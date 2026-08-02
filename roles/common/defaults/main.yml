@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Base packages installed on every managed host:
+#   - acl: lets Ansible set permissions on its temporary files when becoming an
+#     unprivileged user (e.g. a service account) on POSIX-ACL filesystems.
+#   - git: SCM client for build-on-host service deploys (checkout of pinned refs).
+common_packages:
+  - acl
+  - git
+
+# IANA timezone for the host (e.g. Europe/Berlin). Empty = leave the host's
+# current setting untouched. Matters for services whose day/week logic runs
+# on local time (e.g. the Zentrale schedule board and ICS agenda).
+common_timezone: ""

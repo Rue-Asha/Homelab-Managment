@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure nginx is enabled and started
+  ansible.builtin.systemd:
+    name: "{{ nginx_service_name }}"
+    enabled: true
+    state: started

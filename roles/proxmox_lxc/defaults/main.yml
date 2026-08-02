@@ -1,0 +1,14 @@
+#SPDX-License-Identifier: MIT-0
+---
+# Container resource sizing
+lxc_cores: 1
+lxc_memory: 1024
+lxc_swap: 512
+lxc_disk_gb: 8
+
+# Provisioning behavior
+lxc_storage_safety_buffer_gb: 1
+lxc_unprivileged: true
+lxc_onboot: true
+lxc_start_after_create: true
+lxc_wait_for_ssh: false

@@ -1,0 +1,6 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Restart tailscaled
+  ansible.builtin.systemd:
+    name: "{{ tailscale_service_name }}"
+    state: restarted

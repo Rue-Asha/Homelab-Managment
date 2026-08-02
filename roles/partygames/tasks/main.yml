@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the service user and group exist
+  ansible.builtin.import_tasks: user.yml
+
+- name: Ensure the on-host directory layout exists
+  ansible.builtin.import_tasks: directories.yml
+
+- name: Install the read-only deploy key
+  ansible.builtin.import_tasks: deploy_key.yml
+
+- name: Check out the pinned application version
+  ansible.builtin.import_tasks: checkout.yml
+  tags: [deploy]
+
+- name: Build the release
+  ansible.builtin.import_tasks: build.yml
+  tags: [deploy]
+
+- name: Apply database migrations
+  ansible.builtin.import_tasks: migrate.yml
+  tags: [deploy]
+
+- name: Render the service configuration
+  ansible.builtin.import_tasks: config.yml
+
+- name: Activate the new release
+  ansible.builtin.import_tasks: release.yml
+  tags: [deploy]
+
+- name: Manage the systemd service
+  ansible.builtin.import_tasks: service.yml
+
+- name: Prune old releases
+  ansible.builtin.import_tasks: prune.yml
+  tags: [deploy]

@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Restart partygames
+  ansible.builtin.systemd:
+    name: "{{ partygames_service_name }}"
+    state: restarted
+    daemon_reload: true

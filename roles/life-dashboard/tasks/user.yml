@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the life-dashboard group exists
+  ansible.builtin.group:
+    name: "{{ life_dashboard_group }}"
+    system: true
+    state: present
+
+- name: Ensure the life-dashboard service user exists
+  ansible.builtin.user:
+    name: "{{ life_dashboard_user }}"
+    group: "{{ life_dashboard_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ life_dashboard_data_dir }}"
+    create_home: false
+    state: present

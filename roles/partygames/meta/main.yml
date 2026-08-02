@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: >-
+    Deploy the party-games SvelteKit web service: build-on-host release
+    management with atomic symlink go-live, a persistent SQLite database, an
+    environment file, and a systemd unit. Requires the Node.js runtime
+    (provided by the nodejs role) and an nginx reverse proxy in front.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - partygames
+    - webservice
+    - sveltekit
+    - nodejs
+
+# The play orchestrates runtime + proxy (roles: [nodejs, partygames, nginx]),
+# so host-level concerns are not declared as role dependencies here.
+dependencies: []

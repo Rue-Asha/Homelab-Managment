@@ -1,0 +1,20 @@
+#SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: >-
+    Install RetroPie on a Debian VM with EmulationStation set to auto-
+    start on tty1 console login.
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+  galaxy_tags:
+    - retropie
+    - gaming
+    - emulator
+    - emulationstation
+
+dependencies: []

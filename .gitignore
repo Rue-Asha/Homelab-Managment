@@ -1,0 +1,17 @@
+# Ansible
+*.retry
+.ansible/
+.vault_pass
+vault_pass.txt
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc

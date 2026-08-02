@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: Baseline host configuration (SSH hardening) applied after provisioning.
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - system
+    - ssh
+    - hardening
+
+dependencies: []

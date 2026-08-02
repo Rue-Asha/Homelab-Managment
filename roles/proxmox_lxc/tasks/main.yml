@@ -1,0 +1,11 @@
+#SPDX-License-Identifier: MIT-0
+---
+# Entry point: imports each logical task file in execution order.
+- name: Run pre-flight checks
+  ansible.builtin.import_tasks: preflight.yml
+
+- name: Create container
+  ansible.builtin.import_tasks: create.yml
+
+- name: Start container
+  ansible.builtin.import_tasks: start.yml

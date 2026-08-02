@@ -1,0 +1,19 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Clone VM from template if missing
+  community.proxmox.proxmox_kvm:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: "{{ proxmox_validate_certs | default(false) }}"
+    node: "{{ proxmox_node_name }}"
+    clone: "{{ vm_template_name }}"
+    newid: "{{ vmid }}"
+    name: "{{ vm_name | default(inventory_hostname) }}"
+    storage: "{{ vm_disk_storage }}"
+    full: "{{ vm_clone_full }}"
+    timeout: "{{ vm_clone_timeout }}"
+    state: present
+  when: not vm_exists
+  delegate_to: localhost

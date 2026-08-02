@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: >-
+    Install the Node.js runtime from the NodeSource apt repository, pinned to a
+    chosen major version.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - nodejs
+    - runtime
+    - javascript
+
+dependencies: []

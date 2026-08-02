@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: MIT-0
+---
+# The service identity was renamed budget -> life-dashboard, but the container
+# itself was created under the old name and `proxmox_lxc` only sets the hostname
+# at creation time. These two steps close that gap and are self-healing: both
+# guard on the current value, so on an already-renamed (or freshly created) host
+# the whole file is a no-op.
+#
+# Two places have to agree: the Proxmox container config (authoritative — it is
+# rewritten into the container on every start) and the running OS (so the change
+# takes effect without a reboot).
+
+- name: Read the container hostname from the Proxmox config
+  ansible.builtin.command: "pct config {{ life_dashboard_ctid }}"
+  register: life_dashboard_pct_config
+  changed_when: false
+  delegate_to: "{{ life_dashboard_proxmox_host }}"
+  become: false
+
+- name: Set the container hostname in the Proxmox config
+  ansible.builtin.command: >-
+    pct set {{ life_dashboard_ctid }} --hostname {{ life_dashboard_hostname }}
+  when: "'hostname: ' ~ life_dashboard_hostname not in life_dashboard_pct_config.stdout"
+  changed_when: true
+  delegate_to: "{{ life_dashboard_proxmox_host }}"
+  become: false
+
+# Deliberately not ansible.builtin.hostname: it prefers hostnamectl, and
+# systemd-hostnamed is not reachable over D-Bus in this unprivileged container
+# ("Could not get property: Connection timed out"). Writing the file and calling
+# `hostname` does the same job and works everywhere. Proxmox rewrites
+# /etc/hostname from the config on every container start, so the two agree.
+- name: Write /etc/hostname
+  ansible.builtin.copy:
+    content: "{{ life_dashboard_hostname }}\n"
+    dest: /etc/hostname
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Read the running hostname
+  ansible.builtin.command: hostname
+  register: life_dashboard_running_hostname
+  changed_when: false
+
+- name: Apply the hostname to the running system
+  ansible.builtin.command: "hostname {{ life_dashboard_hostname }}"
+  when: life_dashboard_running_hostname.stdout.strip() != life_dashboard_hostname
+  changed_when: true
+
+- name: Point the host's own /etc/hosts entry at the new name
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "^{{ ansible_host | regex_escape }}\\s"
+    line: "{{ ansible_host }} {{ life_dashboard_hostname }}.{{ life_dashboard_domain }} {{ life_dashboard_hostname }}"
+    owner: root
+    group: root
+    mode: "0644"

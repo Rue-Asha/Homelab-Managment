@@ -1,0 +1,16 @@
+#SPDX-License-Identifier: MIT-0
+---
+# Clone behavior
+vm_clone_full: true
+vm_clone_timeout: 300
+
+# QEMU guest agent (used in proxmox_kvm 'agent' parameter)
+vm_agent_enabled: 1
+
+# Cloud-init defaults
+vm_ci_type: nocloud
+vm_ci_cidr: 24
+vm_ci_user: ansible
+vm_ci_nameservers:
+  - 1.1.1.1
+  - 8.8.8.8

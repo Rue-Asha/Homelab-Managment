@@ -1,0 +1,32 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Configure VM hardware/network for template-based VMs
+  community.proxmox.proxmox_kvm:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: "{{ proxmox_validate_certs | default(false) }}"
+    node: "{{ proxmox_node_name }}"
+    vmid: "{{ vmid }}"
+    name: "{{ vm_name | default(inventory_hostname) }}"
+    cores: "{{ vm_cores }}"
+    memory: "{{ vm_memory }}"
+    sockets: "{{ vm_sockets }}"
+    kvm: "{{ vm_kvm_enabled | default(omit) }}"
+    citype: "{{ vm_ci_type | default(omit) }}"
+    net:
+      net0: "virtio,bridge={{ vm_bridge }}{% if vm_vlan is defined %},tag={{ vm_vlan }}{% endif %}"
+    ide:
+      ide2: "{{ vm_ci_storage }}:cloudinit"
+    ipconfig:
+      ipconfig0: "{{ vm_ci_ipconfig0 }}"
+    ciuser: "{{ vm_ci_user }}"
+    cipassword: "{{ vm_ci_password | default(omit) }}"
+    sshkeys: "{{ vm_ci_sshkeys | default(omit) }}"
+    nameservers: "{{ vm_ci_nameservers | default(omit) }}"
+    searchdomains: "{{ vm_ci_searchdomains | default(omit) }}"
+    agent: "{{ vm_agent_enabled | default(1) | int }}"
+    update: true
+    state: present
+  delegate_to: localhost

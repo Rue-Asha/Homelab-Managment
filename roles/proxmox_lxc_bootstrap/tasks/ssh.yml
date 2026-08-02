@@ -1,0 +1,23 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Configure SSH key for ansible user in container
+  ansible.builtin.command: >
+    pct exec {{ lxc_ctid }} -- sh -lc
+    "mkdir -p /home/ansible/.ssh &&
+    echo '{{ lxc_ssh_public_key }}' > /home/ansible/.ssh/authorized_keys &&
+    chmod 700 /home/ansible/.ssh &&
+    chmod 600 /home/ansible/.ssh/authorized_keys &&
+    chown -R ansible:ansible /home/ansible/.ssh"
+  when: lxc_ssh_public_key is defined and (lxc_start_after_create | default(true))
+  no_log: true
+  delegate_to: "{{ proxmox_node_ip }}"
+  become: true
+
+- name: Wait for SSH
+  ansible.builtin.wait_for:
+    host: "{{ ansible_host }}"
+    port: 22
+    timeout: 300
+    delay: 5
+  when: lxc_wait_for_ssh | default(false)
+  delegate_to: localhost

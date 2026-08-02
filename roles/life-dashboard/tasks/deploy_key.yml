@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install the read-only deploy key for the application repository
+  ansible.builtin.copy:
+    # OpenSSH rejects a private key without a trailing newline; normalise to
+    # exactly one regardless of how the vaulted value was stored.
+    content: "{{ life_dashboard_deploy_key | trim }}\n"
+    dest: "{{ life_dashboard_deploy_key_path }}"
+    owner: "{{ life_dashboard_user }}"
+    group: "{{ life_dashboard_group }}"
+    mode: "0600"
+  when: life_dashboard_deploy_key | length > 0
+  no_log: true
+
+# A repo that went public no longer needs a key. Without this the private key
+# stays behind on the host indefinitely, because the task above only ever
+# writes the file and never withdraws it.
+- name: Remove the deploy key when the repository no longer needs one
+  ansible.builtin.file:
+    path: "{{ life_dashboard_deploy_key_path }}"
+    state: absent
+  when: life_dashboard_deploy_key | length < 1

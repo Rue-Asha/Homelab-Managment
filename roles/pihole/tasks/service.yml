@@ -1,0 +1,9 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Enable Pi-hole services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: "{{ pihole_services }}"
+  failed_when: false

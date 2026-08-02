@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install apt repository tooling
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure apt keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Add NodeSource apt signing key
+  ansible.builtin.get_url:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    dest: /etc/apt/keyrings/nodesource.asc
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Add NodeSource apt repository
+  ansible.builtin.deb822_repository:
+    name: nodesource
+    types: [deb]
+    uris: "https://deb.nodesource.com/node_{{ nodejs_version }}.x"
+    suites: [nodistro]
+    components: [main]
+    signed_by: /etc/apt/keyrings/nodesource.asc
+    state: present
+  notify: Update apt cache

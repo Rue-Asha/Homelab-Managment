@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Configure NodeSource apt repository
+  ansible.builtin.import_tasks: repository.yml
+
+- name: Refresh apt cache before installing Node.js
+  ansible.builtin.meta: flush_handlers
+
+- name: Install Node.js
+  ansible.builtin.import_tasks: install.yml

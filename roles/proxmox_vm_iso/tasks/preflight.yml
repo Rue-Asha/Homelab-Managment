@@ -1,0 +1,41 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Check if VM already exists
+  community.proxmox.proxmox_vm_info:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: "{{ proxmox_validate_certs | default(false) }}"
+    node: "{{ proxmox_node_name }}"
+    type: qemu
+    vmid: "{{ vmid }}"
+  register: vm_info
+  delegate_to: localhost
+  failed_when: false
+
+- name: Derive VM existence from Proxmox API result
+  ansible.builtin.set_fact:
+    vm_exists: "{{ (vm_info.proxmox_vms | default([]) | length) > 0 }}"
+
+- name: Query free space on VM disk storage
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_api_host }}:{{ proxmox_api_port | default(8006) }}/api2/json/nodes/{{ proxmox_node_name }}/storage/{{ vm_disk_storage }}/status"
+    method: GET
+    headers:
+      Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+    validate_certs: "{{ proxmox_validate_certs | default(false) }}"
+  register: vm_storage_status
+  when: not vm_exists
+  delegate_to: localhost
+
+- name: Fail early when VM storage has insufficient free space
+  ansible.builtin.assert:
+    that:
+      - (vm_storage_status.json.data.avail | int) >= (((vm_disk_gb | int) + (vm_storage_safety_buffer_gb | default(1) | int)) * 1073741824)
+    fail_msg: >-
+      Not enough free space on storage '{{ vm_disk_storage }}' for VM {{ vmid }}.
+      Required: {{ (vm_disk_gb | int) + (vm_storage_safety_buffer_gb | default(1) | int) }} GiB (disk + safety buffer),
+      available: {{ ((vm_storage_status.json.data.avail | int) / 1073741824) | round(2) }} GiB.
+  when: not vm_exists
+  delegate_to: localhost

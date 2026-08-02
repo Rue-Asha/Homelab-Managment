@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: MIT-0
+---
+nodejs_version: "22"
+nodejs_packages:
+  - nodejs

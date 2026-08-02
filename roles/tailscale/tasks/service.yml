@@ -1,0 +1,30 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Ensure tailscaled is enabled and running
+  ansible.builtin.systemd:
+    name: "{{ tailscale_service_name }}"
+    enabled: true
+    state: started
+
+- name: Query current Tailscale backend state
+  ansible.builtin.command: tailscale status --json
+  register: tailscale_status
+  changed_when: false
+  failed_when: false
+
+# Only (re)authenticate when the node is not already connected, so re-runs do
+# not thrash an established tunnel. Short-circuits before from_json when the
+# status query failed (empty stdout).
+- name: Bring Tailscale up as a subnet router
+  ansible.builtin.command: >-
+    tailscale up
+    --authkey={{ tailscale_authkey }}
+    --advertise-routes={{ tailscale_advertise_routes }}
+    --accept-dns={{ tailscale_accept_dns | bool | ternary('true', 'false') }}
+    {{ tailscale_up_extra_args }}
+  register: tailscale_up
+  changed_when: true
+  no_log: true
+  when: >-
+    tailscale_status.rc > 0
+    or not ((tailscale_status.stdout | from_json).get('BackendState', '') is match('Running'))

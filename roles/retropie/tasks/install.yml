@@ -1,0 +1,21 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Clone RetroPie-Setup repository
+  ansible.builtin.git:
+    repo: "{{ retropie_repo }}"
+    dest: "{{ retropie_install_dir }}"
+    depth: 1
+    version: master
+  become: true
+  become_user: "{{ retropie_user }}"
+  tags: retropie
+
+- name: Run RetroPie basic install (this takes 30-60 minutes)
+  ansible.builtin.command: bash retropie_packages.sh setup basic_install
+  args:
+    chdir: "{{ retropie_install_dir }}"
+    creates: "{{ retropie_home }}/RetroPie"
+  async: "{{ retropie_install_timeout }}"
+  poll: 30
+  register: retropie_install_result
+  tags: retropie

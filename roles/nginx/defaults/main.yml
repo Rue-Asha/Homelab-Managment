@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT-0
+---
+nginx_packages:
+  - nginx
+nginx_service_name: nginx
+
+nginx_reverse_proxy_enabled: false
+
+nginx_server_name: "{{ ansible_facts['default_ipv4']['address'] }}"
+nginx_listen_port: 80
+nginx_backend_host: 127.0.0.1
+nginx_backend_port: 8080
+nginx_proxy_read_timeout: 60s
+nginx_vhost_filename: reverse_proxy.conf
+nginx_service_description: "the application backend"
+
+nginx_worker_processes: auto
+nginx_client_max_body_size: 10m
+nginx_gzip_enabled: true
+
+nginx_remove_default_site: false
+
+nginx_tls_enabled: false
+
+nginx_install_dir: /opt/nginx

@@ -1,0 +1,34 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Install repository prerequisites
+  ansible.builtin.apt:
+    name:
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Add Tailscale package signing key
+  ansible.builtin.get_url:
+    url: "{{ tailscale_apt_key_url }}"
+    dest: "{{ tailscale_apt_keyring }}"
+    mode: "0644"
+    owner: root
+    group: root
+
+- name: Add Tailscale APT repository
+  ansible.builtin.get_url:
+    url: "{{ tailscale_apt_list_url }}"
+    dest: /etc/apt/sources.list.d/tailscale.list
+    mode: "0644"
+    owner: root
+    group: root
+  register: tailscale_repo
+
+- name: Install Tailscale
+  ansible.builtin.apt:
+    name:
+      - tailscale
+    state: present
+    update_cache: "{{ tailscale_repo is changed }}"

@@ -1,0 +1,8 @@
+---
+- name: Configure the Tailscale subnet router
+  hosts: tailscale
+  become: true
+  gather_facts: true
+  roles:
+    - common     # base host config (02 layer)
+    - tailscale  # install + IP forwarding + advertise the LAN route

@@ -1,0 +1,12 @@
+---
+id: "{{ ansible_host.split('.')[-1] | int }}"
+
+proxmox_node_ip: proxmox1
+proxmox_node_name: ray
+proxmox_api_host: 192.168.0.22
+proxmox_api_user: root@pam
+proxmox_api_token_id: ansible
+
+default_gateway: 192.168.0.1
+
+default_ssh_public_key: "{{ lookup('ansible.builtin.file', '~/.ssh/Proxmox.pub') }}"

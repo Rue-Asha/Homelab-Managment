@@ -1,0 +1,18 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Install sudo in container
+  ansible.builtin.command: >
+    pct exec {{ lxc_ctid }} -- sh -lc
+    "apt-get install -y sudo"
+  when: lxc_start_after_create | default(true)
+  delegate_to: "{{ proxmox_node_ip }}"
+  become: true
+
+- name: Grant ansible user passwordless sudo in container
+  ansible.builtin.command: >
+    pct exec {{ lxc_ctid }} -- sh -lc
+    "echo 'ansible ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/ansible &&
+    chmod 0440 /etc/sudoers.d/ansible"
+  when: lxc_start_after_create | default(true)
+  delegate_to: "{{ proxmox_node_ip }}"
+  become: true

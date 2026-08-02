@@ -1,0 +1,23 @@
+---
+# --- LXC provisioning (01_PROVISIONING) ---
+# SvelteKit (adapter-node, Node process) + SQLite.
+lxc_cores: 2
+lxc_memory: 1024
+lxc_swap: 512
+lxc_disk_gb: 10
+
+# --- partygames service (03_SERVICES) ---
+# App lives in its own repo, referenced by URL + a pinned version (the "image
+# tag"). The repo is public, so it is cloned anonymously over HTTPS and no
+# deploy key is needed; partygames_deploy_key stays at its empty role default,
+# which skips both the key install and the SSH options on checkout.
+partygames_repo_url: "https://github.com/Rue-Asha/Party-Games.git"
+partygames_version: v0.12.0
+
+# --- nginx reverse proxy in front of the service ---
+# Baseline defaults live in roles/nginx/defaults/main.yml; these are the
+# host-specific overrides that turn the proxy on and point it at the Node app.
+nginx_reverse_proxy_enabled: true
+nginx_backend_host: 127.0.0.1
+nginx_backend_port: "{{ partygames_port }}"
+nginx_service_description: "the Party Games web service"

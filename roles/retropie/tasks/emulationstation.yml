@@ -1,0 +1,19 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Create EmulationStation config directory
+  ansible.builtin.file:
+    path: "{{ retropie_home }}/.emulationstation"
+    state: directory
+    owner: "{{ retropie_user }}"
+    group: "{{ retropie_user }}"
+    mode: "0755"
+  tags: config
+
+- name: Pre-configure keyboard mapping for EmulationStation
+  ansible.builtin.copy:
+    src: es_input.cfg
+    dest: "{{ retropie_home }}/.emulationstation/es_input.cfg"
+    owner: "{{ retropie_user }}"
+    group: "{{ retropie_user }}"
+    mode: "0644"
+  tags: config

@@ -1,0 +1,9 @@
+---
+# LXC container resource sizing (overrides proxmox_lxc role defaults)
+lxc_cores: 1
+lxc_memory: 512
+lxc_swap: 512
+lxc_disk_gb: 4
+
+# pihole_password: Define per-host in the corresponding host_vars vault.
+# If not set, no password change will be applied.

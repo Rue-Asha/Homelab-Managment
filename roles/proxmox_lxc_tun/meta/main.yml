@@ -1,0 +1,23 @@
+#SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: >-
+    Enable /dev/net/tun passthrough for an unprivileged Proxmox LXC by editing
+    the container's config on the host and rebooting it. For VPN workloads
+    (Tailscale, WireGuard) that need the TUN device.
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - proxmox
+    - lxc
+    - tun
+    - vpn
+    - networking
+
+dependencies: []

@@ -1,0 +1,14 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Create PiGamer user
+  ansible.builtin.user:
+    name: "{{ retropie_user }}"
+    password: "{{ retropie_user_password | password_hash('sha512') }}"
+    home: "{{ retropie_home }}"
+    shell: /bin/bash
+    create_home: true
+    groups: input,video,audio,tty,plugdev,dialout
+    append: true
+    state: present
+  no_log: true
+  tags: config

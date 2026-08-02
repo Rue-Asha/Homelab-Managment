@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Life-Management-Dashboard web service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ life_dashboard_user }}
+Group={{ life_dashboard_group }}
+WorkingDirectory={{ life_dashboard_current_link }}
+EnvironmentFile={{ life_dashboard_env_file }}
+ExecStart={{ life_dashboard_node_bin }} {{ life_dashboard_current_link }}/build
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths={{ life_dashboard_data_dir }} {{ life_dashboard_images_dir }}
+
+[Install]
+WantedBy=multi-user.target

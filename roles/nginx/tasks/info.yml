@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure install artifact directory exists
+  ansible.builtin.file:
+    path: "{{ nginx_install_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Store nginx access details
+  ansible.builtin.template:
+    src: SETUP_INFO.txt.j2
+    dest: "{{ nginx_install_dir }}/SETUP_INFO.txt"
+    owner: root
+    group: root
+    mode: "0644"

@@ -1,0 +1,67 @@
+#################################
+#       Proxmox Local Host      #
+#################################
+
+[proxmox_node]
+proxmox1 ansible_host=192.168.0.22 ansible_user=root
+
+#################################
+#         Proxmox Guests        #
+#################################
+
+[proxmox_guest:children]
+vm_proxmox
+lxc_container_proxmox
+
+#################################
+#            VM Guests          #
+#################################
+
+[vm_proxmox:children]
+retropie
+
+#################################
+#     LXC Container Guests      #
+#################################
+
+[lxc_container_proxmox:children]
+pihole
+partygames
+life_dashboard
+tailscale
+
+#################################
+#         Pi-hole Service       #
+#################################
+
+[pihole]
+pihole01 ansible_host=192.168.0.225 ansible_user=ansible
+
+#################################
+#         RetroPie Service      #
+#################################
+
+[retropie]
+# retropie01 is not currently provisioned — re-add with its IP when the box returns
+# retropie01 ansible_host=<ip> ansible_user=ansible
+
+#################################
+#      Party Games Service      #
+#################################
+
+[partygames]
+partygames01 ansible_host=192.168.0.224 ansible_user=ansible
+
+#################################
+#   Life-Management-Dashboard    #
+#################################
+
+[life_dashboard]
+life-dashboard01 ansible_host=192.168.0.223 ansible_user=ansible
+
+#################################
+#   Tailscale Subnet Router     #
+#################################
+
+[tailscale]
+tailscale01 ansible_host=192.168.0.230 ansible_user=ansible

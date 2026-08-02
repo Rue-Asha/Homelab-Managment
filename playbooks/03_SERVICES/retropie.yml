@@ -1,0 +1,8 @@
+---
+- name: Install RetroPie on Debian VM
+  hosts: retropie
+  become: true
+  gather_facts: true
+  roles:
+    - common
+    - retropie

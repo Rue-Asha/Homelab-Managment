@@ -1,0 +1,26 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Download Pi-hole installer script
+  ansible.builtin.get_url:
+    url: https://install.pi-hole.net
+    dest: /tmp/pihole_installer.sh
+    mode: "0755"
+  register: download_result
+  retries: 3
+  delay: 5
+
+- name: Run Pi-hole installer (non-interactive mode)
+  ansible.builtin.shell: |
+    PIHOLE_SKIP_OS_CHECK=true \
+    PIHOLE_SKIP_DOCKER_CHECK=true \
+    bash /tmp/pihole_installer.sh --unattended
+  register: pihole_install
+  changed_when: "'Setting up Pi-hole' in pihole_install.stdout"
+  timeout: "{{ pihole_install_timeout }}"
+
+- name: Wait for Pi-hole to be ready
+  ansible.builtin.wait_for:
+    port: 80
+    delay: 10
+    timeout: "{{ pihole_wait_timeout }}"
+  failed_when: false

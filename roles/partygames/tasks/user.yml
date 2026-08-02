@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the partygames group exists
+  ansible.builtin.group:
+    name: "{{ partygames_group }}"
+    system: true
+    state: present
+
+- name: Ensure the partygames service user exists
+  ansible.builtin.user:
+    name: "{{ partygames_user }}"
+    group: "{{ partygames_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ partygames_data_dir }}"
+    create_home: false
+    state: present

@@ -1,0 +1,18 @@
+#SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: Provision an LXC container on a Proxmox node via the Proxmox API.
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - proxmox
+    - lxc
+    - provisioning
+
+dependencies: []

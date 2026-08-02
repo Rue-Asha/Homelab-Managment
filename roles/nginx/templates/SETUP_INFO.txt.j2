@@ -1,0 +1,36 @@
+nginx Installation Summary
+==========================
+
+Listen URL: http://{{ nginx_server_name }}:{{ nginx_listen_port }}/
+Hostname: {{ inventory_hostname }}
+TLS enabled: {{ nginx_tls_enabled }}
+Reverse proxy: {{ nginx_reverse_proxy_enabled }}
+{% if nginx_reverse_proxy_enabled | bool %}
+Proxied backend: http://{{ nginx_backend_host }}:{{ nginx_backend_port }} ({{ nginx_service_description }})
+{% endif %}
+
+Notes:
+{% if nginx_reverse_proxy_enabled | bool %}
+- nginx is the front door; {{ nginx_service_description }} serves the actual
+  content from {{ nginx_backend_host }}:{{ nginx_backend_port }}.
+- Until the backend is deployed, requests return 502 Bad Gateway — this is
+  expected and confirms nginx is up and proxying correctly.
+{% else %}
+- No reverse-proxy vhost is configured; nginx serves its stock default site
+  (the "Welcome to nginx!" page). Set nginx_reverse_proxy_enabled: true and
+  provide backend details to front a service.
+{% endif %}
+- TLS is {{ 'enabled' if nginx_tls_enabled | bool else 'disabled (plain HTTP)' }}.
+
+Useful Commands:
+- nginx -t                     : Validate configuration
+- systemctl reload nginx       : Apply config changes (no downtime)
+- systemctl restart nginx      : Restart the service
+- tail -f /var/log/nginx/error.log : View error log
+
+Files:
+- Global config:  /etc/nginx/nginx.conf
+{% if nginx_reverse_proxy_enabled | bool %}
+- Vhost (avail):  /etc/nginx/sites-available/{{ nginx_vhost_filename }}
+- Vhost (active): /etc/nginx/sites-enabled/{{ nginx_vhost_filename }}
+{% endif %}

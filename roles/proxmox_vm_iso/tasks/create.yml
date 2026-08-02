@@ -1,0 +1,28 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Create VM and attach ISO if missing
+  community.proxmox.proxmox_kvm:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: "{{ proxmox_validate_certs | default(false) }}"
+    node: "{{ proxmox_node_name }}"
+    vmid: "{{ vmid }}"
+    name: "{{ vm_name | default(inventory_hostname) }}"
+    cores: "{{ vm_cores }}"
+    memory: "{{ vm_memory }}"
+    sockets: "{{ vm_sockets }}"
+    ostype: "{{ vm_ostype }}"
+    kvm: "{{ vm_kvm_enabled | default(omit) }}"
+    scsihw: virtio-scsi-pci
+    scsi:
+      scsi0: "{{ vm_disk_storage }}:{{ vm_disk_gb }}{% if vm_disk_format is defined %},format={{ vm_disk_format }}{% endif %}"
+    ide:
+      ide2: "{{ vm_iso_storage }}:iso/{{ vm_iso_file }},media=cdrom"
+    net:
+      net0: "virtio,bridge={{ vm_bridge }}{% if vm_vlan is defined %},tag={{ vm_vlan }}{% endif %}"
+    boot: "{{ vm_boot_order_iso }}"
+    state: present
+  when: not vm_exists
+  delegate_to: localhost

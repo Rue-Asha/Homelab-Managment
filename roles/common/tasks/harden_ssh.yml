@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Disable root login over SSH
+  ansible.builtin.replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin.*'
+    replace: 'PermitRootLogin no'
+  notify: Restart ssh
+
+- name: Disable password authentication over SSH
+  ansible.builtin.replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication.*'
+    replace: 'PasswordAuthentication no'
+  notify: Restart ssh

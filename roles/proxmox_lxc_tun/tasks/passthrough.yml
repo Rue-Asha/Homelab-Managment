@@ -1,0 +1,17 @@
+#SPDX-License-Identifier: MIT-0
+---
+# Host-level: edits the container's Proxmox config on the node, then reboots the
+# container so the bind mount takes effect. Runs on the Proxmox host, not inside
+# the guest — this concern deliberately lives outside the tailscale app role.
+- name: Ensure /dev/net/tun passthrough in the container's Proxmox config
+  ansible.builtin.blockinfile:
+    path: "/etc/pve/lxc/{{ lxc_ctid }}.conf"
+    marker: "# {mark} ANSIBLE MANAGED - /dev/net/tun passthrough"
+    block: |
+      lxc.cgroup2.devices.allow: c 10:200 rwm
+      lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file
+  delegate_to: "{{ proxmox_node_ip }}"
+  become: true
+  notify:
+    - Reboot container for TUN passthrough
+    - Wait for container SSH after TUN reboot

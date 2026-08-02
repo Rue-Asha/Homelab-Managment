@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Reload nginx
+  ansible.builtin.systemd:
+    name: "{{ nginx_service_name }}"
+    state: reloaded
+
+- name: Restart nginx
+  ansible.builtin.systemd:
+    name: "{{ nginx_service_name }}"
+    state: restarted

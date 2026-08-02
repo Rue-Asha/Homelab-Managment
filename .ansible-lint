@@ -1,0 +1,27 @@
+---
+# ansible-lint configuration.
+#
+# Each entry below is a deliberate scoping decision, not a "shut up the
+# linter" hack — keep the reasoning here so future-us can revisit them.
+
+skip_list:
+  # Idempotency cleanup on the LXC pct-exec bootstrap is intentionally
+  # deferred (the bootstrap shells out via `pct exec` and needs proper
+  # changed_when guards). Tracked as a follow-up.
+  - no-changed-when
+
+  # Two role pairs share variable namespaces:
+  #   - proxmox_lxc + proxmox_lxc_bootstrap share lxc_*
+  #   - proxmox_vm_template + proxmox_vm_iso share vm_*
+  # Strictly prefixing each role's defaults with its full role name would
+  # force duplicating the same var across two roles (or break the shared
+  # config pattern those roles rely on). The repo uses domain-prefixed
+  # naming instead — lxc_*, vm_*, pihole_*, retropie_* — which still
+  # honors the spirit of the rule.
+  - var-naming[no-role-prefix]
+
+  # A handful of Proxmox API calls have unfoldable inline expressions
+  # (network interface strings, storage availability assertions) that
+  # blow past yamllint's default 160-char ceiling. Hard to refactor
+  # without making the YAML worse.
+  - yaml[line-length]

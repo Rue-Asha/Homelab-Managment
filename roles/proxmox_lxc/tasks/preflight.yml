@@ -1,0 +1,50 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Check if container exists
+  community.proxmox.proxmox_vm_info:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: "{{ proxmox_validate_certs | default(false) }}"
+    node: "{{ proxmox_node_name }}"
+    type: lxc
+    vmid: "{{ lxc_ctid }}"
+  register: lxc_info
+  delegate_to: localhost
+  failed_when: false
+
+- name: Derive container existence from Proxmox API result
+  ansible.builtin.set_fact:
+    lxc_exists: "{{ (lxc_info.proxmox_vms | default([]) | length) > 0 }}"
+
+- name: Query free space on LXC rootfs storage
+  ansible.builtin.uri:
+    url: "https://{{ proxmox_api_host }}:{{ proxmox_api_port | default(8006) }}/api2/json/nodes/{{ proxmox_node_name }}/storage/{{ lxc_rootfs_storage }}/status"
+    method: GET
+    headers:
+      Authorization: "PVEAPIToken={{ proxmox_api_user }}!{{ proxmox_api_token_id }}={{ proxmox_api_token_secret }}"
+    validate_certs: "{{ proxmox_validate_certs | default(false) }}"
+  register: lxc_storage_status
+  when: not lxc_exists
+  delegate_to: localhost
+
+- name: Fail early when LXC storage has insufficient free space
+  ansible.builtin.assert:
+    that:
+      - (lxc_storage_status.json.data.avail | int) >= (((lxc_disk_gb | int) + (lxc_storage_safety_buffer_gb | default(1) | int)) * 1073741824)
+    fail_msg: >-
+      Not enough free space on storage '{{ lxc_rootfs_storage }}' for CT {{ lxc_ctid }}.
+      Required: {{ (lxc_disk_gb | int) + (lxc_storage_safety_buffer_gb | default(1) | int) }} GiB (disk + safety buffer),
+      available: {{ ((lxc_storage_status.json.data.avail | int) / 1073741824) | round(2) }} GiB.
+  when: not lxc_exists
+  delegate_to: localhost
+
+- name: Validate LXC template reference format
+  ansible.builtin.assert:
+    that:
+      - lxc_ostemplate is match('^[^/][^:]*:vztmpl/.+')
+    fail_msg: >-
+      lxc_ostemplate must be a Proxmox volume reference like 'local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst',
+      not a filesystem path.
+  when: not lxc_exists

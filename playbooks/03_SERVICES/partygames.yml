@@ -1,0 +1,10 @@
+---
+- name: Deploy the Party Games web service
+  hosts: partygames
+  become: true
+  gather_facts: true
+  roles:
+    - common      # base host config (02 layer)
+    - nodejs      # Node.js runtime
+    - partygames  # service: checkout, build, release, systemd unit
+    - nginx       # reverse proxy (:80 -> 127.0.0.1:{{ partygames_port }})

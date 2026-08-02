@@ -1,0 +1,30 @@
+---
+# Shared VM settings (apply to both ISO and template provisioning)
+# Role-baseline defaults live in roles/proxmox_vm_template/defaults/main.yml
+# and roles/proxmox_vm_iso/defaults/main.yml.
+vm_cores: 1
+vm_sockets: 1
+vm_memory: 1024
+vm_kvm_enabled: true
+vm_disk_gb: 10
+vm_disk_storage: local-lvm
+vm_disk_format: raw
+# Additional free-space cushion on top of requested VM disk.
+vm_storage_safety_buffer_gb: 1
+vm_bridge: vmbr0
+
+# Environment-specific ISO settings
+vm_iso_storage: local
+vm_iso_file: debian-13.4.0-amd64-netinst.iso
+
+# Environment-specific template / cloud-init settings
+vm_template_name: debian-13-template
+# vm_ci_password: Define Password per Host in the corresponding host_var vault, if not, no password will be set
+vm_ci_sshkeys: "{{ default_ssh_public_key }}"
+vm_ci_storage: local-lvm
+vm_ci_gateway: "{{ default_gateway }}"
+vm_ci_ipconfig0: "ip={{ ansible_host }}/{{ vm_ci_cidr }},gw={{ vm_ci_gateway }}"
+
+vm_start_after_create: true
+vm_wait_for_ssh: true
+vmid: "{{ id }}"

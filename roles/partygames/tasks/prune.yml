@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Find existing releases
+  ansible.builtin.find:
+    paths: "{{ partygames_releases_dir }}"
+    file_type: directory
+    recurse: false
+  register: partygames_release_find
+
+- name: Resolve the currently active release
+  ansible.builtin.stat:
+    path: "{{ partygames_current_link }}"
+  register: partygames_current_stat
+
+- name: Remove old releases, keeping the most recent and the active one
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop: >-
+    {{ (partygames_release_find['files'] | map(attribute='path') | sort)[:0 - (partygames_keep_releases | int)]
+       | difference([partygames_current_stat['stat']['lnk_target'] | default('', true)]) }}
+  loop_control:
+    label: "{{ item }}"

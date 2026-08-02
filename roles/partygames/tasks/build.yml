@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MIT-0
+---
+# devDependencies are required to build (vite/svelte); install them here, then
+# prune to production deps after the build. SQLite uses Node's built-in
+# node:sqlite (Node >= 22), so no C toolchain is needed on the host.
+- name: Install Node.js dependencies (clean install)
+  community.general.npm:
+    path: "{{ partygames_release_dir }}"
+    ci: true
+  become: true
+  become_user: "{{ partygames_user }}"
+  when: partygames_redeploy | bool
+
+- name: Build the application
+  ansible.builtin.command:
+    cmd: "{{ partygames_build_command }}"
+    chdir: "{{ partygames_release_dir }}"
+  become: true
+  become_user: "{{ partygames_user }}"
+  changed_when: true
+  when: partygames_redeploy | bool
+
+- name: Prune development dependencies from the release
+  ansible.builtin.command:
+    cmd: npm prune --omit=dev
+    chdir: "{{ partygames_release_dir }}"
+  become: true
+  become_user: "{{ partygames_user }}"
+  changed_when: true
+  when: partygames_redeploy | bool

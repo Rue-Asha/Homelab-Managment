@@ -1,0 +1,9 @@
+#SPDX-License-Identifier: MIT-0
+---
+# Enable /dev/net/tun passthrough for this container. An unprivileged Proxmox
+# LXC has no TUN device by default; VPN workloads (Tailscale, WireGuard) need it.
+# Off by default — opt in per host (e.g. host_vars/tailscale01/vars.yml).
+proxmox_lxc_tun_enabled: false
+
+# Seconds to wait for the container SSH to return after the passthrough reboot.
+proxmox_lxc_tun_ssh_timeout: 300

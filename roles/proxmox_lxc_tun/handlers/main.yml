@@ -1,0 +1,18 @@
+#SPDX-License-Identifier: MIT-0
+---
+# Defined reboot-first so it runs before the SSH wait (handlers fire in
+# definition order). Both flush at the end of the provisioning play, before the
+# baseline (common) pass connects to the container over SSH.
+- name: Reboot container for TUN passthrough
+  ansible.builtin.command: "pct reboot {{ lxc_ctid }}"
+  changed_when: true
+  delegate_to: "{{ proxmox_node_ip }}"
+  become: true
+
+- name: Wait for container SSH after TUN reboot
+  ansible.builtin.wait_for:
+    host: "{{ ansible_host }}"
+    port: 22
+    timeout: "{{ proxmox_lxc_tun_ssh_timeout }}"
+    delay: 5
+  delegate_to: localhost

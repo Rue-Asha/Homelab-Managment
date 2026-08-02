@@ -1,0 +1,15 @@
+---
+- name: Provision LXC containers in Proxmox
+  hosts: lxc_container_proxmox
+  gather_facts: false
+  roles:
+    - proxmox_lxc
+    - proxmox_lxc_bootstrap
+    - proxmox_lxc_tun
+
+- name: Apply baseline configuration to new LXC containers
+  hosts: lxc_container_proxmox
+  become: true
+  gather_facts: false
+  roles:
+    - common

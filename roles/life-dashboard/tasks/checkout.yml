@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Idempotency: a release is only checked out, built, migrated and activated when
+# the requested version differs from the one currently live. The live version is
+# recorded in a marker file inside the active release.
+- name: Read the currently deployed version marker
+  ansible.builtin.slurp:
+    src: "{{ life_dashboard_current_link }}/.deployed_version"
+  register: life_dashboard_deployed_marker
+  changed_when: false
+  failed_when: false
+
+- name: Determine the currently deployed version
+  ansible.builtin.set_fact:
+    life_dashboard_deployed_version: >-
+      {{ (life_dashboard_deployed_marker['content'] | b64decode | trim)
+         if (life_dashboard_deployed_marker['content'] is defined)
+         else '' }}
+
+- name: Decide whether a new release must be deployed
+  ansible.builtin.set_fact:
+    life_dashboard_redeploy: >-
+      {{ life_dashboard_deployed_version is not
+         match((life_dashboard_version | regex_escape) ~ '$') }}
+
+- name: Compute the timestamped release directory
+  ansible.builtin.set_fact:
+    life_dashboard_release_dir: >-
+      {{ life_dashboard_releases_dir }}/{{ now(utc=true, fmt='%Y%m%d%H%M%S') }}
+  when: life_dashboard_redeploy | bool
+
+- name: Check out the pinned application version
+  ansible.builtin.git:
+    repo: "{{ life_dashboard_repo_url }}"
+    dest: "{{ life_dashboard_release_dir }}"
+    version: "{{ life_dashboard_version }}"
+    # SSH deploy key + relaxed host-key check apply only to a private repo over
+    # SSH; for a public HTTPS clone both are omitted.
+    key_file: "{{ life_dashboard_deploy_key_path if (life_dashboard_deploy_key | length > 0) else omit }}"
+    ssh_opts: "{{ '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' if (life_dashboard_deploy_key | length > 0) else omit }}"
+  become: true
+  become_user: "{{ life_dashboard_user }}"
+  when: life_dashboard_redeploy | bool
+
+- name: Record the deployed version inside the release
+  ansible.builtin.copy:
+    content: "{{ life_dashboard_version }}\n"
+    dest: "{{ life_dashboard_release_dir }}/.deployed_version"
+    owner: "{{ life_dashboard_user }}"
+    group: "{{ life_dashboard_group }}"
+    mode: "0644"
+  when: life_dashboard_redeploy | bool
