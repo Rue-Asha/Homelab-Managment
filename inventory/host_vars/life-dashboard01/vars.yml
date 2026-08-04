@@ -8,51 +8,14 @@ lxc_memory: 1024
 lxc_swap: 512
 lxc_disk_gb: 10
 
-# --- life-dashboard service (03_SERVICES) ---
-# App lives in its own repo, referenced by URL + a pinned version (the "image
-# tag"). The repo is public, so the checkout is an anonymous HTTPS clone: no
-# deploy key, and the role omits key_file/ssh_opts when
-# life_dashboard_deploy_key is empty (which it now is).
-# This deploys the Life-Management-Dashboard ("Zentrale"), which absorbed the
-# Budgeting-Web-App. The service was first stood up under a `budget` identity;
-# the role now owns it as `life-dashboard` and migrates the old on-host layout
-# in place on the first deploy (the persistent SQLite DB moves from
-# /var/lib/budget/app.db to /var/lib/life-dashboard/app.db, with its recorded
-# migrations 0001-0005 intact; new modules use date-prefixed migrations).
-#
-# v2.0.0 ("SISTEMA") is a breaking redesign down to five modules: Overview,
-# Tasks, Uni, Projects, Notes. Finance, curriculum, review, search and the
-# Proton-ICS agenda have no UI any more (their tables stay in app.db), and the
-# app now needs IMAGES_DIR for uploaded images. v2.1.0 turns the note body into
-# a block editor; migration 20260802_0011 adds notes.doc. v2.2.0 switches the
-# whole UI to English (20260802_0012 renames uni_tasks.type 'VL' -> 'LEC').
-# v2.2.1 is a CSS-only fix (the block editor's gap cursor was invisible) — it
-# adds no migration, so a rollback to v2.2.0 stays safe. v2.2.2 is the same
-# kind of change: notes take the accent colour of the folder they sit in.
-# v2.3.0 changes no application code; it scrubs the app repo for publication.
-# It *deletes* migration 0002_seed.sql (seed rows of the retired finance
-# module), which is a no-op here because this host already recorded it in
-# schema_migrations and the runner only considers bundled files. That release
-# also re-authored the app repo's whole history, so every commit SHA before it
-# changed: pin this to a tag, never to a pre-v2.3.0 commit hash.
+
 life_dashboard_repo_url: "https://github.com/Rue-Asha/Life-Managment-Dashboard.git"
 life_dashboard_version: v2.3.0
-# life_dashboard_origin (browser-facing URL, needed by SvelteKit's CSRF check)
-# is NOT pinned here: the role default follows ansible_host, so the env stays
-# correct when the container's IP changes. Only override to serve via a hostname.
 
-# Due dates, the today list and the uni study session are computed from the
-# host clock, so it has to sit in the timezone actually lived in.
 common_timezone: Europe/Berlin
 
-# --- nginx reverse proxy in front of the service ---
-# Baseline defaults live in roles/nginx/defaults/main.yml; these are the
-# host-specific overrides that turn the proxy on and point it at the Node app.
 nginx_reverse_proxy_enabled: true
 nginx_backend_host: 127.0.0.1
 nginx_backend_port: "{{ life_dashboard_port }}"
 nginx_service_description: "the SISTEMA (Life-Management-Dashboard) web service"
-# Image uploads (PUT /api/images/<slot>) pass through the proxy; the app caps
-# them at 15 MB, so nginx has to sit above that — otherwise a big image 413s at
-# the front door instead of getting a clean error from the app.
 nginx_client_max_body_size: 16m
