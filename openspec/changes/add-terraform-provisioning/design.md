@@ -133,9 +133,8 @@ still reads correctly: Terraform is the new step "00" that precedes `02_`.
 
 The move costs nothing operationally, which was verified before committing to
 it: relative paths inside `ansible.cfg` (`inventory = inventory/`,
-`roles_path = ./roles`, `vault_password_file = .vault_pass`) resolve against the
-**config file's own directory**, not the working directory, so none of them
-needed rewriting. A root `.envrc` exports `ANSIBLE_CONFIG`, and every command
+`roles_path = ./roles`) resolve against the **config file's own directory**,
+not the working directory, so none of them needed rewriting. A root `.envrc` exports `ANSIBLE_CONFIG`, and every command
 continues to run from the repo root — which is required anyway, because the
 inventory plugin resolves `project_path` relative to the working directory.
 
@@ -383,7 +382,13 @@ lived in Vault, the system could not be bootstrapped. Hence:
 - **Phase A (this change):** Terraform migration. The PVE API token lives in
   `~/.config/homelab/terraform.env` (mode `0600`, outside the repo), loaded by
   `direnv` — already installed on the control host. Root passwords deleted per
-  D8. Ansible keeps ansible-vault untouched.
+  D8. Ansible keeps ansible-vault, but its password file moves alongside the
+  token to `~/.config/homelab/vault_pass` rather than sitting in the repo as
+  `.vault_pass`. `.gitignore` guards against *accident*; a file outside the tree
+  is additionally immune to a stray `tar`, an editor that copies siblings, or a
+  mistaken ignore rule. It is also one location for homelab secrets instead of
+  two. Deliberately **not** encrypted: it is scheduled for deletion in phase B,
+  and a key stored next to the file it decrypts protects against nothing.
 - **Phase B (follow-up change):** Terraform provisions `vault01`; Vault is
   initialised and unsealed; every remaining Ansible secret — `pihole_password`,
   `life_dashboard_proton_ics_url`, the Tailscale pre-auth key, and both git

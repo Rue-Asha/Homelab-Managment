@@ -30,6 +30,7 @@ is reachable (API answers 401), so only credentials are missing.
 - [x] 1b.3 Fill the real token into `~/.config/homelab/terraform.env` (template created, mode 0600)
 - [x] 1b.4 **Determine whether the ansible-vault password still exists.** If not, `pihole_password`, `life_dashboard_proton_ics_url`, the Tailscale pre-auth key, and both git deploy keys are unrecoverable and must be regenerated — fold that into phase B
   - Vault password is available; existing secrets stay usable, nothing needs regenerating.
+- [ ] 1b.6 Write the vault password to `~/.config/homelab/vault_pass` (mode `0600`, **outside the repo**, alongside the PVE token). `ansible.cfg` now points there; tilde expansion verified
 - [x] 1b.5 Verify SSH works again: `ssh -i ~/.ssh/Proxmox root@192.168.0.22` and `ssh -i ~/.ssh/Proxmox ansible@192.168.0.225`
 
 ## 2. Repository scaffolding
@@ -155,5 +156,5 @@ data but about availability.
 
 ## 14. Handoff to phase B (not implemented here)
 
-- [ ] 14.1 Run `/opsx:propose` for the Vault change once this change has landed and `terraform apply` is proven: provision `vault01`, initialise/unseal, migrate `pihole_password`, `life_dashboard_proton_ics_url`, the Tailscale pre-auth key, and both git deploy keys from ansible-vault to Vault, then remove `.vault_pass` and the `vault_password_file` line from `ansible/ansible.cfg`
+- [ ] 14.1 Run `/opsx:propose` for the Vault change once this change has landed and `terraform apply` is proven: provision `vault01`, initialise/unseal, migrate `pihole_password`, `life_dashboard_proton_ics_url`, the Tailscale pre-auth key, and both git deploy keys from ansible-vault to Vault, then remove `~/.config/homelab/vault_pass` and the `vault_password_file` line from `ansible/ansible.cfg`
 - [ ] 14.2 Include AWS KMS auto-unseal in that proposal — it removes the manual post-reboot unseal step and is the intended cloud-security learning vehicle
