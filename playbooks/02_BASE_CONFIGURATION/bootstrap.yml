@@ -1,0 +1,36 @@
+---
+# Baseline configuration for a freshly provisioned guest.
+#
+# Runs after `terraform apply` has created the guest. Terraform seeds the SSH
+# key into the guest's root account; this playbook creates the unprivileged
+# ansible account every later playbook connects as, then hands over to `common`
+# which closes root SSH login.
+#
+# ONE-SHOT for fresh guests. The first play connects as root, which `common`
+# disables at the end of the run -- by design. Re-running it against an already
+# hardened host will fail to connect, and does not need to succeed: the state it
+# establishes is already in place. To re-bootstrap, recreate the guest.
+#
+#   terraform -chdir=terraform/environments/homelab apply
+#   ansible-playbook playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l <host>
+
+- name: Bootstrap the ansible account on a freshly provisioned guest
+  hosts: proxmox_guest
+  gather_facts: false
+  remote_user: "{{ guest_bootstrap_connect_user | default('root') }}"
+  roles:
+    - guest_bootstrap
+
+- name: Verify the ansible account is reachable before hardening
+  hosts: proxmox_guest
+  gather_facts: false
+  tasks:
+    - name: Wait for SSH as the unprivileged ansible user
+      ansible.builtin.wait_for_connection:
+        timeout: 60
+
+- name: Apply baseline configuration
+  hosts: proxmox_guest
+  become: true
+  roles:
+    - common

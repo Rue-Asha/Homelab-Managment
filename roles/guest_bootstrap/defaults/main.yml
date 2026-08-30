@@ -1,0 +1,16 @@
+#SPDX-License-Identifier: MIT-0
+---
+# The unprivileged account every later playbook connects as.
+guest_bootstrap_user: ansible
+guest_bootstrap_user_shell: /bin/bash
+guest_bootstrap_user_home: "/home/{{ guest_bootstrap_user }}"
+
+# Public key authorised for that account. Terraform seeds the same key into the
+# guest's root account at creation; this hands it to the unprivileged user so
+# root SSH login can be closed afterwards by the common role.
+guest_bootstrap_ssh_public_key: "{{ lookup('ansible.builtin.file', '~/.ssh/Proxmox.pub') }}"
+
+guest_bootstrap_packages:
+  - sudo
+
+guest_bootstrap_sudoers_path: "/etc/sudoers.d/{{ guest_bootstrap_user }}"

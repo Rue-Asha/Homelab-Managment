@@ -1,0 +1,11 @@
+#SPDX-License-Identifier: MIT-0
+---
+- name: Authorise the SSH key for the ansible user
+  ansible.posix.authorized_key:
+    user: "{{ guest_bootstrap_user }}"
+    key: "{{ guest_bootstrap_ssh_public_key }}"
+    state: present
+    exclusive: true
+# Reachability as the ansible user is verified by a separate play in
+# playbooks/02_BASE_CONFIGURATION/bootstrap.yml -- overriding ansible_user on a
+# single task does not reliably re-establish the already-open SSH connection.

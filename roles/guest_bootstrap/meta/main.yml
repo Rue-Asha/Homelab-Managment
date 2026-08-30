@@ -1,0 +1,23 @@
+#SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: >-
+    Prepare a freshly provisioned guest for SSH-based Ansible management:
+    ensure a Python interpreter, create the unprivileged ansible account,
+    grant passwordless sudo, and authorise its SSH key. Runs inside the
+    guest over SSH as root; replaces the pct-exec bootstrap that ran on the
+    Proxmox node before Terraform took over provisioning.
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - bootstrap
+    - ssh
+    - sudo
+
+dependencies: []
