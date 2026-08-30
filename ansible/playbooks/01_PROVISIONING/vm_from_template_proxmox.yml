@@ -1,8 +1,0 @@
----
-# Creates a VM from a Proxmox template complete with OS installation
-
-- name: Provision VMs in Proxmox from template
-  hosts: vm_proxmox
-  gather_facts: false
-  roles:
-    - proxmox_vm_template

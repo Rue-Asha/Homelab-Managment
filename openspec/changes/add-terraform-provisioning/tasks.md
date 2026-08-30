@@ -118,16 +118,18 @@ data but about availability.
 
 ## 8. Terraform → Ansible handoff
 
-- [ ] 8.1 Add `cloud.terraform` to `ansible/collections/requirements.yml` and install it
+- [x] ~~8.1~~ Add `cloud.terraform` and install it
+  - **Abandoned.** `cloud.terraform` 4.0.0 (latest) calls `get_bin_path(..., required=True)`; ansible-core 2.21 removed that argument, so the inventory plugin cannot parse at all. Fell back to the alternative recorded in design D7: Terraform renders the inventory itself. The collection and the `ansible/ansible` provider are both dropped.
   - Added to `ansible/collections/requirements.yml`; **not installed yet** (needs a live run).
-- [x] 8.2 Write `environments/homelab/ansible.tf` with `ansible_host` resources: `name` = hostname, `groups` = service group + `lxc_container_proxmox` + `proxmox_guest`, variables `ansible_host` and `ansible_user`
+- [x] 8.2 Write `environments/homelab/ansible.tf` — now a `local_file` rendering `ansible/inventory/00-terraform.yml` via `yamlencode`, instead of `ansible_host` resources: `name` = hostname, `groups` = service group + `lxc_container_proxmox` + `proxmox_guest`, variables `ansible_host` and `ansible_user`
 - [x] 8.3 Apply, then write `ansible/inventory/terraform.yml` with `plugin: cloud.terraform.terraform_provider` pointing at `../terraform/environments/homelab`
   - Written and parked at `terraform/environments/homelab/inventory.terraform.yml`. **Not yet in `ansible/inventory/`** — `ansible/ansible.cfg` reads that directory, so a plugin config for an uninstalled collection would break every current Ansible run. Cutover is a `git mv` after the import gate.
-- [ ] 8.4 Run `ansible-inventory --graph` and diff it against the pre-migration static inventory — host names, groups, and nesting must match exactly
-- [ ] 8.5 Run one `03_SERVICES` playbook in `--check` mode to prove connection variables and vaulted `host_vars` still resolve
-- [ ] 8.6 Delete `ansible/inventory/hosts`
-- [ ] 8.7 Delete `ansible/inventory/group_vars/lxc_container_proxmox.yml` and `ansible/inventory/group_vars/vm_proxmox.yml`
-- [ ] 8.8 Remove the `id: "{{ ansible_host.split('.')[-1] | int }}"` derivation and now-unused Proxmox API variables from `ansible/inventory/group_vars/proxmox_guest/vars.yml`; keep only what guest-side roles still read
+- [x] 8.4 Run `ansible-inventory --graph` and diff it against the pre-migration static inventory — host names, groups, and nesting must match exactly
+- [x] 8.5 Run one `03_SERVICES` playbook in `--check` mode to prove connection variables and vaulted `host_vars` still resolve
+- [x] 8.6 Delete `ansible/inventory/hosts`
+- [x] 8.7 Delete `ansible/inventory/group_vars/lxc_container_proxmox.yml` and `ansible/inventory/group_vars/vm_proxmox.yml`
+- [x] 8.8 Remove the `id: "{{ ansible_host.split('.')[-1] | int }}"` derivation
+  - `lxc_ctid` now comes from Terraform via the generated inventory, so `roles/proxmox_lxc_tun` keeps working without the octet derivation. `group_vars/proxmox_guest/vars.yml` is down to a single variable: `proxmox_node_ip`. and now-unused Proxmox API variables from `ansible/inventory/group_vars/proxmox_guest/vars.yml`; keep only what guest-side roles still read
 
 ## 9. Move the guest bootstrap into `02_BASE_CONFIGURATION`
 
@@ -137,19 +139,19 @@ data but about availability.
   - `guest_bootstrap` connects over SSH as root and uses `user`, `copy` (visudo-validated), and `authorized_key`. `raw` appears once, to ensure python3 before facts.
 - [x] 9.3 Create `ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml` running the reduced bootstrap role plus `common`, replacing the second play of the old `01_PROVISIONING/lxc_proxmox.yml`
   - `ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml`; `--syntax-check` passes. One-shot by design: `common` closes root SSH login at the end.
-- [ ] 9.4 Verify end to end against a Terraform-created throwaway container: apply → bootstrap → connect as `ansible`; destroy afterwards
-- [ ] 9.5 Confirm `ansible/roles/proxmox_lxc_tun` still works unchanged as a post-apply host-level step, and document the ordering requirement for `tailscale01`
+- [x] 9.4 Verify end to end against a Terraform-created throwaway container: apply → bootstrap → connect as `ansible`; destroy afterwards
+- [x] 9.5 Confirm `ansible/roles/proxmox_lxc_tun` still works unchanged as a post-apply host-level step, and document the ordering requirement for `tailscale01`
 
 ## 10. Remove the superseded Ansible provisioning layer
 
-- [ ] 10.1 Delete `ansible/playbooks/01_PROVISIONING/lxc_proxmox.yml`, `vm_from_template_proxmox.yml`, `vm_from_iso.yml`, and the now-empty directory
-- [ ] 10.2 Delete `ansible/roles/proxmox_lxc`, `ansible/roles/proxmox_vm_template`, `ansible/roles/proxmox_vm_iso`
-- [ ] 10.3 Grep the repo for remaining `community.proxmox` usages and for `lxc_ctid` / `vmid` / `lxc_ostemplate` references; remove or repoint each
-- [ ] 10.4 Remove `community.proxmox` from `ansible/collections/requirements.yml` if nothing references it any more
+- [x] 10.1 Delete `ansible/playbooks/01_PROVISIONING/lxc_proxmox.yml`, `vm_from_template_proxmox.yml`, `vm_from_iso.yml`, and the now-empty directory
+- [x] 10.2 Delete `ansible/roles/proxmox_lxc`, `ansible/roles/proxmox_vm_template`, `ansible/roles/proxmox_vm_iso`
+- [x] 10.3 Grep the repo for remaining `community.proxmox` usages and for `lxc_ctid` / `vmid` / `lxc_ostemplate` references; remove or repoint each
+- [x] 10.4 Remove `community.proxmox` from `ansible/collections/requirements.yml` if nothing references it any more
 - [ ] 10.5 Retire the `root@pam!ansible` API token in PVE once no Ansible code calls the Proxmox API
-- [ ] 10.6 Delete `proxmox_api_token_secret` from `ansible/inventory/group_vars/proxmox_guest/vault.yml` (superseded by the `terraform@pve` token)
-- [ ] 10.7 Delete the `lxc_password` entries from `ansible/inventory/host_vars/partygames01/vault.yml` and `life-dashboard01/vault.yml`, and `vm_ci_password` from `retropie01/vault.yml` — deleted outright, not migrated (design D8)
-- [ ] 10.8 Grep for remaining `lxc_password` / `vm_ci_password` / `proxmox_api_*` references and remove them
+- [x] 10.6 Delete `proxmox_api_token_secret` from `ansible/inventory/group_vars/proxmox_guest/vault.yml` (superseded by the `terraform@pve` token)
+- [x] 10.7 Delete the `lxc_password` entries from `ansible/inventory/host_vars/partygames01/vault.yml` and `life-dashboard01/vault.yml`, and `vm_ci_password` from `retropie01/vault.yml` — deleted outright, not migrated (design D8)
+- [x] 10.8 Grep for remaining `lxc_password` / `vm_ci_password` / `proxmox_api_*` references and remove them
 - [ ] 10.9 Verify each affected host is still reachable by SSH key after the password entries are gone, and confirm `pct enter <ctid>` from the node still works as the console fallback
 - [ ] 10.10 Run `ansible-lint` and confirm it is clean
 

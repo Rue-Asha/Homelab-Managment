@@ -1,8 +1,0 @@
----
-# Creates a VM with Specified VM settings but only attaches the ISO!
-# VM has to be booted from the ISO to complete installation
-- name: Provision VMs in Proxmox from ISO
-  hosts: vm_proxmox
-  gather_facts: false
-  roles:
-    - proxmox_vm_iso

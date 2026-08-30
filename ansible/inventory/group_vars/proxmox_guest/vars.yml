@@ -1,12 +1,8 @@
 ---
-id: "{{ ansible_host.split('.')[-1] | int }}"
+# Terraform owns guest identity: vmid, IP, hostname, and group membership come
+# from the generated inventory (ansible/inventory/00-terraform.yml). What is
+# left here is what roles/proxmox_lxc_tun needs to reach the Proxmox node --
+# the one host-level concern the Terraform provider cannot express.
 
+# Inventory name of the Proxmox node, used as a delegate_to target.
 proxmox_node_ip: proxmox1
-proxmox_node_name: ray
-proxmox_api_host: 192.168.0.22
-proxmox_api_user: root@pam
-proxmox_api_token_id: ansible
-
-default_gateway: 192.168.0.1
-
-default_ssh_public_key: "{{ lookup('ansible.builtin.file', '~/.ssh/Proxmox.pub') }}"

@@ -7,9 +7,9 @@ terraform {
       source  = "bpg/proxmox"
       version = "~> 0.111"
     }
-    ansible = {
-      source  = "ansible/ansible"
-      version = "~> 1.3"
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.5"
     }
   }
 

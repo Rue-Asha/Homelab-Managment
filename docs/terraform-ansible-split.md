@@ -36,7 +36,7 @@ desired-state model. Three consequences, all visible in the code it removed:
 | `ansible/roles/proxmox_lxc` | `terraform/modules/proxmox_lxc` |
 | `ansible/roles/proxmox_vm_template`, `ansible/roles/proxmox_vm_iso` | `terraform/modules/proxmox_vm` |
 | `ansible/playbooks/01_PROVISIONING/*` | `terraform apply` |
-| `ansible/inventory/hosts` | `terraform/environments/homelab/hosts.auto.tfvars` |
+| `ansible/inventory/hosts` | `terraform/environments/homelab/hosts.auto.tfvars`, rendered into `ansible/inventory/00-terraform.yml` |
 | `group_vars/{lxc_container_proxmox,vm_proxmox}.yml` | root-module variables |
 | `proxmox_lxc_bootstrap` — SSH key via `pct exec` | Terraform `initialization.user_account.keys` |
 | `proxmox_lxc_bootstrap` — root password | **deleted**, see Secrets |
@@ -83,6 +83,25 @@ terraform apply
 ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l tailscale01
 ansible-playbook ansible/playbooks/03_SERVICES/tailscale.yml -l tailscale01   # includes proxmox_lxc_tun
 ```
+
+## How Ansible learns about hosts
+
+Terraform renders `ansible/inventory/00-terraform.yml` on every apply: host
+names, addresses, group hierarchy, and `lxc_ctid`. It is committed and marked
+generated — `local_file` compares content on every plan, so a hand-edit or a
+stale checkout surfaces as drift instead of being silently tolerated.
+
+The original design used the `ansible/ansible` Terraform provider plus the
+`cloud.terraform` inventory plugin. That is not usable here: `cloud.terraform`
+4.0.0, its latest release, calls `get_bin_path(..., required=True)`, and
+ansible-core 2.21 removed that argument, so the plugin cannot parse the
+inventory at all. Rendering turned out better anyway — no extra collection, no
+extra provider, no dependency on readable Terraform state at inventory time,
+and the inventory shows up in diffs next to the tfvars change that caused it.
+
+The group hierarchy is reproduced exactly (`<service>` →
+`lxc_container_proxmox` / `vm_proxmox` → `proxmox_guest`), so every existing
+file under `group_vars/` and `host_vars/` keeps resolving unchanged.
 
 ## Secrets
 

@@ -18,5 +18,3 @@ provider "proxmox" {
     private_key = file(pathexpand(var.pve_ssh_private_key_path))
   }
 }
-
-provider "ansible" {}

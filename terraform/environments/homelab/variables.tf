@@ -12,6 +12,24 @@ variable "pve_insecure" {
   default     = true
 }
 
+variable "pve_node_ip" {
+  description = "IP of the Proxmox node, for the Ansible inventory entry."
+  type        = string
+  default     = "192.168.0.22"
+}
+
+variable "pve_node_inventory_name" {
+  description = "Ansible inventory host name for the node (kept from the old static inventory)."
+  type        = string
+  default     = "proxmox1"
+}
+
+variable "guest_ansible_user" {
+  description = "Unprivileged account Ansible connects as, created by roles/guest_bootstrap."
+  type        = string
+  default     = "ansible"
+}
+
 variable "pve_ssh_username" {
   description = "SSH user on the Proxmox node, for provider operations the API does not cover."
   type        = string

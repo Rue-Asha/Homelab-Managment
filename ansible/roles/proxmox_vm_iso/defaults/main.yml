@@ -1,7 +1,0 @@
-#SPDX-License-Identifier: MIT-0
----
-# Guest OS type hint for proxmox_kvm
-vm_ostype: l26
-
-# Boot order: try cdrom (ide2) then disk then network
-vm_boot_order_iso: "order=ide2;scsi0;net0"
