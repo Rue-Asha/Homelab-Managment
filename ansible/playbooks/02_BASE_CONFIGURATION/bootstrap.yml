@@ -17,7 +17,12 @@
 - name: Bootstrap the ansible account on a freshly provisioned guest
   hosts: proxmox_guest
   gather_facts: false
-  remote_user: "{{ guest_bootstrap_connect_user | default('root') }}"
+  # Must be a play var, not the `remote_user` keyword: the inventory sets
+  # ansible_user=ansible per host, and an inventory host var beats the keyword.
+  # Play vars sit above inventory host vars in the precedence chain, so this
+  # wins -- and the account does not exist yet, so root is the only way in.
+  vars:
+    ansible_user: "{{ guest_bootstrap_connect_user | default('root') }}"
   roles:
     - guest_bootstrap
 
