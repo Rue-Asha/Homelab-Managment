@@ -104,6 +104,18 @@ data but about availability.
 - [x] 7.9 Add `SDN.Use` only if network configuration actually fails — do not add it pre-emptively
   - It failed; `SDN.Use` added to the role. The empirical approach was correct: the provider's documented minimum did not mention it.
 
+## 7b. Redeploy the services (rebuild path)
+
+- [x] 7b.1 `02_BASE_CONFIGURATION/bootstrap.yml` — ansible user, sudo, SSH key, `common` baseline on all four
+  - Needed a fix: the play set `remote_user`, which an inventory `ansible_user` host var overrides. Moved to a play var, which outranks inventory host vars.
+- [x] 7b.2 `03_SERVICES/pihole.yml` — verified answering DNS on 192.168.0.225 and admin UI HTTP 200
+- [x] 7b.3 `03_SERVICES/partygames.yml` — built from the pinned tag, nginx + service active, HTTP 200
+- [x] 7b.4 `03_SERVICES/life-dashboard.yml` — built from the pinned tag, nginx + service active, HTTP 200
+- [x] 7b.5 Wire `proxmox_lxc_tun` into `03_SERVICES/tailscale.yml` as its own play — it lost its home when `01_PROVISIONING` was superseded. Verified `/dev/net/tun` present in CT 230.
+- [ ] 7b.6 **Blocked: the Tailscale pre-auth key is still the placeholder** from `add-tailscale-subnet-router` task 1.2 (decrypts to a single character), so `tailscale up` fails. `tailscaled` is installed and running, TUN works, the node is "Logged out". Generate a real key, `ansible-vault edit ansible/inventory/host_vars/tailscale01/vault.yml`, re-run the playbook
+- [ ] 7b.7 Approve the advertised `192.168.0.0/24` route in the Tailscale admin console and disable key expiry on the node (manual, as documented in the original change)
+- [ ] 7b.8 On this control host, `tailscale up --accept-routes=false` — it sits on the LAN directly and must not route 192.168.0.0/24 over the tailnet again
+
 ## 8. Terraform → Ansible handoff
 
 - [ ] 8.1 Add `cloud.terraform` to `ansible/collections/requirements.yml` and install it
