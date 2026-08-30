@@ -31,6 +31,39 @@ Other top-level directories:
 
 ---
 
+## Terraform / Ansible boundary
+
+> **Migration in progress.** The `terraform/` tree exists and is additive;
+> `playbooks/01_PROVISIONING/` is still the active path until the import gate
+> passes. The rules below describe the target and already apply to new work.
+
+**Terraform** declares anything the Proxmox API owns: guest existence, vmid,
+hostname, CPU/memory/swap/disk, network interface and IP, boot behaviour,
+template/ISO reference, and the SSH key seeded at creation.
+
+**Ansible** declares anything inside the guest: users, sudo, SSH hardening,
+packages, runtimes, services, application releases.
+
+- **Never add guest lifecycle to Ansible.** No role or playbook may call a
+  Proxmox API module to create, resize, or delete a guest.
+- **Terraform `provisioner` / `remote-exec` / `local-exec` are banned** —
+  one-shot, not idempotent, invisible to `plan`. Post-boot configuration is
+  always an Ansible run.
+- **`for_each` over a hostname-keyed map, never `count`** — `count` renumbers on
+  deletion and proposes recreating unrelated containers.
+- **vmid and IP are independent declarations** — deriving one from the other
+  welds the address plan to container IDs.
+- **No guest root passwords.** `pct enter <ctid>` is the console fallback.
+- Terraform follows HashiCorp style (`terraform fmt`, snake_case,
+  `main.tf`/`variables.tf`/`outputs.tf`/`versions.tf` per module) — the Ansible
+  rules below do not apply to it.
+
+Known gap: `roles/proxmox_lxc_tun` stays in Ansible because the provider has no
+escape hatch for raw `lxc.*` config keys. Full detail, including the run order
+and the secret model, in `docs/terraform-ansible-split.md`.
+
+---
+
 ## Service delivery model
 
 Application services are deployed **app-per-LXC**, not via container images. Each service runs in its own Proxmox LXC; Ansible converges the box into the service (no Docker/OCI images, no registry, no CI required). `systemd` supervises the process (restart, boot-start, journald) — it is the runtime supervisor in place of a container runtime.
@@ -93,9 +126,18 @@ These are choices the team has made that differ from defaults or are worth keepi
 
 ## Before committing
 
+Ansible:
+
 - `ansible-playbook --syntax-check <playbook>.yml`
 - `ansible-lint`
 - Address all lint warnings
+
+Terraform (anything under `terraform/`):
+
+- `terraform fmt -check -recursive`
+- `terraform validate`
+- `tflint`
+- `checkov -d .` (or `trivy config .`) — address findings or record a reason inline
 
 ---
 
