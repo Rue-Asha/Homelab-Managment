@@ -30,17 +30,34 @@ Docker, no CI required — `systemd` supervises the process). See
 
 ## Repo layout
 
+Two peer layers in one repo: Terraform provisions the guests, Ansible
+configures them. See `docs/terraform-ansible-split.md` for where the line runs.
+
 ```
-playbooks/
-  00_OPERATIONAL/         # ad-hoc / day-2 ops: backups, snapshots, maintenance
-  01_PROVISIONING/        # create infrastructure: LXCs, VMs from ISO/template
-  02_BASE_CONFIGURATION/  # post-provision host setup: users, SSH, hardening
-  03_SERVICES/            # application install & config
-inventory/                # hosts + group_vars/host_vars (no vars in `hosts` itself)
-roles/                    # standard Galaxy role structure
-docs/                     # architecture notes and implementation plans
-openspec/                 # OpenSpec change proposals for larger pieces of work
+terraform/                    # provisioning layer — Proxmox guest lifecycle
+  environments/homelab/       #   the single root module: one node, one state
+    hosts.auto.tfvars         #   the host catalogue
+  modules/                    #   proxmox_lxc, proxmox_vm
+ansible/                      # configuration layer — everything inside a guest
+  ansible.cfg
+  inventory/                  #   group_vars/host_vars (no vars in `hosts` itself)
+  playbooks/
+    00_OPERATIONAL/           #   ad-hoc / day-2 ops
+    02_BASE_CONFIGURATION/    #   users, SSH, hardening
+    03_SERVICES/              #   application install & config
+  roles/                      #   standard Galaxy role structure
+docs/                         # architecture notes and implementation plans
+openspec/                     # OpenSpec change proposals for larger pieces of work
 ```
 
 The `NN_` prefix on playbook categories encodes the order a fresh host moves
-through them (00 → 03).
+through them. `01_PROVISIONING` is gone — that step is now `terraform apply`.
+
+Run everything **from the repo root**: `.envrc` exports `ANSIBLE_CONFIG`, so
+Ansible finds its config in `ansible/` without changing directory.
+
+```sh
+direnv allow                                          # once
+terraform -chdir=terraform/environments/homelab apply
+ansible-playbook ansible/playbooks/03_SERVICES/pihole.yml -l pihole01
+```

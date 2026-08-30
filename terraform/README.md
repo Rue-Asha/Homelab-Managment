@@ -13,13 +13,23 @@ boot is always an Ansible run.
 
 ## Layout
 
+This tree is the provisioning layer; `../ansible/` is the configuration layer.
+Both sit at the repo root as peers.
+
 ```
 environments/homelab/     the only root module — one node, one state
-  hosts.auto.tfvars       the host catalogue (replaced inventory/hosts)
-  imports.tf              adoption of the four pre-existing containers
+  hosts.auto.tfvars       the host catalogue (replaced ansible/inventory/hosts)
+  imports.tf              commented-out state-loss recovery path
   ansible.tf              inventory metadata consumed by Ansible
 modules/proxmox_lxc/      one container
 modules/proxmox_vm/       one VM, clone-from-template or ISO shell
+```
+
+Run Terraform from the repo root with `-chdir`, so the Ansible commands that
+follow keep resolving their relative paths:
+
+```sh
+terraform -chdir=terraform/environments/homelab plan
 ```
 
 ## Credentials
@@ -59,30 +69,42 @@ credential, but it does record the complete address and container-ID plan.
 Losing it is recoverable — `imports.tf` stays in the repo precisely so
 re-adoption is one `terraform apply` rather than archaeology.
 
-## First run (migration)
+## First run (rebuild)
 
-Order matters; do not skip the gate.
+The four pre-existing containers are **destroyed and recreated**, not imported.
+That was a deliberate choice: importing proves only that Terraform can describe
+what already exists, never that it can build it, and every future host takes the
+create path. See design D9 in the OpenSpec change for the full reasoning.
 
-```sh
-cd terraform/environments/homelab
-terraform init                  # commit the resulting .terraform.lock.hcl
-terraform plan                  # imports the four live containers
-```
+Consequences to know before starting:
 
-**Gate:** the plan must end up reporting *no changes* for all four containers.
-
-If it proposes a change, the **configuration** is wrong — fix
-`hosts.auto.tfvars` or the module defaults until it matches the live container.
-Never modify a container to match the config. A proposed `destroy` or
-`replace` of a running container is a hard stop: back out and re-check.
+- **There is no rollback.** The old containers must be gone before Terraform can
+  create guests with the same vmids. Existing guest data is discarded by
+  decision — the SQLite databases and uploaded images are not preserved.
+- **The LAN loses DNS** while `pihole01` is gone. Set a fallback resolver on the
+  router first, or rebuild it last.
 
 ```sh
-terraform apply                 # writes the imported resources into state
-terraform plan                  # must say "No changes"
+terraform -chdir=terraform/environments/homelab init    # commit .terraform.lock.hcl
+terraform -chdir=terraform/environments/homelab plan    # expect N creates, 0 destroys
 ```
 
-Then verify the services still answer: Pi-hole DNS, both web services, and the
-Tailscale route.
+Read the plan in full before applying — that habit is the only safety net left.
+Then, on the node, `pct stop <ctid> && pct destroy <ctid>` for each old guest,
+and:
+
+```sh
+terraform -chdir=terraform/environments/homelab apply
+terraform -chdir=terraform/environments/homelab plan    # must say "No changes"
+
+ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml
+ansible-playbook ansible/playbooks/03_SERVICES/<service>.yml -l <host>
+```
+
+Before trusting it, run the API preflight: confirm the LXC template exists on
+`local`, that `local-lvm` has room, and that the declared sizing matches what
+you actually want. That check already caught `pihole01` being declared at
+1024 MiB / 8 GiB when the live container ran at 512 / 4.
 
 ## Day-2
 
@@ -103,7 +125,7 @@ protection is reading the plan.
 
 ## What Terraform does *not* do here
 
-`roles/proxmox_lxc_tun` writes raw `lxc.mount.entry` lines into
+`ansible/roles/proxmox_lxc_tun` writes raw `lxc.mount.entry` lines into
 `/etc/pve/lxc/<ctid>.conf` for `/dev/net/tun` passthrough on `tailscale01`. The
 provider models container config as typed attributes with no escape hatch for
 arbitrary `lxc.*` keys, so this stays a host-level Ansible role delegated to the

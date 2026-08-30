@@ -9,32 +9,47 @@ Proxmox-based homelab automation. Standard Ansible best practices (Red Hat CoP) 
 
 ## Repo layout
 
-Playbooks live under a single `playbooks/` directory, grouped by purpose. Directory names carry a numeric prefix that reflects the order in which the categories are applied to a fresh host (00 → 03).
+Two peer layers, one repo. `terraform/` provisions the guests, `ansible/` configures them — see the boundary section below.
 
 ```
-playbooks/
+ansible/                    # configuration layer
+  ansible.cfg
+  inventory/
+  playbooks/
+  roles/
+  collections/
+terraform/                  # provisioning layer
+  environments/homelab/     # the single root module — one node, one state
+  modules/
+docs/  openspec/  .envrc
+```
+
+`.envrc` exports `ANSIBLE_CONFIG=$PWD/ansible/ansible.cfg`, so **every command runs from the repo root**. Relative paths inside `ansible.cfg` resolve against the config file's own directory, so they needed no rewriting when the tree moved. Do not `cd ansible/` — the Terraform-backed inventory plugin resolves `project_path` relative to the working directory.
+
+Playbooks are grouped by purpose, with a numeric prefix encoding the order the categories are applied to a fresh host (00 → 03).
+
+```
+ansible/playbooks/
   00_OPERATIONAL/         # ad-hoc / day-2 ops: backups, snapshots, maintenance, troubleshooting
-  01_PROVISIONING/        # create infrastructure: LXC containers, VMs from ISO/template
+  01_PROVISIONING/        # SUPERSEDED by terraform/ — removed once the rebuild lands
   02_BASE_CONFIGURATION/  # post-provision host setup: users, SSH, packages, OS hardening
   03_SERVICES/            # application install & config: pihole, retropie, etc.
 ```
 
-Other top-level directories:
-
-- `inventory/` — structured directory inventory (no vars in `hosts` file). Introduce a `<datacenter>/<environment>/` layer only when a second site or environment is added.
-  - `inventory/group_vars/`, `inventory/host_vars/` — co-located with the inventory; split into logical YAML files per group/host
-- `roles/` — standard Galaxy structure; variables prefixed with role name (`foo_packages`, not `packages`)
+- `ansible/inventory/` — structured directory inventory (no vars in `hosts` file). Introduce a `<datacenter>/<environment>/` layer only when a second site or environment is added.
+  - `ansible/inventory/group_vars/`, `ansible/inventory/host_vars/` — co-located with the inventory; split into logical YAML files per group/host
+- `ansible/roles/` — standard Galaxy structure; variables prefixed with role name (`foo_packages`, not `packages`)
 
 **Naming:**
 - **Top-level playbook category directories** use `NN_UPPER_SNAKE_CASE` (e.g. `01_PROVISIONING/`). The `NN_` prefix encodes apply order so the categories sort visually in the right sequence.
-- **Filenames inside each category** stay descriptive snake_case with no further numbering — e.g. `playbooks/01_PROVISIONING/lxc_proxmox.yml`, `playbooks/03_SERVICES/pihole.yml`. The directory provides the ordering; the filename describes the action.
+- **Filenames inside each category** stay descriptive snake_case with no further numbering — e.g. `ansible/playbooks/01_PROVISIONING/lxc_proxmox.yml`, `ansible/playbooks/03_SERVICES/pihole.yml`. The directory provides the ordering; the filename describes the action.
 
 ---
 
 ## Terraform / Ansible boundary
 
 > **Migration in progress.** The `terraform/` tree exists and is additive;
-> `playbooks/01_PROVISIONING/` is still the active path until the import gate
+> `ansible/playbooks/01_PROVISIONING/` is still the active path until the import gate
 > passes. The rules below describe the target and already apply to new work.
 
 **Terraform** declares anything the Proxmox API owns: guest existence, vmid,
@@ -58,7 +73,7 @@ packages, runtimes, services, application releases.
   `main.tf`/`variables.tf`/`outputs.tf`/`versions.tf` per module) — the Ansible
   rules below do not apply to it.
 
-Known gap: `roles/proxmox_lxc_tun` stays in Ansible because the provider has no
+Known gap: `ansible/roles/proxmox_lxc_tun` stays in Ansible because the provider has no
 escape hatch for raw `lxc.*` config keys. Full detail, including the run order
 and the secret model, in `docs/terraform-ansible-split.md`.
 

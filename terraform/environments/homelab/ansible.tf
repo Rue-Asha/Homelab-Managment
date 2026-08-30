@@ -2,12 +2,12 @@
 #
 # These resources hold no infrastructure; they record inventory metadata in
 # state, which the cloud.terraform.terraform_provider inventory plugin reads
-# back (see inventory/terraform.yml). One definition of each host, consumed by
+# back (see ansible/inventory/terraform.yml). One definition of each host, consumed by
 # both layers.
 #
-# The group hierarchy reproduces the old inventory/hosts exactly -- service
+# The group hierarchy reproduces the old ansible/inventory/hosts exactly -- service
 # group -> lxc_container_proxmox / vm_proxmox -> proxmox_guest -- so every
-# existing file under inventory/group_vars/ and inventory/host_vars/ keeps
+# existing file under ansible/inventory/group_vars/ and ansible/inventory/host_vars/ keeps
 # resolving to the same hosts with no edits.
 
 resource "ansible_host" "lxc" {
@@ -35,7 +35,7 @@ resource "ansible_host" "vm" {
 }
 
 # The Proxmox node itself is not managed by Terraform -- it is the substrate.
-# It still needs to be in the inventory, because roles/proxmox_lxc_tun delegates
+# It still needs to be in the inventory, because ansible/roles/proxmox_lxc_tun delegates
 # to it for the raw LXC config the provider cannot express.
 resource "ansible_host" "proxmox_node" {
   name   = "proxmox1"

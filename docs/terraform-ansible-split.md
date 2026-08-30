@@ -21,11 +21,11 @@ and why the leftovers are where they are.
 The Ansible provisioning it replaced had no state, and therefore no
 desired-state model. Three consequences, all visible in the code it removed:
 
-- **No update path.** `roles/proxmox_lxc/tasks/create.yml` was gated on
+- **No update path.** `ansible/roles/proxmox_lxc/tasks/create.yml` was gated on
   `when: not lxc_exists`, so changing `lxc_memory` on an existing host silently
   did nothing.
 - **No teardown path.** Nothing implemented `state: absent`. Removing a host
-  from `inventory/hosts` left the container running forever.
+  from `ansible/inventory/hosts` left the container running forever.
 - **Hand-rolled idempotency.** Each role reimplemented "does it exist / is there
   free space" in `preflight.yml`, which a state file gives for free.
 
@@ -33,16 +33,16 @@ desired-state model. Three consequences, all visible in the code it removed:
 
 | Before | After |
 |---|---|
-| `roles/proxmox_lxc` | `terraform/modules/proxmox_lxc` |
-| `roles/proxmox_vm_template`, `roles/proxmox_vm_iso` | `terraform/modules/proxmox_vm` |
-| `playbooks/01_PROVISIONING/*` | `terraform apply` |
-| `inventory/hosts` | `terraform/environments/homelab/hosts.auto.tfvars` |
+| `ansible/roles/proxmox_lxc` | `terraform/modules/proxmox_lxc` |
+| `ansible/roles/proxmox_vm_template`, `ansible/roles/proxmox_vm_iso` | `terraform/modules/proxmox_vm` |
+| `ansible/playbooks/01_PROVISIONING/*` | `terraform apply` |
+| `ansible/inventory/hosts` | `terraform/environments/homelab/hosts.auto.tfvars` |
 | `group_vars/{lxc_container_proxmox,vm_proxmox}.yml` | root-module variables |
 | `proxmox_lxc_bootstrap` — SSH key via `pct exec` | Terraform `initialization.user_account.keys` |
 | `proxmox_lxc_bootstrap` — root password | **deleted**, see Secrets |
-| `proxmox_lxc_bootstrap` — `ansible` user + sudo | `roles/guest_bootstrap`, via `02_BASE_CONFIGURATION/bootstrap.yml` |
-| `roles/proxmox_lxc_tun` | **unchanged**, still Ansible — see below |
-| `roles/common`, all of `03_SERVICES` | **unchanged** |
+| `proxmox_lxc_bootstrap` — `ansible` user + sudo | `ansible/roles/guest_bootstrap`, via `02_BASE_CONFIGURATION/bootstrap.yml` |
+| `ansible/roles/proxmox_lxc_tun` | **unchanged**, still Ansible — see below |
+| `ansible/roles/common`, all of `03_SERVICES` | **unchanged** |
 
 The app-per-LXC, two-repo, build-on-host service model is untouched. Nothing
 about how services are deployed changed.
@@ -51,9 +51,9 @@ about how services are deployed changed.
 
 ```sh
 terraform -chdir=terraform/environments/homelab apply     # 1. infrastructure
-ansible-playbook playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l <host>
+ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l <host>
                                                           # 2. ansible user + baseline
-ansible-playbook playbooks/03_SERVICES/<service>.yml -l <host>
+ansible-playbook ansible/playbooks/03_SERVICES/<service>.yml -l <host>
                                                           # 3. the service
 ```
 
@@ -61,7 +61,7 @@ For `tailscale01` there is an extra step between 2 and 3 — see the next sectio
 
 ## The one thing Terraform cannot express
 
-`roles/proxmox_lxc_tun` writes raw lines into `/etc/pve/lxc/<ctid>.conf` to pass
+`ansible/roles/proxmox_lxc_tun` writes raw lines into `/etc/pve/lxc/<ctid>.conf` to pass
 `/dev/net/tun` into the unprivileged container Tailscale runs in:
 
 ```
@@ -80,8 +80,8 @@ until the role runs again. Order after any recreate:
 
 ```sh
 terraform apply
-ansible-playbook playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l tailscale01
-ansible-playbook playbooks/03_SERVICES/tailscale.yml -l tailscale01   # includes proxmox_lxc_tun
+ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l tailscale01
+ansible-playbook ansible/playbooks/03_SERVICES/tailscale.yml -l tailscale01   # includes proxmox_lxc_tun
 ```
 
 ## Secrets

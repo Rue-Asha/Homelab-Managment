@@ -25,7 +25,7 @@ variable "pve_ssh_private_key_path" {
 }
 
 # Shared network defaults -------------------------------------------------
-# Absorbed from inventory/group_vars/{lxc_container_proxmox,vm_proxmox}.yml,
+# Absorbed from ansible/inventory/group_vars/{lxc_container_proxmox,vm_proxmox}.yml,
 # which are deleted once the migration lands.
 
 variable "network_bridge" {
@@ -71,7 +71,7 @@ variable "vm_datastore_id" {
 variable "ssh_public_key_path" {
   description = <<-EOT
     Public key seeded into every guest, replacing the pct-exec key injection in
-    roles/proxmox_lxc_bootstrap. Matches default_ssh_public_key in the old
+    ansible/roles/proxmox_lxc_bootstrap. Matches default_ssh_public_key in the old
     group_vars/proxmox_guest/vars.yml.
   EOT
   type        = string

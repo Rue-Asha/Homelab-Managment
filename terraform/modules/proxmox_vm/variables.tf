@@ -1,7 +1,7 @@
 # Covers both former provisioning paths in one module:
-#   - clone from a Proxmox template + cloud-init  (was roles/proxmox_vm_template)
+#   - clone from a Proxmox template + cloud-init  (was ansible/roles/proxmox_vm_template)
 #   - bare shell with an ISO attached, installed by hand at the console
-#     (was roles/proxmox_vm_iso)
+#     (was ansible/roles/proxmox_vm_iso)
 # Set exactly one of `clone_vmid` or `cdrom_file_id`.
 
 variable "hostname" {

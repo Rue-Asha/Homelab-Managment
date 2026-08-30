@@ -61,7 +61,7 @@ Constraints:
 
 ## Decisions
 
-### D1: Same repo, new top-level `terraform/` — not a second repo
+### D1: Same repo, two peer top-level directories — not a second repo
 
 Terraform and Ansible go in **this** repo, side by side.
 
@@ -85,38 +85,64 @@ points at a relative path, not a cross-repo artifact fetch.
   Rejected — it implies Terraform is a step inside an Ansible run. It is a
   peer layer that runs first, on its own.
 
-Resulting layout:
+**Revised during implementation — symmetric top-level split.** The first cut
+left Ansible at the repo root with `terraform/` as a subdirectory. That put six
+of nine root entries under one tool and made the provisioning layer look like an
+appendage of the configuration layer, contradicting the boundary this design
+spends D6 establishing. Structure that has to be explained away is worse than
+structure that explains itself.
+
+Ansible moves into `ansible/`, peer to `terraform/`:
 
 ```
-terraform/
+terraform/                   # provisioning layer
   environments/
     homelab/                 # the single root module — one state, one node
       versions.tf            # required_version + provider constraints
       providers.tf           # bpg/proxmox + ansible provider config
       variables.tf
-      hosts.auto.tfvars      # ← the host catalogue (replaces inventory/hosts)
+      hosts.auto.tfvars      # ← the host catalogue (replaces ansible/inventory/hosts)
       containers.tf          # module "lxc" for_each over var.lxc_hosts
       vms.tf                 # module "vm"  for_each over var.vm_hosts
       ansible.tf             # ansible_host / ansible_group resources (D7)
-      imports.tf             # import blocks for the four live LXCs (D9)
+      imports.tf             # commented-out state-loss recovery path (D9)
       outputs.tf
   modules/
     proxmox_lxc/             # main.tf variables.tf outputs.tf versions.tf
     proxmox_vm/
   README.md                  # bootstrap + day-2 commands
-playbooks/
-  00_OPERATIONAL/
-  02_BASE_CONFIGURATION/     # ← gains bootstrap.yml (was empty)
-  03_SERVICES/               # unchanged
-inventory/
-  terraform.yml              # ← inventory plugin config (replaces `hosts`)
-  group_vars/                # unchanged
-  host_vars/                 # unchanged
-roles/                       # minus proxmox_lxc, proxmox_vm_iso, proxmox_vm_template
+ansible/                     # configuration layer
+  ansible.cfg
+  .ansible-lint
+  collections/
+  inventory/
+    terraform.yml            # ← inventory plugin config (replaces `hosts`)
+    group_vars/              # unchanged
+    host_vars/               # unchanged
+  playbooks/
+    00_OPERATIONAL/
+    02_BASE_CONFIGURATION/   # ← gains bootstrap.yml (was empty)
+    03_SERVICES/             # unchanged
+  roles/                     # minus proxmox_lxc, proxmox_vm_iso, proxmox_vm_template
+docs/  openspec/
+.envrc                       # ← exports ANSIBLE_CONFIG
 ```
 
-`playbooks/01_PROVISIONING/` is removed entirely. The `NN_` ordering still
-reads correctly: Terraform is the new step "00" that precedes `02_`.
+`ansible/playbooks/01_PROVISIONING/` is removed entirely. The `NN_` ordering
+still reads correctly: Terraform is the new step "00" that precedes `02_`.
+
+The move costs nothing operationally, which was verified before committing to
+it: relative paths inside `ansible.cfg` (`inventory = inventory/`,
+`roles_path = ./roles`, `vault_password_file = .vault_pass`) resolve against the
+**config file's own directory**, not the working directory, so none of them
+needed rewriting. A root `.envrc` exports `ANSIBLE_CONFIG`, and every command
+continues to run from the repo root — which is required anyway, because the
+inventory plugin resolves `project_path` relative to the working directory.
+
+Naming by tool (`ansible/`, `terraform/`) rather than by function
+(`configuration/`, `provisioning/`) is deliberate: the directory name should
+tell you which command you type in it. It is also more accurate —
+`00_OPERATIONAL` is day-2 ops, not configuration.
 
 ### D2: `bpg/proxmox` provider, not `Telmate/proxmox`
 
