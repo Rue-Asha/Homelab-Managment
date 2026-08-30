@@ -1,0 +1,18 @@
+---
+# Ansible dynamic inventory, sourced from Terraform state.
+#
+# NOT YET ACTIVE. This file is parked here on purpose: ansible.cfg reads
+# `inventory/` as a directory, so dropping a plugin config in there before
+# cloud.terraform is installed and state exists would break every current
+# Ansible run. At cutover (tasks.md 8.3), after the import gate has passed:
+#
+#   ansible-galaxy collection install -r collections/requirements.yml
+#   git mv terraform/environments/homelab/inventory.terraform.yml inventory/terraform.yml
+#   ansible-inventory --graph        # must match the old inventory/hosts exactly
+#   git rm inventory/hosts
+#
+# project_path is resolved relative to the current working directory, which is
+# the repo root for every documented command in this project.
+
+plugin: cloud.terraform.terraform_provider
+project_path: terraform/environments/homelab

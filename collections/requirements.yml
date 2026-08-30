@@ -1,5 +1,10 @@
 ---
 collections:
+  # Reads hosts back out of Terraform state -- see inventory/terraform.yml.
+  - name: cloud.terraform
+    version: ">=2.0.0"
+  # Still required while playbooks/01_PROVISIONING exists. Removed once the
+  # Terraform import gate has passed and the provisioning roles are deleted.
   - name: community.proxmox
     version: ">=1.6.0"
   - name: community.general

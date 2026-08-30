@@ -4,6 +4,23 @@
 .vault_pass
 vault_pass.txt
 
+# Terraform
+# State is never committed: it records the full address and container-ID plan,
+# and Terraform makes no guarantee a future resource attribute stays non-secret.
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.tfstate.lock.info
+crash.log
+crash.*.log
+# Belt and braces -- no secret-bearing tfvars should exist at all (the PVE token
+# arrives via environment variables), but do not let one slip in by accident.
+*.auto.tfvars.secret
+secrets.auto.tfvars
+# NOT ignored, deliberately: .terraform.lock.hcl (provider pinning) and
+# hosts.auto.tfvars (the host catalogue, which holds no secrets).
+.direnv/
+
 # OS
 .DS_Store
 Thumbs.db
