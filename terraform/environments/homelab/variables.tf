@@ -95,8 +95,10 @@ variable "lxc_hosts" {
     disk_gb = optional(number, 8)
     vlan_id = optional(number)
     tags    = optional(list(string), [])
+    # nesting defaults to true: systemd-logind will not start in an
+    # unprivileged container without it, and every SSH login then stalls 25s.
     features = optional(object({
-      nesting = optional(bool, false)
+      nesting = optional(bool, true)
       fuse    = optional(bool, false)
       keyctl  = optional(bool, false)
     }), {})

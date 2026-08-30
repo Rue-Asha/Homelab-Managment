@@ -91,9 +91,13 @@ data but about availability.
   - Despite the dropped SSH session the remote loop ran to completion: **all four containers were destroyed**, not just 230. Verified by API, not assumed.
 - [ ] 7.2 `terraform plan` — expect four creates, zero destroys; read it in full before applying
   - First `apply` failed on all four with `Permission check failed (/sdn/zones/localnetwork/vmbr0, SDN.Use)` — PVE 9 requires `SDN.Use` to attach a network interface. Anticipated in 7.9. State stayed clean (no partial container resources). Fix: add `SDN.Use` to the `TerraformProvisioning` role.
-- [ ] 7.3 `terraform apply`; then `terraform plan` again and confirm "No changes"
-- [ ] 7.4 Confirm each container boots and answers SSH as root with the new key
-- [ ] 7.5 Prove the update path: change one swap value, `apply`, confirm an in-place update rather than a replacement
+- [x] 7.3 `terraform apply`; then `terraform plan` again and confirm "No changes"
+- [x] 7.4 Confirm each container boots and answers SSH as root with the new key
+  - **`nesting` must be on for any systemd guest.** The first build set `features { nesting=false, fuse=false, keyctl=false }`, so `systemd-logind` failed to start and every SSH login blocked 25s on `org.freedesktop.login1` before falling through. Fatal for Ansible, which opens a connection per task. Measured 26.6s → 0.3s after enabling it. The old Ansible role omitted `features` entirely and inherited a working default; setting them explicitly to false was the regression.
+  - **PVE only lets a non-root user change `nesting`**, not the other flags: `changing feature flags (except nesting) is only allowed for root@pam`. The module now emits `fuse`/`keyctl` only when actually requested (`? true : null`) -- sending them even as `false` counts as a change.
+  - Even so, the *update* path stayed blocked while *create* worked fine as `terraform@pve`. Containers were therefore recreated rather than updated -- free here, since they were still empty. Worth knowing: enabling a non-nesting feature on an existing container needs an apply under `root@pam`.
+- [x] 7.5 Prove the update path: change one swap value, `apply`, confirm an in-place update rather than a replacement
+  - Proven incidentally by the `nesting` change: `0 to add, 4 to change, 0 to destroy`, in-place. This is the path the old role could not express at all (`when: not lxc_exists`).
 - [ ] 7.6 Prove the destroy path and `for_each` behaviour: add a throwaway host, apply, remove its entry, apply, and confirm only that host is destroyed
 - [ ] 7.7 **Tighten the PVE role now that failures are cheap.** Reduce to the intended set and re-verify against a throwaway container: `VM.Allocate VM.Audit VM.Clone VM.Config.{CPU,Disk,Memory,Network,Options,Cloudinit,CDROM} VM.PowerMgmt Datastore.AllocateSpace Datastore.Audit`. Drop every `VM.GuestAgent.*` (arbitrary command execution inside running guests), `VM.Console`, `VM.Backup`, `VM.Migrate`, `VM.Replicate`, `VM.Snapshot*`, `Datastore.Allocate`, `Datastore.AllocateTemplate`
 - [ ] 7.8 Rebind from `/` to `/vms` + `/storage` with propagate, so the token has no reach into `/access`, `/nodes`, `/sdn`, or `/pool`

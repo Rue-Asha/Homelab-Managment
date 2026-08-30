@@ -56,10 +56,15 @@ resource "proxmox_virtual_environment_container" "this" {
     type             = var.os_type
   }
 
+  # Only `nesting` may be set by a non-root PVE user; PVE rejects any change to
+  # the other flags with "changing feature flags (except nesting) is only
+  # allowed for root@pam". Sending them at all -- even as false -- counts as a
+  # change, so they are emitted only when actually requested, and enabling them
+  # requires an apply run under root@pam.
   features {
     nesting = var.features.nesting
-    fuse    = var.features.fuse
-    keyctl  = var.features.keyctl
+    fuse    = var.features.fuse ? true : null
+    keyctl  = var.features.keyctl ? true : null
   }
 
   # Deliberately no `prevent_destroy`. It cannot be driven by a variable

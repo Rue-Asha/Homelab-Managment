@@ -136,9 +136,15 @@ variable "started" {
 }
 
 variable "features" {
-  description = "Optional container features (nesting, fuse, keyctl)."
+  description = <<-EOT
+    Container features. `nesting` defaults to true and should stay that way for
+    any systemd guest: without it, systemd-logind fails to start in an
+    unprivileged container, and every SSH login then blocks for 25 seconds
+    waiting on org.freedesktop.login1 before falling through. Ansible opens a
+    connection per task, so that is fatal in practice, not cosmetic.
+  EOT
   type = object({
-    nesting = optional(bool, false)
+    nesting = optional(bool, true)
     fuse    = optional(bool, false)
     keyctl  = optional(bool, false)
   })
