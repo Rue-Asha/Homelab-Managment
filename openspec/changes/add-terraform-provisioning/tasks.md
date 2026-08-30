@@ -1,8 +1,12 @@
-> **Status:** everything implementable without a live Proxmox or an installed
-> Terraform is done and committed on `feat/terraform-provisioning`. The HCL is
-> **unvalidated** — `terraform` is not installed on the control host, so
-> `fmt`/`validate`/`plan` have not run. Nothing is deleted or rewired: the
-> existing Ansible provisioning path is still the active one.
+> **Status:** the Terraform layer is written, validated, and planned against the
+> live node — `fmt`, `validate`, `tflint`, and `terraform plan` all pass, and the
+> plan matches the four running containers exactly (`9 to add, 0 to change,
+> 0 to destroy`). All prerequisites and credential recovery are done.
+>
+> **Nothing has been destroyed or rewired yet.** The existing Ansible
+> provisioning path is still the active one. The next step (section 7) is the
+> first irreversible one, and backups were dropped by operator decision — the
+> old guests and their data are being discarded deliberately.
 
 ## 1. Prerequisites (operator, out-of-band)
 
@@ -12,8 +16,9 @@
   - Created, but **much broader than designed**: 27 privileges (PVEVMAdmin + PVEDatastoreAdmin) bound at `/`, including `VM.GuestAgent.Unrestricted`, `VM.GuestAgent.FileWrite`, `VM.Console`, and `Datastore.Allocate`. No `Permissions.Modify`/`User.Modify`/`Sys.*`, so it cannot escalate itself. Tightening deferred to 7.7 — see there.
 - [x] 1.4 Create an API token for `terraform@pve` and write the credentials to `~/.config/homelab/terraform.env` (mode `0600`, **outside the repo**) exporting `PROXMOX_VE_ENDPOINT` and `PROXMOX_VE_API_TOKEN`. This is the designated bootstrap credential — it stays outside Vault permanently (design D12)
 - [x] 1.5 Add a committed `terraform/environments/homelab/.envrc` (`dotenv_if_exists ~/.config/homelab/terraform.env`) and run `direnv allow`; `direnv` is already installed
-- [ ] 1.6 Take a Proxmox backup or snapshot of `pihole01`, `partygames01`, `life-dashboard01`, and `tailscale01` before any Terraform run
-- [ ] 1.7 Record the live configuration of all four containers (`pct config <ctid>` for each) as the reference the Terraform configuration must reproduce exactly
+- [~] 1.6 ~~Take a Proxmox backup or snapshot before any Terraform run~~ — **dropped** (operator decision: guests are rebuilt from scratch, existing data is not wanted)
+- [x] 1.7 Record the live configuration of all four containers
+  - Done via the API preflight, not `pct config`. Found pihole01 at 512 MiB / 4 GiB where the catalogue claimed 1024 / 8.
 
 ## 1b. Recover lost credentials (unplanned — discovered during validation)
 
@@ -21,10 +26,11 @@ The control host had neither `~/.ssh/Proxmox` nor `.vault_pass`. The node itself
 is reachable (API answers 401), so only credentials are missing.
 
 - [x] 1b.1 Generate a replacement ed25519 keypair at `~/.ssh/Proxmox`
-- [ ] 1b.2 Distribute the new public key via the PVE web shell: append to `/root/.ssh/authorized_keys` on the node, and to `/home/ansible/.ssh/authorized_keys` in CTs 223, 224, 225, 230 (`restore-key.sh`)
+- [x] 1b.2 Distribute the new public key via the PVE web shell: append to `/root/.ssh/authorized_keys` on the node, and to `/home/ansible/.ssh/authorized_keys` in CTs 223, 224, 225, 230 (`restore-key.sh`)
 - [x] 1b.3 Fill the real token into `~/.config/homelab/terraform.env` (template created, mode 0600)
-- [ ] 1b.4 **Determine whether the ansible-vault password still exists.** If not, `pihole_password`, `life_dashboard_proton_ics_url`, the Tailscale pre-auth key, and both git deploy keys are unrecoverable and must be regenerated — fold that into phase B
-- [ ] 1b.5 Verify SSH works again: `ssh -i ~/.ssh/Proxmox root@192.168.0.22` and `ssh -i ~/.ssh/Proxmox ansible@192.168.0.225`
+- [x] 1b.4 **Determine whether the ansible-vault password still exists.** If not, `pihole_password`, `life_dashboard_proton_ics_url`, the Tailscale pre-auth key, and both git deploy keys are unrecoverable and must be regenerated — fold that into phase B
+  - Vault password is available; existing secrets stay usable, nothing needs regenerating.
+- [x] 1b.5 Verify SSH works again: `ssh -i ~/.ssh/Proxmox root@192.168.0.22` and `ssh -i ~/.ssh/Proxmox ansible@192.168.0.225`
 
 ## 2. Repository scaffolding
 
@@ -61,18 +67,18 @@ is reachable (API answers 401), so only credentials are missing.
 - [x] 5.7 Run `terraform validate` and `terraform fmt`
   - `validate` passes against the real provider schema, so the container/VM block structures are confirmed. `fmt` and `tflint --recursive` clean.
 
-## 6. Capture everything before destroying anything
+## 6. Pre-rebuild (backups dropped by operator decision)
 
-**This backup is the only rollback.** The containers must be destroyed before
-Terraform can create guests with the same vmids, so the import-era safety net
-("revert the commit, nothing was touched") no longer exists.
+The original plan led with backups. The operator chose to discard the existing
+guests and their data outright, so 6.1-6.4 are gone. What remains is not about
+data but about availability.
 
-- [ ] 6.1 `vzdump` all four containers (223, 224, 225, 230) to a datastore with room; confirm the archives exist and note their size
-- [ ] 6.2 Copy the persistent data off: `/var/lib/life-dashboard/` (app.db + images/) and `/var/lib/partygames/` (app.db) — tar them to the control host, not just to the node
-- [ ] 6.3 Record `pct config <ctid>` for all four, as the reference for what the rebuilt containers should look like
-- [ ] 6.4 Note anything configured by hand that is not in a role: Pi-hole local DNS records, custom blocklists, any manual tweak worth reproducing
-- [ ] 6.5 Set a fallback resolver on the router (or plan to rebuild `pihole01` last) — the LAN loses DNS while it is gone
-- [ ] 6.6 Confirm the vault password works: `ansible-vault view inventory/host_vars/pihole01/vault.yml`
+- [~] 6.1 ~~vzdump all four containers~~ — dropped
+- [~] 6.2 ~~Copy /var/lib/{life-dashboard,partygames} off the containers~~ — dropped; the SQLite databases and uploaded images are intentionally discarded
+- [~] 6.3 ~~Record `pct config`~~ — superseded by the API preflight (see 1.7)
+- [~] 6.4 ~~Note hand-configured Pi-hole state~~ — dropped; Pi-hole is set up fresh from the role
+- [ ] 6.5 **Set a fallback resolver on the router** before destroying `pihole01`. The LAN loses DNS while it is gone, including the control host running Terraform
+- [x] 6.6 Confirm the vault password works — available, existing secrets stay usable
 
 ## 7. Rebuild the guests with Terraform
 
