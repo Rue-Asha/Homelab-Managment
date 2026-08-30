@@ -383,27 +383,50 @@ second Vault and is not an option here.
   thing to run for real. Recorded here because it remains the fallback if the
   unseal burden proves impractical.
 
-### D9: Migrate by `import`, never by rebuild
+### D9: Rebuild the guests from scratch (revised — was: migrate by `import`)
 
-The four LXCs are running services with persistent data. They are adopted using
-Terraform 1.5+ `import` blocks committed to `imports.tf`, so the adoption is
-reviewable code rather than shell history and is replayable if state is lost:
+**Original decision:** adopt the four running containers with `import` blocks,
+gated on a completely empty `terraform plan`, so no running service is ever
+destroyed.
 
-```hcl
-import {
-  to = module.lxc["pihole01"].proxmox_virtual_environment_container.this
-  id = "ray/225"   # <node>/<vmid> — confirm format against provider docs
-}
-```
+**Revised, at the operator's decision:** destroy the four containers and let
+Terraform create them fresh. The services are redeployed by the existing
+`03_SERVICES` playbooks afterwards.
 
-The gate for success is a **completely empty `terraform plan`** after import. If
-the plan proposes changes, the *configuration* is wrong (defaults that do not
-match reality) and gets corrected until it matches — the container is never
-"fixed" to match the config. Any proposed `-/+ destroy and then create` on a
-running container is a hard stop.
+Why this is defensible, not merely expedient:
 
-Order: import and reach empty-plan **before** deleting the Ansible provisioning
-roles, so rollback is "revert the commit, the playbooks are still there".
+- It exercises the **create** path end to end. The import path proves only that
+  Terraform can describe what already exists; it never proves Terraform can
+  build it. Every future host takes the create path.
+- The result genuinely matches the declaration. An imported container is
+  "close enough that the plan is empty", which quietly tolerates drift the
+  configuration never expressed.
+- It sidesteps the expected import wrinkle: for LXC, Proxmox writes SSH keys
+  into the container filesystem rather than storing them in the container
+  config, so `initialization.user_account.keys` is likely not readable back on
+  import. That would have shown as a permanent `null → [key]` diff and forced
+  either an `ignore_changes` escape hatch or a weakened gate.
+- Tasks 6.x and 7.x collapse into one sequence.
+
+What it costs, and the mitigation:
+
+| Host | Lost on rebuild | Mitigation |
+|---|---|---|
+| `life-dashboard01` | `/var/lib/life-dashboard/app.db` + `images/` | `vzdump` + tar before destroy; restore after |
+| `partygames01` | `/var/lib/partygames/app.db` | same |
+| `pihole01` | local DNS records, blocklist tweaks, query history | same; **and the LAN loses DNS during the rebuild** — set a fallback resolver on the router first, or rebuild it last |
+| `tailscale01` | tailnet node identity | new node; re-approve the advertised route in the admin console and remove the stale node |
+
+**The backup is the only rollback.** With import, rollback was "revert the
+commit, the containers were never touched". That safety net is gone by
+construction: the containers must be destroyed before Terraform can create
+guests with the same vmids. Backups therefore move from prudent to mandatory,
+and are taken *before* anything is destroyed.
+
+`imports.tf` is kept as a commented-out template rather than deleted. An active
+import block for a non-existent resource makes `plan` fail, but the recovery
+argument still holds once the guests exist: if state is lost later, uncommenting
+it re-adopts the running containers instead of proposing to recreate them.
 
 ### D10: VM-from-ISO becomes a Terraform VM with an attached CD-ROM
 

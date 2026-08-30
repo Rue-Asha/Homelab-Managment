@@ -47,25 +47,32 @@ fields. Neither SHALL be derived from the other.
 - **WHEN** a host's IPv4 address is changed while its vmid is left unchanged
 - **THEN** the plan shows only a network configuration change and the container ID is unaffected
 
-### Requirement: Existing running guests are adopted without recreation
+### Requirement: The existing guests are rebuilt, and their data is captured first
 
-The four live containers (`pihole01`, `partygames01`, `life-dashboard01`,
-`tailscale01`) SHALL be brought under Terraform management using `import`
-blocks committed to the repository. No running guest may be destroyed or
-recreated during adoption.
+The four containers (`pihole01`, `partygames01`, `life-dashboard01`,
+`tailscale01`) SHALL be destroyed and recreated by Terraform rather than
+imported. Because recreation is irreversible, a verified backup SHALL exist
+before any guest is destroyed.
 
-#### Scenario: Adoption is complete
-- **WHEN** the import blocks have been applied and `terraform plan` is run against the unchanged configuration
-- **THEN** the plan reports no changes for any of the four containers
+#### Scenario: Backups precede destruction
+- **WHEN** the rebuild sequence begins
+- **THEN** a Proxmox backup of all four containers exists
+- **AND** `/var/lib/life-dashboard/` and `/var/lib/partygames/` have been copied off the containers
+- **AND** no guest is destroyed until both are confirmed present
 
-#### Scenario: Configuration does not match reality
-- **WHEN** a post-import `terraform plan` proposes any change to a running container
-- **THEN** the Terraform configuration is corrected to match the live container
-- **AND** the container is NOT modified to match the configuration
+#### Scenario: Guests are created from the declaration
+- **WHEN** the old containers have been destroyed and `terraform apply` is run
+- **THEN** all four containers are created with the declared vmid, IP, sizing, and SSH key
+- **AND** a subsequent `terraform plan` reports no changes
 
-#### Scenario: A destructive plan is produced
-- **WHEN** a plan proposes destroying or replacing a container that is running a service
-- **THEN** the migration halts and no `apply` is performed
+#### Scenario: Services are restored
+- **WHEN** the containers have been created and baseline-configured
+- **THEN** each service playbook runs successfully against its host
+- **AND** the captured SQLite databases and uploaded images are restored where wanted
+
+#### Scenario: DNS availability during the rebuild
+- **WHEN** `pihole01` is destroyed
+- **THEN** the LAN has a fallback resolver configured, or `pihole01` is rebuilt last to bound the outage
 
 ### Requirement: Terraform does not configure guest internals
 

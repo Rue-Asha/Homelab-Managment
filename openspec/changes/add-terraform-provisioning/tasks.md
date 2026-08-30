@@ -60,21 +60,27 @@ is reachable (API answers 401), so only credentials are missing.
 - [x] 5.7 Run `terraform validate` and `terraform fmt`
   - `validate` passes against the real provider schema, so the container/VM block structures are confirmed. `fmt` and `tflint --recursive` clean.
 
-## 6. Import the four live containers
+## 6. Capture everything before destroying anything
 
-- [ ] 6.1 Confirm the container import ID format for the pinned provider version against its documentation (design assumes `<node>/<vmid>`, i.e. `ray/225`)
-- [x] 6.2 Write `imports.tf` with one `import` block per live container, targeting `module.lxc["<name>"].proxmox_virtual_environment_container.this`
-- [ ] 6.3 Run `terraform plan`; iterate on the **configuration** until the plan is empty — never modify a container to match the config
-- [ ] 6.4 **Gate:** confirm the plan proposes no destroy or replace for any running container; halt the migration if it does
-- [ ] 6.5 Run `terraform apply` to write the imported resources into state; re-run `terraform plan` and confirm "No changes"
-- [ ] 6.6 Verify all four services are still reachable (Pi-hole DNS, both web services, Tailscale route)
+**This backup is the only rollback.** The containers must be destroyed before
+Terraform can create guests with the same vmids, so the import-era safety net
+("revert the commit, nothing was touched") no longer exists.
 
-## 7. Prove the update and destroy paths
+- [ ] 6.1 `vzdump` all four containers (223, 224, 225, 230) to a datastore with room; confirm the archives exist and note their size
+- [ ] 6.2 Copy the persistent data off: `/var/lib/life-dashboard/` (app.db + images/) and `/var/lib/partygames/` (app.db) — tar them to the control host, not just to the node
+- [ ] 6.3 Record `pct config <ctid>` for all four, as the reference for what the rebuilt containers should look like
+- [ ] 6.4 Note anything configured by hand that is not in a role: Pi-hole local DNS records, custom blocklists, any manual tweak worth reproducing
+- [ ] 6.5 Set a fallback resolver on the router (or plan to rebuild `pihole01` last) — the LAN loses DNS while it is gone
+- [ ] 6.6 Confirm the vault password works: `ansible-vault view inventory/host_vars/pihole01/vault.yml`
 
-- [ ] 7.1 Make one trivial reversible change (e.g. a swap value) and apply it, confirming the in-place update path that the Ansible roles never had
-- [ ] 7.2 Create a throwaway container purely from Terraform, confirm it boots with the SSH key seeded by the provider
-- [ ] 7.3 Destroy the throwaway container with `terraform apply` after removing its map entry, confirming the destroy path
-- [ ] 7.4 Confirm removing a middle entry from the `lxc_hosts` map proposes destroying only that host (`for_each` behaviour, spec requirement)
+## 7. Rebuild the guests with Terraform
+
+- [ ] 7.1 Destroy the four old containers (`pct stop <ctid> && pct destroy <ctid>`), one at a time
+- [ ] 7.2 `terraform plan` — expect four creates, zero destroys; read it in full before applying
+- [ ] 7.3 `terraform apply`; then `terraform plan` again and confirm "No changes"
+- [ ] 7.4 Confirm each container boots and answers SSH as root with the new key
+- [ ] 7.5 Prove the update path: change one swap value, `apply`, confirm an in-place update rather than a replacement
+- [ ] 7.6 Prove the destroy path and `for_each` behaviour: add a throwaway host, apply, remove its entry, apply, and confirm only that host is destroyed
 
 ## 8. Terraform → Ansible handoff
 
