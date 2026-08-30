@@ -1,0 +1,112 @@
+## 1. Prerequisites (operator, out-of-band)
+
+- [ ] 1.1 Install Terraform (>= 1.7, for `for_each` in `import` blocks) on the control host; verify `terraform version`
+- [ ] 1.2 Install `tflint` and `checkov` (or `trivy config`) on the control host
+- [ ] 1.3 Create a PVE user `terraform@pve` and a **custom role** with the minimum privileges for guest lifecycle (start from the provider's documented minimum: `VM.Allocate`, `VM.Config.*`, `VM.PowerMgmt`, `VM.Audit`, `Datastore.AllocateSpace`, `Datastore.Audit`); assign it at the appropriate path
+- [ ] 1.4 Create an API token for `terraform@pve` and write the credentials to `~/.config/homelab/terraform.env` (mode `0600`, **outside the repo**) exporting `PROXMOX_VE_ENDPOINT` and `PROXMOX_VE_API_TOKEN`. This is the designated bootstrap credential — it stays outside Vault permanently (design D12)
+- [ ] 1.5 Add a committed `terraform/environments/homelab/.envrc` (`dotenv_if_exists ~/.config/homelab/terraform.env`) and run `direnv allow`; `direnv` is already installed
+- [ ] 1.6 Take a Proxmox backup or snapshot of `pihole01`, `partygames01`, `life-dashboard01`, and `tailscale01` before any Terraform run
+- [ ] 1.7 Record the live configuration of all four containers (`pct config <ctid>` for each) as the reference the Terraform configuration must reproduce exactly
+
+## 2. Repository scaffolding
+
+- [ ] 2.1 Create the `terraform/` tree: `environments/homelab/` and `modules/proxmox_lxc/`, `modules/proxmox_vm/`
+- [ ] 2.2 Add `.gitignore` entries: `*.tfstate`, `*.tfstate.*`, `.terraform/`, `crash*.log`, `secrets.auto.tfvars`
+- [ ] 2.3 Write `environments/homelab/versions.tf`: `required_version`, `bpg/proxmox` pinned with `~>`, `ansible/ansible` provider
+- [ ] 2.4 Write `environments/homelab/providers.tf` reading endpoint and token from environment variables only — no credential literals
+- [ ] 2.5 Run `terraform init`; commit `.terraform.lock.hcl`
+
+## 3. `modules/proxmox_lxc`
+
+- [ ] 3.1 Write `variables.tf`: `hostname`, `vmid`, `ipv4_address`, `gateway`, `cores`, `memory`, `swap`, `disk_gb`, `datastore`, `template_file_id`, `bridge`, `vlan_id` (optional), `ssh_public_keys`, `unprivileged`, `start_on_boot`. **No `root_password` variable** — root passwords are deleted, not migrated (design D8)
+- [ ] 3.2 Write `main.tf` with a single `proxmox_virtual_environment_container` resource — no `count`/`for_each` inside the module
+- [ ] 3.3 Map the SSH public key onto `initialization.user_account.keys`, replacing the `pct exec` bootstrap in `roles/proxmox_lxc_bootstrap/tasks/ssh.yml`; set no password
+- [ ] 3.4 Write `outputs.tf`: `vmid`, `ipv4_address`, `hostname`
+- [ ] 3.5 Set homelab defaults (`unprivileged = true`, `start_on_boot = true`, swap `512`, bridge `vmbr0`) so a host entry stays short
+
+## 4. `modules/proxmox_vm`
+
+- [ ] 4.1 Write `variables.tf` covering both provisioning paths: a `clone` source (template name/vmid) **or** a `cdrom` file id, plus cores/sockets/memory/disk/bridge and cloud-init settings (user, ssh keys, ip config, nameservers) — no cloud-init password, per design D8
+- [ ] 4.2 Write `main.tf` with one `proxmox_virtual_environment_vm` resource covering clone-from-template and ISO-attached-shell cases (design D10)
+- [ ] 4.3 Write `outputs.tf`: `vmid`, `ipv4_address`, `hostname`
+- [ ] 4.4 Confirm the module is not instantiated yet — `retropie01` is unprovisioned and is deliberately **not** imported
+
+## 5. Host catalogue (root module)
+
+- [ ] 5.1 Write `variables.tf` for shared settings absorbed from `group_vars/lxc_container_proxmox.yml` and `vm_proxmox.yml`: bridge, gateway, CIDR, rootfs datastore, template file id, SSH public key path
+- [ ] 5.2 Write `hosts.auto.tfvars` with the `lxc_hosts` map for the four live containers, using their **actual** vmid, IP, cores, memory, swap, and disk from task 1.6 — vmid declared explicitly, not derived from the IP
+- [ ] 5.3 Write `containers.tf`: `module "lxc"` with `for_each = var.lxc_hosts` (never `count`)
+- [ ] 5.4 Write `vms.tf` with `module "vm"` over an empty `vm_hosts` map
+- [ ] 5.5 Write `outputs.tf` exposing hostname → vmid/IP for operator inspection
+- [ ] 5.6 Confirm the root module needs **no** secret-bearing tfvars file at all — the PVE token is the only secret and it arrives via environment variables
+- [ ] 5.7 Run `terraform validate` and `terraform fmt`
+
+## 6. Import the four live containers
+
+- [ ] 6.1 Confirm the container import ID format for the pinned provider version against its documentation (design assumes `<node>/<vmid>`, i.e. `ray/225`)
+- [ ] 6.2 Write `imports.tf` with one `import` block per live container, targeting `module.lxc["<name>"].proxmox_virtual_environment_container.this`
+- [ ] 6.3 Run `terraform plan`; iterate on the **configuration** until the plan is empty — never modify a container to match the config
+- [ ] 6.4 **Gate:** confirm the plan proposes no destroy or replace for any running container; halt the migration if it does
+- [ ] 6.5 Run `terraform apply` to write the imported resources into state; re-run `terraform plan` and confirm "No changes"
+- [ ] 6.6 Verify all four services are still reachable (Pi-hole DNS, both web services, Tailscale route)
+
+## 7. Prove the update and destroy paths
+
+- [ ] 7.1 Make one trivial reversible change (e.g. a swap value) and apply it, confirming the in-place update path that the Ansible roles never had
+- [ ] 7.2 Create a throwaway container purely from Terraform, confirm it boots with the SSH key seeded by the provider
+- [ ] 7.3 Destroy the throwaway container with `terraform apply` after removing its map entry, confirming the destroy path
+- [ ] 7.4 Confirm removing a middle entry from the `lxc_hosts` map proposes destroying only that host (`for_each` behaviour, spec requirement)
+
+## 8. Terraform → Ansible handoff
+
+- [ ] 8.1 Add `cloud.terraform` to `collections/requirements.yml` and install it
+- [ ] 8.2 Write `environments/homelab/ansible.tf` with `ansible_host` resources: `name` = hostname, `groups` = service group + `lxc_container_proxmox` + `proxmox_guest`, variables `ansible_host` and `ansible_user`
+- [ ] 8.3 Apply, then write `inventory/terraform.yml` with `plugin: cloud.terraform.terraform_provider` pointing at `../terraform/environments/homelab`
+- [ ] 8.4 Run `ansible-inventory --graph` and diff it against the pre-migration static inventory — host names, groups, and nesting must match exactly
+- [ ] 8.5 Run one `03_SERVICES` playbook in `--check` mode to prove connection variables and vaulted `host_vars` still resolve
+- [ ] 8.6 Delete `inventory/hosts`
+- [ ] 8.7 Delete `inventory/group_vars/lxc_container_proxmox.yml` and `inventory/group_vars/vm_proxmox.yml`
+- [ ] 8.8 Remove the `id: "{{ ansible_host.split('.')[-1] | int }}"` derivation and now-unused Proxmox API variables from `inventory/group_vars/proxmox_guest/vars.yml`; keep only what guest-side roles still read
+
+## 9. Move the guest bootstrap into `02_BASE_CONFIGURATION`
+
+- [ ] 9.1 Reduce `roles/proxmox_lxc_bootstrap` to guest-side concerns only: create the unprivileged `ansible` user and its sudo rule; delete `tasks/ssh.yml` and the password half of `tasks/account.yml` (now provider-seeded)
+- [ ] 9.2 Convert the remaining tasks from `pct exec` on the node to normal guest-side modules connecting as `root`
+- [ ] 9.3 Create `playbooks/02_BASE_CONFIGURATION/bootstrap.yml` running the reduced bootstrap role plus `common`, replacing the second play of the old `01_PROVISIONING/lxc_proxmox.yml`
+- [ ] 9.4 Verify end to end against a Terraform-created throwaway container: apply → bootstrap → connect as `ansible`; destroy afterwards
+- [ ] 9.5 Confirm `roles/proxmox_lxc_tun` still works unchanged as a post-apply host-level step, and document the ordering requirement for `tailscale01`
+
+## 10. Remove the superseded Ansible provisioning layer
+
+- [ ] 10.1 Delete `playbooks/01_PROVISIONING/lxc_proxmox.yml`, `vm_from_template_proxmox.yml`, `vm_from_iso.yml`, and the now-empty directory
+- [ ] 10.2 Delete `roles/proxmox_lxc`, `roles/proxmox_vm_template`, `roles/proxmox_vm_iso`
+- [ ] 10.3 Grep the repo for remaining `community.proxmox` usages and for `lxc_ctid` / `vmid` / `lxc_ostemplate` references; remove or repoint each
+- [ ] 10.4 Remove `community.proxmox` from `collections/requirements.yml` if nothing references it any more
+- [ ] 10.5 Retire the `root@pam!ansible` API token in PVE once no Ansible code calls the Proxmox API
+- [ ] 10.6 Delete `proxmox_api_token_secret` from `inventory/group_vars/proxmox_guest/vault.yml` (superseded by the `terraform@pve` token)
+- [ ] 10.7 Delete the `lxc_password` entries from `inventory/host_vars/partygames01/vault.yml` and `life-dashboard01/vault.yml`, and `vm_ci_password` from `retropie01/vault.yml` — deleted outright, not migrated (design D8)
+- [ ] 10.8 Grep for remaining `lxc_password` / `vm_ci_password` / `proxmox_api_*` references and remove them
+- [ ] 10.9 Verify each affected host is still reachable by SSH key after the password entries are gone, and confirm `pct enter <ctid>` from the node still works as the console fallback
+- [ ] 10.10 Run `ansible-lint` and confirm it is clean
+
+## 11. Validation gates
+
+- [ ] 11.1 Confirm `terraform fmt -check`, `terraform validate`, and `tflint` pass on the whole `terraform/` tree
+- [ ] 11.2 Run `checkov` (or `trivy config`) against `terraform/`; fix real findings, and record deliberate exceptions inline with a reason
+- [ ] 11.3 Verify `git status` is clean after an apply — no `*.tfstate`, `.terraform/`, or secret-bearing tfvars tracked or untracked
+- [ ] 11.4 Verify no credential literal exists anywhere in the repo (`git grep` for the token id and for `PROXMOX_VE_API_TOKEN` values)
+
+## 12. Documentation
+
+- [ ] 12.1 Write `terraform/README.md`: bootstrap order, where credentials come from, day-2 commands, state backup duty, and the post-apply Ansible steps Terraform cannot perform
+- [ ] 12.2 Write `docs/terraform-ansible-split.md`: the boundary rule, the table of what moved where, and the `proxmox_lxc_tun` drift caveat
+- [ ] 12.3 Update `README.md`: repo layout section (add `terraform/`, remove `01_PROVISIONING/`), and the provisioning row of the services table
+- [ ] 12.4 Update `.claude/CLAUDE.md`: add a Terraform/Ansible boundary section (including the provisioner ban), the Terraform style conventions, and the new pre-commit gates from section 11
+- [ ] 12.5 Document the secret model in `docs/terraform-ansible-split.md`: the PVE token is the bootstrap credential and stays outside Vault; root passwords are gone; `pct enter` is the console fallback
+- [ ] 12.6 Add the D11 roadmap items to `docs/` or an OpenSpec backlog note so the follow-on work (PVE RBAC, firewall, remote state, Tailscale ACLs, policy-as-code, cloud module) is not lost
+- [ ] 12.7 Invoke the `update-docs` skill — this is an architecture and deploy-model change, so the blog project page likely needs updating
+
+## 13. Handoff to phase B (not implemented here)
+
+- [ ] 13.1 Run `/opsx:propose` for the Vault change once this change has landed and `terraform apply` is proven: provision `vault01`, initialise/unseal, migrate `pihole_password`, `life_dashboard_proton_ics_url`, the Tailscale pre-auth key, and both git deploy keys from ansible-vault to Vault, then remove `.vault_pass` and the `vault_password_file` line from `ansible.cfg`
+- [ ] 13.2 Include AWS KMS auto-unseal in that proposal — it removes the manual post-reboot unseal step and is the intended cloud-security learning vehicle
