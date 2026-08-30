@@ -6,13 +6,24 @@
 
 ## 1. Prerequisites (operator, out-of-band)
 
-- [ ] 1.1 Install Terraform (>= 1.7, for `for_each` in `import` blocks) on the control host; verify `terraform version`
-- [ ] 1.2 Install `tflint` and `checkov` (or `trivy config`) on the control host
+- [x] 1.1 Install Terraform (>= 1.7, for `for_each` in `import` blocks) on the control host; verify `terraform version`
+- [x] 1.2 Install `tflint` and `checkov` (or `trivy config`) on the control host
 - [ ] 1.3 Create a PVE user `terraform@pve` and a **custom role** with the minimum privileges for guest lifecycle (start from the provider's documented minimum: `VM.Allocate`, `VM.Config.*`, `VM.PowerMgmt`, `VM.Audit`, `Datastore.AllocateSpace`, `Datastore.Audit`); assign it at the appropriate path
 - [ ] 1.4 Create an API token for `terraform@pve` and write the credentials to `~/.config/homelab/terraform.env` (mode `0600`, **outside the repo**) exporting `PROXMOX_VE_ENDPOINT` and `PROXMOX_VE_API_TOKEN`. This is the designated bootstrap credential — it stays outside Vault permanently (design D12)
 - [x] 1.5 Add a committed `terraform/environments/homelab/.envrc` (`dotenv_if_exists ~/.config/homelab/terraform.env`) and run `direnv allow`; `direnv` is already installed
 - [ ] 1.6 Take a Proxmox backup or snapshot of `pihole01`, `partygames01`, `life-dashboard01`, and `tailscale01` before any Terraform run
 - [ ] 1.7 Record the live configuration of all four containers (`pct config <ctid>` for each) as the reference the Terraform configuration must reproduce exactly
+
+## 1b. Recover lost credentials (unplanned — discovered during validation)
+
+The control host had neither `~/.ssh/Proxmox` nor `.vault_pass`. The node itself
+is reachable (API answers 401), so only credentials are missing.
+
+- [x] 1b.1 Generate a replacement ed25519 keypair at `~/.ssh/Proxmox`
+- [ ] 1b.2 Distribute the new public key via the PVE web shell: append to `/root/.ssh/authorized_keys` on the node, and to `/home/ansible/.ssh/authorized_keys` in CTs 223, 224, 225, 230 (`restore-key.sh`)
+- [ ] 1b.3 Fill the real token into `~/.config/homelab/terraform.env` (template created, mode 0600)
+- [ ] 1b.4 **Determine whether the ansible-vault password still exists.** If not, `pihole_password`, `life_dashboard_proton_ics_url`, the Tailscale pre-auth key, and both git deploy keys are unrecoverable and must be regenerated — fold that into phase B
+- [ ] 1b.5 Verify SSH works again: `ssh -i ~/.ssh/Proxmox root@192.168.0.22` and `ssh -i ~/.ssh/Proxmox ansible@192.168.0.225`
 
 ## 2. Repository scaffolding
 
@@ -20,7 +31,8 @@
 - [x] 2.2 Add `.gitignore` entries: `*.tfstate`, `*.tfstate.*`, `.terraform/`, `crash*.log`, `secrets.auto.tfvars`
 - [x] 2.3 Write `environments/homelab/versions.tf`: `required_version`, `bpg/proxmox` pinned with `~>`, `ansible/ansible` provider
 - [x] 2.4 Write `environments/homelab/providers.tf` reading endpoint and token from environment variables only — no credential literals
-- [ ] 2.5 Run `terraform init`; commit `.terraform.lock.hcl`
+- [x] 2.5 Run `terraform init`; commit `.terraform.lock.hcl`
+  - bpg/proxmox resolved to **0.111.1**; constraint tightened from `~> 0.60` (which allowed it) to `~> 0.111`. Lock file committed.
 
 ## 3. `modules/proxmox_lxc`
 
@@ -45,7 +57,8 @@
 - [x] 5.4 Write `vms.tf` with `module "vm"` over an empty `vm_hosts` map
 - [x] 5.5 Write `outputs.tf` exposing hostname → vmid/IP for operator inspection
 - [x] 5.6 Confirm the root module needs **no** secret-bearing tfvars file at all — the PVE token is the only secret and it arrives via environment variables
-- [ ] 5.7 Run `terraform validate` and `terraform fmt`
+- [x] 5.7 Run `terraform validate` and `terraform fmt`
+  - `validate` passes against the real provider schema, so the container/VM block structures are confirmed. `fmt` and `tflint --recursive` clean.
 
 ## 6. Import the four live containers
 
@@ -102,7 +115,7 @@
 
 ## 11. Validation gates
 
-- [ ] 11.1 Confirm `terraform fmt -check`, `terraform validate`, and `tflint` pass on the whole `terraform/` tree
+- [x] 11.1 Confirm `terraform fmt -check`, `terraform validate`, and `tflint` pass on the whole `terraform/` tree
 - [ ] 11.2 Run `checkov` (or `trivy config`) against `terraform/`; fix real findings, and record deliberate exceptions inline with a reason
 - [ ] 11.3 Verify `git status` is clean after an apply — no `*.tfstate`, `.terraform/`, or secret-bearing tfvars tracked or untracked
 - [ ] 11.4 Verify no credential literal exists anywhere in the repo (`git grep` for the token id and for `PROXMOX_VE_API_TOKEN` values)
