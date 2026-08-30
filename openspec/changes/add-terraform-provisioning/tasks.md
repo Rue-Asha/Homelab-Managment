@@ -8,8 +8,9 @@
 
 - [x] 1.1 Install Terraform (>= 1.7, for `for_each` in `import` blocks) on the control host; verify `terraform version`
 - [x] 1.2 Install `tflint` and `checkov` (or `trivy config`) on the control host
-- [ ] 1.3 Create a PVE user `terraform@pve` and a **custom role** with the minimum privileges for guest lifecycle (start from the provider's documented minimum: `VM.Allocate`, `VM.Config.*`, `VM.PowerMgmt`, `VM.Audit`, `Datastore.AllocateSpace`, `Datastore.Audit`); assign it at the appropriate path
-- [ ] 1.4 Create an API token for `terraform@pve` and write the credentials to `~/.config/homelab/terraform.env` (mode `0600`, **outside the repo**) exporting `PROXMOX_VE_ENDPOINT` and `PROXMOX_VE_API_TOKEN`. This is the designated bootstrap credential — it stays outside Vault permanently (design D12)
+- [x] 1.3 Create a PVE user `terraform@pve` and a **custom role** with the minimum privileges for guest lifecycle (start from the provider's documented minimum: `VM.Allocate`, `VM.Config.*`, `VM.PowerMgmt`, `VM.Audit`, `Datastore.AllocateSpace`, `Datastore.Audit`); assign it at the appropriate path
+  - Created, but **much broader than designed**: 27 privileges (PVEVMAdmin + PVEDatastoreAdmin) bound at `/`, including `VM.GuestAgent.Unrestricted`, `VM.GuestAgent.FileWrite`, `VM.Console`, and `Datastore.Allocate`. No `Permissions.Modify`/`User.Modify`/`Sys.*`, so it cannot escalate itself. Tightening deferred to 7.7 — see there.
+- [x] 1.4 Create an API token for `terraform@pve` and write the credentials to `~/.config/homelab/terraform.env` (mode `0600`, **outside the repo**) exporting `PROXMOX_VE_ENDPOINT` and `PROXMOX_VE_API_TOKEN`. This is the designated bootstrap credential — it stays outside Vault permanently (design D12)
 - [x] 1.5 Add a committed `terraform/environments/homelab/.envrc` (`dotenv_if_exists ~/.config/homelab/terraform.env`) and run `direnv allow`; `direnv` is already installed
 - [ ] 1.6 Take a Proxmox backup or snapshot of `pihole01`, `partygames01`, `life-dashboard01`, and `tailscale01` before any Terraform run
 - [ ] 1.7 Record the live configuration of all four containers (`pct config <ctid>` for each) as the reference the Terraform configuration must reproduce exactly
@@ -21,7 +22,7 @@ is reachable (API answers 401), so only credentials are missing.
 
 - [x] 1b.1 Generate a replacement ed25519 keypair at `~/.ssh/Proxmox`
 - [ ] 1b.2 Distribute the new public key via the PVE web shell: append to `/root/.ssh/authorized_keys` on the node, and to `/home/ansible/.ssh/authorized_keys` in CTs 223, 224, 225, 230 (`restore-key.sh`)
-- [ ] 1b.3 Fill the real token into `~/.config/homelab/terraform.env` (template created, mode 0600)
+- [x] 1b.3 Fill the real token into `~/.config/homelab/terraform.env` (template created, mode 0600)
 - [ ] 1b.4 **Determine whether the ansible-vault password still exists.** If not, `pihole_password`, `life_dashboard_proton_ics_url`, the Tailscale pre-auth key, and both git deploy keys are unrecoverable and must be regenerated — fold that into phase B
 - [ ] 1b.5 Verify SSH works again: `ssh -i ~/.ssh/Proxmox root@192.168.0.22` and `ssh -i ~/.ssh/Proxmox ansible@192.168.0.225`
 
@@ -81,6 +82,9 @@ Terraform can create guests with the same vmids, so the import-era safety net
 - [ ] 7.4 Confirm each container boots and answers SSH as root with the new key
 - [ ] 7.5 Prove the update path: change one swap value, `apply`, confirm an in-place update rather than a replacement
 - [ ] 7.6 Prove the destroy path and `for_each` behaviour: add a throwaway host, apply, remove its entry, apply, and confirm only that host is destroyed
+- [ ] 7.7 **Tighten the PVE role now that failures are cheap.** Reduce to the intended set and re-verify against a throwaway container: `VM.Allocate VM.Audit VM.Clone VM.Config.{CPU,Disk,Memory,Network,Options,Cloudinit,CDROM} VM.PowerMgmt Datastore.AllocateSpace Datastore.Audit`. Drop every `VM.GuestAgent.*` (arbitrary command execution inside running guests), `VM.Console`, `VM.Backup`, `VM.Migrate`, `VM.Replicate`, `VM.Snapshot*`, `Datastore.Allocate`, `Datastore.AllocateTemplate`
+- [ ] 7.8 Rebind from `/` to `/vms` + `/storage` with propagate, so the token has no reach into `/access`, `/nodes`, `/sdn`, or `/pool`
+- [ ] 7.9 Add `SDN.Use` only if network configuration actually fails — do not add it pre-emptively
 
 ## 8. Terraform → Ansible handoff
 

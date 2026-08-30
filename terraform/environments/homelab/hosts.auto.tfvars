@@ -15,12 +15,13 @@ lxc_hosts = {
     ipv4   = "192.168.0.225/24"
     groups = ["pihole"]
     tags   = ["dns", "terraform"]
-    # Sizing was never overridden in host_vars; these are the old
-    # roles/proxmox_lxc/defaults/main.yml values, now stated explicitly.
+    # Sizing was never in host_vars, so the role defaults (1024/8) looked
+    # authoritative -- but the live container is half that. Taken from
+    # `pct config`/the API, not from the defaults.
     cores   = 1
-    memory  = 1024
+    memory  = 512
     swap    = 512
-    disk_gb = 8
+    disk_gb = 4
   }
 
   "partygames01" = {
@@ -70,7 +71,7 @@ lxc_hosts = {
 #     vmid       = 231
 #     ipv4       = "192.168.0.231/24"
 #     groups     = ["retropie"]
-#     clone_vmid = <vmid of debian-12-template>
+#     clone_vmid = 1001   # debian-12-template (1000 = debian-13-template)
 #     cores      = 4
 #     memory     = 4096
 #     disk_gb    = 32
