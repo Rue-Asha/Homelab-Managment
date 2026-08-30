@@ -78,20 +78,27 @@ data but about availability.
 - [~] 6.2 ~~Copy /var/lib/{life-dashboard,partygames} off the containers~~ — dropped; the SQLite databases and uploaded images are intentionally discarded
 - [~] 6.3 ~~Record `pct config`~~ — superseded by the API preflight (see 1.7)
 - [~] 6.4 ~~Note hand-configured Pi-hole state~~ — dropped; Pi-hole is set up fresh from the role
-- [ ] 6.5 **Set a fallback resolver on the router** before destroying `pihole01`. The LAN loses DNS while it is gone, including the control host running Terraform
+- [x] 6.5 **Set a fallback resolver on the router** before destroying `pihole01`. The LAN loses DNS while it is gone, including the control host running Terraform
 - [x] 6.6 Confirm the vault password works — available, existing secrets stay usable
 
 ## 7. Rebuild the guests with Terraform
 
-- [ ] 7.1 Destroy the four old containers (`pct stop <ctid> && pct destroy <ctid>`), one at a time
+- [x] 7.1 Destroy the four old containers (`pct stop <ctid> && pct destroy <ctid>`), one at a time
+  - **Incident.** Destroying `tailscale01` (230) first severed the control host's own path to the node: Tailscale had installed `192.168.0.0/24 dev tailscale0` in route table 52 because the subnet router advertised it, so the LAN was reached over the tailnet even though the machine sits on that LAN with `192.168.0.119/24`. Stopping CT 230 killed the SSH session mid-loop.
+  - The ordering rationale was backwards — 230 was picked first as "smallest blast radius: no DNS, no database", but it *was* the management path. **Infrastructure your access depends on is never small.** Rebuild it last.
+  - Recovery: `sudo tailscale down` on the control host, which cleared table 52 and released `/etc/resolv.conf` (Tailscale had pinned it to MagicDNS at `100.100.100.100`). Permanent fix for a host physically on the LAN: `--accept-routes=false`.
+  - Follow-on symptom: with `pihole01` gone, the router's DHCP kept handing out `192.168.0.225` as resolver, so the control host had no working DNS until the rebuild. Terraform was unaffected — it addresses the node by IP.
+  - Despite the dropped SSH session the remote loop ran to completion: **all four containers were destroyed**, not just 230. Verified by API, not assumed.
 - [ ] 7.2 `terraform plan` — expect four creates, zero destroys; read it in full before applying
+  - First `apply` failed on all four with `Permission check failed (/sdn/zones/localnetwork/vmbr0, SDN.Use)` — PVE 9 requires `SDN.Use` to attach a network interface. Anticipated in 7.9. State stayed clean (no partial container resources). Fix: add `SDN.Use` to the `TerraformProvisioning` role.
 - [ ] 7.3 `terraform apply`; then `terraform plan` again and confirm "No changes"
 - [ ] 7.4 Confirm each container boots and answers SSH as root with the new key
 - [ ] 7.5 Prove the update path: change one swap value, `apply`, confirm an in-place update rather than a replacement
 - [ ] 7.6 Prove the destroy path and `for_each` behaviour: add a throwaway host, apply, remove its entry, apply, and confirm only that host is destroyed
 - [ ] 7.7 **Tighten the PVE role now that failures are cheap.** Reduce to the intended set and re-verify against a throwaway container: `VM.Allocate VM.Audit VM.Clone VM.Config.{CPU,Disk,Memory,Network,Options,Cloudinit,CDROM} VM.PowerMgmt Datastore.AllocateSpace Datastore.Audit`. Drop every `VM.GuestAgent.*` (arbitrary command execution inside running guests), `VM.Console`, `VM.Backup`, `VM.Migrate`, `VM.Replicate`, `VM.Snapshot*`, `Datastore.Allocate`, `Datastore.AllocateTemplate`
 - [ ] 7.8 Rebind from `/` to `/vms` + `/storage` with propagate, so the token has no reach into `/access`, `/nodes`, `/sdn`, or `/pool`
-- [ ] 7.9 Add `SDN.Use` only if network configuration actually fails — do not add it pre-emptively
+- [x] 7.9 Add `SDN.Use` only if network configuration actually fails — do not add it pre-emptively
+  - It failed; `SDN.Use` added to the role. The empirical approach was correct: the provider's documented minimum did not mention it.
 
 ## 8. Terraform → Ansible handoff
 
