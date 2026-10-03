@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Atomic go-live: repoint `current` at the freshly built release in a single
+# symlink swap. Rollback = repoint `current` at a previous release.
+- name: Activate the new release
+  ansible.builtin.file:
+    src: "{{ life_manager_release_dir }}"
+    dest: "{{ life_manager_current_link }}"
+    state: link
+    owner: "{{ life_manager_user }}"
+    group: "{{ life_manager_group }}"
+    force: true
+  when: life_manager_redeploy | bool
+  notify: Restart life-manager

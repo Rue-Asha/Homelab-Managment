@@ -1,0 +1,13 @@
+---
+# --- life_manager service (03_SERVICES) ---
+# Pinned to a commit until the app repo cuts its first tag.
+life_manager_repo_url: "https://github.com/Rue-Asha/Life-Manager.git"
+life_manager_version: 0b332ce2dd33a07a5ca7159c7763dd912c4b7d11
+
+common_timezone: Europe/Berlin
+
+# --- nginx reverse proxy in front of the service ---
+nginx_reverse_proxy_enabled: true
+nginx_backend_host: 127.0.0.1
+nginx_backend_port: "{{ life_manager_port }}"
+nginx_service_description: "the Life Manager web service"

@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Restart life-manager
+  ansible.builtin.systemd:
+    name: "{{ life_manager_service_name }}"
+    state: restarted
+    daemon_reload: true

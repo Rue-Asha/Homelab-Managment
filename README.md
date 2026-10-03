@@ -12,16 +12,12 @@ its own lightweight LXC, and a playbook is the only way in.
 
 | Service / role | Purpose |
 |---|---|
-| `pihole` | Network-wide DNS filtering |
-| `tailscale` | Subnet router, remote access into the LAN |
 | `nginx` | Host-level reverse proxy in front of each web service |
 | `nodejs` | Runtime for the SvelteKit services below |
-| `life_dashboard` | Deploys [Life-Managment-Dashboard](https://github.com/Rue-Asha/Life-Managment-Dashboard) |
-| `partygames` | Deploys [Party-Games](https://github.com/Rue-Asha/Party-Games) |
-| `retropie` | Retro-games box |
+| `life_manager` | Deploys [Life-Manager](https://github.com/Rue-Asha/Life-Manager) |
 | `common` | Base host hardening shared by every guest |
 | `guest_bootstrap` | First run on a fresh guest: `ansible` user + sudo |
-| `proxmox_lxc_tun` | `/dev/net/tun` passthrough on the node for `tailscale01` |
+| `proxmox_lxc_tun` | `/dev/net/tun` passthrough on the node (for a future Tailscale guest) |
 
 Provisioning (creating, resizing, destroying LXCs/VMs) is not an Ansible role —
 it is `terraform/`, with the host catalogue in
@@ -66,8 +62,8 @@ Ansible finds its config in `ansible/` without changing directory.
 ```sh
 direnv allow                                          # once
 terraform -chdir=terraform/environments/homelab apply
-ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l pihole01  # fresh guests only
-ansible-playbook ansible/playbooks/03_SERVICES/pihole.yml -l pihole01
+ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l life-manager01  # fresh guests only
+ansible-playbook ansible/playbooks/03_SERVICES/life-manager.yml -l life-manager01
 ```
 
 Credentials live outside the repo: the PVE API token in
