@@ -1,18 +1,10 @@
 ---
 # Vaulted secrets for life-dashboard01. New entries are appended as the LAST entry.
-# lxc_password: root password for the LXC (set during provisioning).
 # life_dashboard_proton_ics_url: read-only Proton-Calendar ICS capability URL.
 #
 # life_dashboard_deploy_key was removed once the app repo went public: the
 # checkout is an anonymous HTTPS clone now, so the role leaves key_file and
 # ssh_opts unset and no secret is needed for it.
-lxc_password: !vault |
-          $ANSIBLE_VAULT;1.1;AES256
-          36633837643733383837623065663966663335363930666461396264383266353935613566613939
-          3930303036616364663963333562306530316638393739640a666665333533613938643566363237
-          31346362333662356634663331316631373334653833363865316161376237383731386162623566
-          3834373066656438330a663165336536613162383436616139386164346133613137663938656637
-          62383861386437356339313037366264376261376137353263303965396330316331
 life_dashboard_proton_ics_url: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           34386335333034636562656135303266303465613665653634633963323866343339303761373134

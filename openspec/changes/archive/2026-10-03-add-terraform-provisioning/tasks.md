@@ -2,8 +2,8 @@
 > `terraform plan` reports no changes, the old Ansible provisioning layer is
 > gone, and fmt / validate / tflint / checkov / ansible-lint all pass.
 >
-> **Still open:** 10.6–10.8 (the dead vault values are still in the files) and
-> the Tailscale tail in 7b.6–7b.8, deferred by operator decision.
+> **Still open:** the Tailscale tail in 7b.6–7b.8, deferred by operator
+> decision, and the phase B handoff in section 14.
 
 ## 1. Prerequisites (operator, out-of-band)
 
@@ -152,12 +152,10 @@ data but about availability.
 - [x] 10.4 Remove `community.proxmox` from `ansible/collections/requirements.yml` if nothing references it any more
 - [x] 10.5 Retire the `root@pam!ansible` API token in PVE once no Ansible code calls the Proxmox API
   - Done by the operator.
-- [ ] 10.6 Delete `proxmox_api_token_secret` from `ansible/inventory/group_vars/proxmox_guest/vault.yml` (superseded by the `terraform@pve` token)
-  - **Was ticked, but never done:** the values are still in the vault files. Nothing references them any more (grep clean), so they are dead, not dangerous. `pihole01/vault.yml` also still carries an `lxc_password`.
-- [ ] 10.7 Delete the `lxc_password` entries from `ansible/inventory/host_vars/partygames01/vault.yml` and `life-dashboard01/vault.yml`, and `vm_ci_password` from `retropie01/vault.yml` — deleted outright, not migrated (design D8)
-  - **Was ticked, but never done:** the values are still in the vault files. Nothing references them any more (grep clean), so they are dead, not dangerous. `pihole01/vault.yml` also still carries an `lxc_password`.
-- [ ] 10.8 Grep for remaining `lxc_password` / `vm_ci_password` / `proxmox_api_*` references and remove them
-  - **Was ticked, but never done:** the values are still in the vault files. Nothing references them any more (grep clean), so they are dead, not dangerous. `pihole01/vault.yml` also still carries an `lxc_password`.
+- [x] 10.6 Delete `proxmox_api_token_secret` from `ansible/inventory/group_vars/proxmox_guest/vault.yml` (superseded by the `terraform@pve` token)
+- [x] 10.7 Delete the `lxc_password` entries from `ansible/inventory/host_vars/partygames01/vault.yml` and `life-dashboard01/vault.yml`, and `vm_ci_password` from `retropie01/vault.yml` — deleted outright, not migrated (design D8)
+- [x] 10.8 Grep for remaining `lxc_password` / `vm_ci_password` / `proxmox_api_*` references and remove them
+  - Done 2026-10-03 by the operator (10.6–10.8 together): `proxmox_guest/vault.yml` and `partygames01/vault.yml` deleted, the `lxc_password` / `vm_ci_password` blocks removed from `life-dashboard01`, `pihole01` and `retropie01`. Remaining vaulted values still decrypt; `ansible-lint` clean.
 - [x] 10.9 Verify each affected host is still reachable by SSH key after the password entries are gone, and confirm `pct enter <ctid>` from the node still works as the console fallback
   - `ansible all -m ping` succeeds by key on all four guests and the node; `pct exec <ctid> -- hostname` works for 223, 224, 225, 230.
 - [x] 10.10 Run `ansible-lint` and confirm it is clean
