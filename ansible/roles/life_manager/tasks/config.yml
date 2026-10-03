@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Render the service environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ life_manager_env_file }}"
+    owner: root
+    group: "{{ life_manager_group }}"
+    mode: "0640"
+  notify: Restart life-manager

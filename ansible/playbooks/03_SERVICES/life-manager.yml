@@ -1,0 +1,10 @@
+---
+- name: Deploy the Life Manager web service
+  hosts: life_manager
+  become: true
+  gather_facts: true
+  roles:
+    - common        # base host config (02 layer)
+    - nodejs        # Node.js runtime
+    - life_manager  # service: checkout, build, release, systemd unit
+    - nginx         # reverse proxy (:80 -> 127.0.0.1:{{ life_manager_port }})

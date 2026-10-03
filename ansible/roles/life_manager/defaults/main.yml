@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: MIT-0
+---
+# --- Service identity ---
+life_manager_user: life-manager
+life_manager_group: life-manager
+life_manager_service_name: life-manager
+
+# --- Source: the separate app repo; pinned version is the "image tag" ---
+# Set life_manager_repo_url in host_vars. The repo is public and cloned over
+# HTTPS, so unlike partygames there is no deploy key.
+life_manager_repo_url: ""
+life_manager_version: main                # git tag / branch / commit to deploy
+
+# --- On-host layout (see docs/party-games-webservice-architecture.md) ---
+life_manager_base_dir: /opt/life-manager
+life_manager_releases_dir: "{{ life_manager_base_dir }}/releases"
+life_manager_current_link: "{{ life_manager_base_dir }}/current"
+life_manager_data_dir: /var/lib/life-manager
+life_manager_config_dir: /etc/life-manager
+life_manager_db_path: "{{ life_manager_data_dir }}/life-manager.db"
+life_manager_env_file: "{{ life_manager_config_dir }}/env"
+
+# --- Runtime ---
+life_manager_node_bin: /usr/bin/node
+# Bind address for the adapter-node server. Keep on loopback so the backend is
+# reachable only through the nginx reverse proxy, never directly on the LAN.
+life_manager_host: 127.0.0.1
+life_manager_port: 3000
+life_manager_node_env: production
+# adapter-node assumes https unless told where the original protocol is; over
+# plain http every form post then fails SvelteKit's origin check with a 403.
+# The nginx role sends X-Forwarded-Proto.
+life_manager_protocol_header: x-forwarded-proto
+
+# --- Build / deploy ---
+# No migrate step: the app applies its migrations on start and exits non-zero
+# if one fails, so a bad migration surfaces as a failed restart.
+life_manager_build_command: "npm run build"
+life_manager_keep_releases: 5

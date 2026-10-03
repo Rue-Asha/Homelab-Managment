@@ -8,30 +8,12 @@
       "children":
         "lxc_container_proxmox":
           "children":
-            "life_dashboard":
+            "life_manager":
               "hosts":
-                "life-dashboard01":
+                "life-manager01":
                   "ansible_host": "192.168.0.223"
                   "ansible_user": "ansible"
                   "lxc_ctid": 223
-            "partygames":
-              "hosts":
-                "partygames01":
-                  "ansible_host": "192.168.0.224"
-                  "ansible_user": "ansible"
-                  "lxc_ctid": 224
-            "pihole":
-              "hosts":
-                "pihole01":
-                  "ansible_host": "192.168.0.225"
-                  "ansible_user": "ansible"
-                  "lxc_ctid": 225
-            "tailscale":
-              "hosts":
-                "tailscale01":
-                  "ansible_host": "192.168.0.230"
-                  "ansible_user": "ansible"
-                  "lxc_ctid": 230
         "vm_proxmox":
           "children": {}
     "proxmox_node":

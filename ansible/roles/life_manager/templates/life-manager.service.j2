@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Life Manager web service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ life_manager_user }}
+Group={{ life_manager_group }}
+WorkingDirectory={{ life_manager_current_link }}
+EnvironmentFile={{ life_manager_env_file }}
+ExecStart={{ life_manager_node_bin }} {{ life_manager_current_link }}/build
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths={{ life_manager_data_dir }}
+
+[Install]
+WantedBy=multi-user.target

@@ -10,55 +10,16 @@
 # lxc_container_proxmox and proxmox_guest -- see ansible.tf.
 
 lxc_hosts = {
-  "pihole01" = {
-    vmid   = 225
-    ipv4   = "192.168.0.225/24"
-    groups = ["pihole"]
-    tags   = ["dns", "terraform"]
-    # Sizing was never in host_vars, so the role defaults (1024/8) looked
-    # authoritative -- but the live container is half that. Taken from
-    # `pct config`/the API, not from the defaults.
-    cores   = 1
-    memory  = 512
-    swap    = 512
-    disk_gb = 4
-  }
-
-  "partygames01" = {
-    vmid    = 224
-    ipv4    = "192.168.0.224/24"
-    groups  = ["partygames"]
-    tags    = ["web", "terraform"]
-    cores   = 2
-    memory  = 1024
-    swap    = 512
-    disk_gb = 10
-  }
-
-  "life-dashboard01" = {
+  # 223 / .223 are reused from the retired life-dashboard01.
+  "life-manager01" = {
     vmid    = 223
     ipv4    = "192.168.0.223/24"
-    groups  = ["life_dashboard"]
+    groups  = ["life_manager"]
     tags    = ["web", "terraform"]
     cores   = 2
     memory  = 1024
     swap    = 512
     disk_gb = 10
-  }
-
-  "tailscale01" = {
-    vmid    = 230
-    ipv4    = "192.168.0.230/24"
-    groups  = ["tailscale"]
-    tags    = ["vpn", "terraform"]
-    cores   = 1
-    memory  = 512
-    swap    = 512
-    disk_gb = 4
-    # /dev/net/tun passthrough is NOT declared here. The provider models
-    # container config as typed attributes and has no escape hatch for raw
-    # lxc.mount.entry lines, so it stays a post-apply Ansible step
-    # (roles/proxmox_lxc_tun). See design D6.
   }
 }
 

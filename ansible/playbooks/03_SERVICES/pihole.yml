@@ -1,8 +1,0 @@
----
-- name: Install and Configure Pi-hole in LXC Container
-  hosts: pihole
-  become: true
-  gather_facts: true
-  roles:
-    - common
-    - pihole

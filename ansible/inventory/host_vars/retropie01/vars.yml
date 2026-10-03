@@ -1,6 +1,0 @@
----
-# VM hardware overrides (override vm_proxmox group defaults)
-vm_cores: 4
-vm_memory: 4096
-vm_disk_gb: 32
-vm_template_name: debian-12-template
