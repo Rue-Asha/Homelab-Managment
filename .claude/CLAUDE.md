@@ -136,6 +136,13 @@ These are choices the team has made that differ from defaults or are worth keepi
 
 ## Before committing
 
+`scripts/proof.sh` (or `/proof`) runs every check below that applies to the
+staged files; `--all` covers the whole repo. The commit gate in
+`.claude/settings.json` runs it on every agent `git commit` and blocks on any
+`INVARIANT_VIOLATION`. A second gate asks for confirmation before
+`terraform apply`/`destroy` or any `ansible-playbook` run without `--check`.
+checkov is not one of its sensors yet — run it by hand.
+
 Ansible:
 
 - `ansible-playbook --syntax-check <playbook>.yml`
