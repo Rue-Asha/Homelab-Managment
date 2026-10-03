@@ -22,7 +22,7 @@
 
 - [x] 4.1 Add a checked-in `.claude/settings.json` registering both scripts as `PreToolUse` hooks with matcher `Bash`, using `$CLAUDE_PROJECT_DIR` paths
 - [x] 4.2 Add `.claude/commands/proof.md`: runs `scripts/proof.sh` (`--all` when the argument says so) and reports one pass/fail line per sensor, followed by details of any failure
-- [ ] 4.3 Verify live in a new Claude Code session: a no-op Bash command is unaffected, `terraform plan` runs unprompted, `terraform apply` prompts (decline it), `/proof` reports per-sensor results — commit gate confirmed live (staged lint fixture blocked `git commit --dry-run`); the apply prompt and `/proof` are still to be checked by hand
+- [x] 4.3 Verify live in a new Claude Code session: a no-op Bash command is unaffected, `terraform plan` runs unprompted, `terraform apply` prompts (decline it), `/proof` reports per-sensor results
 
 ## 5. Docs and checks
 
