@@ -52,6 +52,7 @@ ansible/                      # configuration layer — everything inside a gues
     03_SERVICES/              #   application install & config
   roles/                      #   standard Galaxy role structure
 .ansible-lint                 # at the root so lint and the pre-commit hook find it
+scripts/proof.sh              # pre-commit checks, also run by the Claude Code commit gate
 docs/                         # architecture notes and implementation plans
 openspec/                     # OpenSpec change proposals for larger pieces of work
 ```
@@ -78,8 +79,13 @@ git-ignored — back it up with the control host. Full setup and day-2 commands:
 ## Checks
 
 ```sh
-terraform fmt -check -recursive && terraform -chdir=terraform/environments/homelab validate
-tflint --chdir=terraform/environments/homelab
-uvx checkov -d terraform --skip-path .terraform
-ansible-lint
+scripts/proof.sh          # fmt, validate, tflint, ansible-lint, syntax-check — staged files only
+scripts/proof.sh --all    # the same, whole repo
+uvx checkov -d terraform --skip-path .terraform   # not part of proof.sh yet
 ```
+
+Each failing check prints `INVARIANT_VIOLATION: <CODE>`. In Claude Code, two
+hooks in `.claude/settings.json` use this as a harness: an agent `git commit`
+is blocked until `proof.sh` passes, and `terraform apply`/`destroy` or an
+`ansible-playbook` run without `--check` always asks for confirmation.
+`/proof` runs the sensors on demand.
