@@ -131,6 +131,9 @@ provider models container config as typed attributes with no escape hatch for
 arbitrary `lxc.*` keys, so this stays a host-level Ansible role delegated to the
 node.
 
+Its `blockinfile` markers show up in the container's `description`, which is
+why `modules/proxmox_lxc` ignores changes to `description` after create.
+
 **Consequence:** `terraform plan` will never notice that passthrough is missing,
 and a container recreated by Terraform loses TUN until the role runs again. For
 `tailscale01` the order after any recreate is: `terraform apply` → baseline →

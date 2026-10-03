@@ -67,10 +67,18 @@ resource "proxmox_virtual_environment_container" "this" {
     keyctl  = var.features.keyctl ? true : null
   }
 
-  # Deliberately no `prevent_destroy`. It cannot be driven by a variable
+  # Deliberately no `prevent_destroy` in the lifecycle block below. It cannot be driven by a variable
   # (lifecycle takes literals only), so it would apply to every host including
   # throwaways, and removing a host from the catalogue would error instead of
   # destroying -- which contradicts the destroy path this migration exists to
   # gain. Protection against an unwanted destroy is reading the plan; that is a
   # mandated gate during import and a habit worth building anyway.
+  #
+  # description is ignored after create because proxmox_lxc_tun's blockinfile
+  # markers are comment lines in <ctid>.conf, which PVE reports as part of the
+  # description. Without this, plan wants to strip them on every run and the
+  # next tailscale playbook run re-inserts them.
+  lifecycle {
+    ignore_changes = [description]
+  }
 }
