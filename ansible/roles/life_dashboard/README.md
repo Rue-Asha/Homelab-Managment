@@ -159,7 +159,7 @@ Example Playbook
       roles:
         - common
         - nodejs
-        - life-dashboard
+        - life_dashboard
         - nginx
 
 License

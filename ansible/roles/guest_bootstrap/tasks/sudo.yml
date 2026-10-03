@@ -1,4 +1,4 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
 # `copy` with visudo validation rather than lineinfile: a malformed sudoers
 # drop-in locks the account out of privilege escalation, and validate makes

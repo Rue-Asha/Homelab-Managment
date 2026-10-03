@@ -1,4 +1,4 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
 - name: Ensure tailscaled is enabled and running
   ansible.builtin.systemd:

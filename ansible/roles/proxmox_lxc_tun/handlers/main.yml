@@ -1,4 +1,4 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
 # Defined reboot-first so it runs before the SSH wait (handlers fire in
 # definition order). Both flush at the end of the provisioning play, before the

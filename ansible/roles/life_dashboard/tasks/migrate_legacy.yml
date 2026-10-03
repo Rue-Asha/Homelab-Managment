@@ -43,12 +43,7 @@
       ansible.builtin.file:
         path: "/etc/systemd/system/{{ life_dashboard_legacy_service_name }}.service"
         state: absent
-      register: life_dashboard_legacy_unit
-
-    - name: Reload systemd after removing the legacy unit
-      ansible.builtin.systemd:
-        daemon_reload: true
-      when: life_dashboard_legacy_unit is changed
+      notify: Reload systemd
 
     - name: Ensure the new data directory's parent exists
       ansible.builtin.file:

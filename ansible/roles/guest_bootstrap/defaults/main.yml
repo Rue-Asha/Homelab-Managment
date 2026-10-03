@@ -1,4 +1,4 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
 # The unprivileged account every later playbook connects as.
 guest_bootstrap_user: ansible

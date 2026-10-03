@@ -1,4 +1,4 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
 # Host-level: edits the container's Proxmox config on the node, then reboots the
 # container so the bind mount takes effect. Runs on the Proxmox host, not inside

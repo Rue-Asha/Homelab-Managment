@@ -15,11 +15,11 @@ galaxy_info:
         - bookworm
         - trixie
   galaxy_tags:
-    - life_dashboard
+    - lifedashboard
     - webservice
     - sveltekit
     - nodejs
 
-# The play orchestrates runtime + proxy (roles: [nodejs, life-dashboard, nginx]),
+# The play orchestrates runtime + proxy (roles: [nodejs, life_dashboard, nginx]),
 # so host-level concerns are not declared as role dependencies here.
 dependencies: []

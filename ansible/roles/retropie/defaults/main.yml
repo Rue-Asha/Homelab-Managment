@@ -1,4 +1,4 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
 # Local user that owns the RetroPie install and auto-logs into tty1
 retropie_user: PiGamer

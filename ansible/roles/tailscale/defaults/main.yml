@@ -1,4 +1,4 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
 # Subnet(s) advertised into the tailnet so remote devices can reach the LAN.
 tailscale_advertise_routes: 192.168.0.0/24

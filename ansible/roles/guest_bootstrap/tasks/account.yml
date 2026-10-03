@@ -1,4 +1,4 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
 # No password is set. Terraform seeds no root password either, and `pct enter`
 # from the node is the console fallback -- see design D8.

@@ -1,4 +1,4 @@
-#SPDX-License-Identifier: MIT-0
+# SPDX-License-Identifier: MIT-0
 ---
 # Runs before facts are gathered: a fresh guest may have no Python, and every
 # other module needs one. `raw` is the only thing that works here, and this is
