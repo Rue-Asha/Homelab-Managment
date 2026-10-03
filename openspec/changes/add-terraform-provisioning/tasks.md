@@ -2,9 +2,8 @@
 > `terraform plan` reports no changes, the old Ansible provisioning layer is
 > gone, and fmt / validate / tflint / checkov / ansible-lint all pass.
 >
-> **Still open:** 7.6 (destroy-path proof — creates and destroys a throwaway
-> guest on the live node), 10.6–10.8 (the dead vault values are still in the
-> files), and the Tailscale tail in 7b.6–7b.8, deferred by operator decision.
+> **Still open:** 10.6–10.8 (the dead vault values are still in the files) and
+> the Tailscale tail in 7b.6–7b.8, deferred by operator decision.
 
 ## 1. Prerequisites (operator, out-of-band)
 
@@ -97,7 +96,9 @@ data but about availability.
   - Even so, the *update* path stayed blocked while *create* worked fine as `terraform@pve`. Containers were therefore recreated rather than updated -- free here, since they were still empty. Worth knowing: enabling a non-nesting feature on an existing container needs an apply under `root@pam`.
 - [x] 7.5 Prove the update path: change one swap value, `apply`, confirm an in-place update rather than a replacement
   - Proven incidentally by the `nesting` change: `0 to add, 4 to change, 0 to destroy`, in-place. This is the path the old role could not express at all (`when: not lxc_exists`).
-- [ ] 7.6 Prove the destroy path and `for_each` behaviour: add a throwaway host, apply, remove its entry, apply, and confirm only that host is destroyed
+- [x] 7.6 Prove the destroy path and `for_each` behaviour: add a throwaway host, apply, remove its entry, apply, and confirm only that host is destroyed
+  - 2026-10-03: added `throwaway01` (CT 239, 192.168.0.239): plan `1 to add, 0 to change, 0 to destroy`, apply, follow-up plan clean. Removed the entry: plan `0 to add, 0 to change, 1 to destroy` naming only `module.lxc["throwaway01"]`, apply destroyed CT 239 in 5s, follow-up plan clean, the four real containers untouched.
+  - Side finding: a host with `groups = []` is not written to `00-terraform.yml` at all — the inventory is built per group. Every real host has a group, so this only matters for ad-hoc test hosts.
 - [x] 7.7 **Tighten the PVE role now that failures are cheap.** Reduce to the intended set and re-verify against a throwaway container: `VM.Allocate VM.Audit VM.Clone VM.Config.{CPU,Disk,Memory,Network,Options,Cloudinit,CDROM} VM.PowerMgmt Datastore.AllocateSpace Datastore.Audit`. Drop every `VM.GuestAgent.*` (arbitrary command execution inside running guests), `VM.Console`, `VM.Backup`, `VM.Migrate`, `VM.Replicate`, `VM.Snapshot*`, `Datastore.Allocate`, `Datastore.AllocateTemplate`
   - Done by the operator.
 - [x] 7.8 Rebind from `/` to `/vms` + `/storage` with propagate, so the token has no reach into `/access`, `/nodes`, `/sdn`, or `/pool`
