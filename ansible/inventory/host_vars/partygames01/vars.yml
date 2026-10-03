@@ -1,11 +1,4 @@
 ---
-# --- LXC provisioning (01_PROVISIONING) ---
-# SvelteKit (adapter-node, Node process) + SQLite.
-lxc_cores: 2
-lxc_memory: 1024
-lxc_swap: 512
-lxc_disk_gb: 10
-
 # --- partygames service (03_SERVICES) ---
 # App lives in its own repo, referenced by URL + a pinned version (the "image
 # tag"). The repo is public, so it is cloned anonymously over HTTPS and no

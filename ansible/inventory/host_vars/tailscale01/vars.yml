@@ -1,15 +1,8 @@
 ---
-# --- LXC provisioning (01_PROVISIONING) ---
-# Minimal box — its only job is to be a Tailscale subnet router.
-# CTID (lxc_ctid) is derived from the host's last IP octet by the
-# proxmox_guest group vars (id), so 192.168.0.230 -> CT 230.
-lxc_cores: 1
-lxc_memory: 512
-lxc_swap: 512
-lxc_disk_gb: 4
-
+# --- host-level (Proxmox node) ---
+# Sizing, vmid and address live in terraform/environments/homelab/hosts.auto.tfvars.
 # Tailscale needs /dev/net/tun, which an unprivileged LXC lacks by default.
-# This flag makes the provisioning layer add the passthrough to the container's
+# This flag makes the tailscale playbook add the passthrough to the container's
 # Proxmox config on the host (roles/proxmox_lxc_tun). Host-level concern — it
 # deliberately lives outside the tailscale app role.
 proxmox_lxc_tun_enabled: true
