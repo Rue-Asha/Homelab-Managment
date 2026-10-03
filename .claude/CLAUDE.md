@@ -21,7 +21,7 @@ ansible/                    # configuration layer
 terraform/                  # provisioning layer
   environments/homelab/     # the single root module — one node, one state
   modules/
-docs/  openspec/  .envrc
+docs/  openspec/  .envrc  .ansible-lint   # lint config at the root: ansible-lint only searches cwd upwards
 ```
 
 `.envrc` exports `ANSIBLE_CONFIG=$PWD/ansible/ansible.cfg`, so **every command runs from the repo root**. Relative paths inside `ansible.cfg` resolve against the config file's own directory, so they needed no rewriting when the tree moved.
@@ -46,10 +46,6 @@ ansible/playbooks/
 ---
 
 ## Terraform / Ansible boundary
-
-> **Migration in progress.** The `terraform/` tree exists and is additive;
-> `ansible/playbooks/01_PROVISIONING/` is still the active path until the import gate
-> passes. The rules below describe the target and already apply to new work.
 
 **Terraform** declares anything the Proxmox API owns: guest existence, vmid,
 hostname, CPU/memory/swap/disk, network interface and IP, boot behaviour,

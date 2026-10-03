@@ -22,7 +22,7 @@ SQLite database), so the deployment was refactored `budget` → `life-dashboard`
 the role, variables (`life_dashboard_*`), host (`life-dashboard01`), on-host
 paths, systemd unit, and service user were all renamed. The first deploy of the
 renamed role migrates the old on-host layout in place (see
-[roles/life-dashboard](../roles/life-dashboard/README.md#legacy-migration)); the
+[ansible/roles/life_dashboard](../ansible/roles/life_dashboard/README.md#legacy-migration)); the
 persistent database — with its already-recorded `budget` migrations `0001`–`0005`
 — moves intact, and newer modules add date-prefixed migrations.
 

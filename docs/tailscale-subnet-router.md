@@ -32,21 +32,24 @@ tailnet; remote Tailscale devices reach `192.168.0.x` directly.
 2. Generate a **pre-auth key** (Settings → Keys). Put it in the host vault,
    replacing the placeholder:
    ```bash
-   ansible-vault edit inventory/host_vars/tailscale01/vault.yml
+   ansible-vault edit ansible/inventory/host_vars/tailscale01/vault.yml
    # set: tailscale_authkey: tskey-auth-...
    ```
 
 ## Deploy
 
-Pick a free LAN IP for `tailscale01` in `inventory/hosts` (default
-`192.168.0.230`; the CTID is derived from the last octet → CT `230`).
+`tailscale01` is declared in `terraform/environments/homelab/hosts.auto.tfvars`
+(`192.168.0.230`, CT `230`).
 
 ```bash
-# 1. Provision the LXC (creates CT, bootstraps SSH, adds TUN passthrough + reboot)
-ansible-playbook playbooks/01_PROVISIONING/lxc_proxmox.yml --limit tailscale01
+# 1. Create the LXC
+terraform -chdir=terraform/environments/homelab apply
 
-# 2. Install Tailscale and bring the subnet router up
-ansible-playbook playbooks/03_SERVICES/tailscale.yml --limit tailscale01
+# 2. Baseline: ansible user, SSH hardening
+ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l tailscale01
+
+# 3. TUN passthrough on the node (+ reboot), then Tailscale and the subnet router
+ansible-playbook ansible/playbooks/03_SERVICES/tailscale.yml -l tailscale01
 ```
 
 ## Complete in the admin console (manual — Ansible cannot do these)
@@ -86,7 +89,8 @@ ansible-playbook playbooks/03_SERVICES/tailscale.yml --limit tailscale01
 
 | Concern | Where |
 |---|---|
-| Host + sizing + routes + TUN flag | `inventory/hosts`, `host_vars/tailscale01/{vars,vault}.yml` |
-| `/dev/net/tun` passthrough (host-level) | `roles/proxmox_lxc_tun` (in `01_PROVISIONING`) |
-| Install + forwarding + `tailscale up` | `roles/tailscale` (`install`/`configure`/`service`) |
-| Service playbook | `playbooks/03_SERVICES/tailscale.yml` |
+| Host + sizing | `terraform/environments/homelab/hosts.auto.tfvars` |
+| Routes + TUN flag | `ansible/inventory/host_vars/tailscale01/{vars,vault}.yml` |
+| `/dev/net/tun` passthrough (host-level) | `ansible/roles/proxmox_lxc_tun` (first play of the tailscale playbook) |
+| Install + forwarding + `tailscale up` | `ansible/roles/tailscale` (`install`/`configure`/`service`) |
+| Service playbook | `ansible/playbooks/03_SERVICES/tailscale.yml` |

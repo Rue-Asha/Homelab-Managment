@@ -1,8 +1,8 @@
 # Homelab-Managment
 
-Ansible repository that configures every machine in my Proxmox homelab. Nothing
-is set up by hand: each service gets its own lightweight LXC, and a playbook is
-the only way in.
+Terraform + Ansible repository for my Proxmox homelab. Nothing is set up by
+hand: Terraform creates each guest through the Proxmox API, every service gets
+its own lightweight LXC, and a playbook is the only way in.
 
 > **Docs:** project write-up on the blog —
 > [rue-asha.github.io/projects/homelab](https://rue-asha.github.io/projects/homelab/).
@@ -16,11 +16,16 @@ the only way in.
 | `tailscale` | Subnet router, remote access into the LAN |
 | `nginx` | Host-level reverse proxy in front of each web service |
 | `nodejs` | Runtime for the SvelteKit services below |
-| `life-dashboard` | Deploys [Life-Managment-Dashboard](https://github.com/Rue-Asha/Life-Managment-Dashboard) |
+| `life_dashboard` | Deploys [Life-Managment-Dashboard](https://github.com/Rue-Asha/Life-Managment-Dashboard) |
 | `partygames` | Deploys [Party-Games](https://github.com/Rue-Asha/Party-Games) |
 | `retropie` | Retro-games box |
 | `common` | Base host hardening shared by every guest |
-| `proxmox_lxc*`, `proxmox_vm*` | Provisioning: create LXCs/VMs from template or ISO |
+| `guest_bootstrap` | First run on a fresh guest: `ansible` user + sudo |
+| `proxmox_lxc_tun` | `/dev/net/tun` passthrough on the node for `tailscale01` |
+
+Provisioning (creating, resizing, destroying LXCs/VMs) is not an Ansible role —
+it is `terraform/`, with the host catalogue in
+`terraform/environments/homelab/hosts.auto.tfvars`.
 
 Application services follow an **app-per-LXC, two-repo model**: this repo
 configures the host and installs the runtime; the application code lives in
@@ -46,6 +51,7 @@ ansible/                      # configuration layer — everything inside a gues
     02_BASE_CONFIGURATION/    #   users, SSH, hardening
     03_SERVICES/              #   application install & config
   roles/                      #   standard Galaxy role structure
+.ansible-lint                 # at the root so lint and the pre-commit hook find it
 docs/                         # architecture notes and implementation plans
 openspec/                     # OpenSpec change proposals for larger pieces of work
 ```
@@ -59,5 +65,21 @@ Ansible finds its config in `ansible/` without changing directory.
 ```sh
 direnv allow                                          # once
 terraform -chdir=terraform/environments/homelab apply
+ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l pihole01  # fresh guests only
 ansible-playbook ansible/playbooks/03_SERVICES/pihole.yml -l pihole01
+```
+
+Credentials live outside the repo: the PVE API token in
+`~/.config/homelab/terraform.env` (loaded by direnv) and the ansible-vault
+password in `~/.config/homelab/vault_pass`. Terraform state is local and
+git-ignored — back it up with the control host. Full setup and day-2 commands:
+`terraform/README.md`.
+
+## Checks
+
+```sh
+terraform fmt -check -recursive && terraform -chdir=terraform/environments/homelab validate
+tflint --chdir=terraform/environments/homelab
+uvx checkov -d terraform --skip-path .terraform
+ansible-lint
 ```

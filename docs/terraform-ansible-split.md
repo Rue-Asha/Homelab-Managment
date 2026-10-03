@@ -74,6 +74,11 @@ no escape hatch for arbitrary `lxc.*` keys. This is a genuine provider gap, not
 a stylistic preference, so the role stays — a host-level Ansible concern
 delegated to the Proxmox node, deliberately outside the `tailscale` app role.
 
+The role's `blockinfile` markers are comment lines in `<ctid>.conf`, and PVE
+reports those as part of the container's `description`. `modules/proxmox_lxc`
+therefore sets `lifecycle { ignore_changes = [description] }` — without it every
+plan wants to strip the markers and the next tailscale run puts them back.
+
 **Consequence to know about:** `terraform plan` will never notice the
 passthrough is missing. If Terraform ever recreates `tailscale01`, it loses TUN
 until the role runs again. Order after any recreate:
@@ -158,3 +163,28 @@ terraform validate
 tflint
 checkov -d .
 ```
+
+`checkov` ships no `bpg/proxmox` policies, so today it evaluates nothing here;
+it stays in the gate for its secrets scan and for the cloud module on the
+roadmap below.
+
+## Roadmap
+
+Follow-on work, ordered by value (design D11 of `add-terraform-provisioning`):
+
+0. **HashiCorp Vault LXC** + migration of all ansible-vault secrets, with AWS
+   KMS auto-unseal. Next in time, already decided.
+1. **PVE users, roles, ACLs, API tokens as code** — makes the `terraform@pve`
+   role itself reviewable.
+2. **Proxmox firewall as code** — the LAN is a flat `/24` with no segmentation.
+3. **Template/ISO management** via `proxmox_virtual_environment_download_file`,
+   replacing the manually staged LXC template.
+4. **Remote state with locking** (MinIO/S3-compatible LXC). Until then state is
+   local and backed up with the control host.
+5. **Policy-as-code**: OPA/Conftest rules for homelab policy on top of checkov.
+6. **Tailscale provider** — tailnet ACLs, auth keys, and the two manual
+   admin-console steps as code.
+7. **A real cloud module** (AWS/Azure free tier), deployed via OIDC and scanned
+   by the same gate.
+8. **Packer images** — only if the deploy model moves from converge-in-place to
+   rebuild.

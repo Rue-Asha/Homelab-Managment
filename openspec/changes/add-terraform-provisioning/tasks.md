@@ -1,12 +1,10 @@
-> **Status:** the Terraform layer is written, validated, and planned against the
-> live node — `fmt`, `validate`, `tflint`, and `terraform plan` all pass, and the
-> plan matches the four running containers exactly (`9 to add, 0 to change,
-> 0 to destroy`). All prerequisites and credential recovery are done.
+> **Status (2026-10-03):** cut over and merged. Terraform owns the four guests;
+> `terraform plan` reports no changes, the old Ansible provisioning layer is
+> gone, and fmt / validate / tflint / checkov / ansible-lint all pass.
 >
-> **Nothing has been destroyed or rewired yet.** The existing Ansible
-> provisioning path is still the active one. The next step (section 7) is the
-> first irreversible one, and backups were dropped by operator decision — the
-> old guests and their data are being discarded deliberately.
+> **Still open:** 7.6 (destroy-path proof — creates and destroys a throwaway
+> guest on the live node), 10.6–10.8 (the dead vault values are still in the
+> files), and the Tailscale tail in 7b.6–7b.8, deferred by operator decision.
 
 ## 1. Prerequisites (operator, out-of-band)
 
@@ -30,7 +28,8 @@ is reachable (API answers 401), so only credentials are missing.
 - [x] 1b.3 Fill the real token into `~/.config/homelab/terraform.env` (template created, mode 0600)
 - [x] 1b.4 **Determine whether the ansible-vault password still exists.** If not, `pihole_password`, `life_dashboard_proton_ics_url`, the Tailscale pre-auth key, and both git deploy keys are unrecoverable and must be regenerated — fold that into phase B
   - Vault password is available; existing secrets stay usable, nothing needs regenerating.
-- [ ] 1b.6 Write the vault password to `~/.config/homelab/vault_pass` (mode `0600`, **outside the repo**, alongside the PVE token). `ansible.cfg` now points there; tilde expansion verified
+- [x] 1b.6 Write the vault password to `~/.config/homelab/vault_pass` (mode `0600`, **outside the repo**, alongside the PVE token). `ansible.cfg` now points there; tilde expansion verified
+  - In place; every vaulted playbook run since decrypts without error.
 - [x] 1b.5 Verify SSH works again: `ssh -i ~/.ssh/Proxmox root@192.168.0.22` and `ssh -i ~/.ssh/Proxmox ansible@192.168.0.225`
 
 ## 2. Repository scaffolding
@@ -89,7 +88,7 @@ data but about availability.
   - Recovery: `sudo tailscale down` on the control host, which cleared table 52 and released `/etc/resolv.conf` (Tailscale had pinned it to MagicDNS at `100.100.100.100`). Permanent fix for a host physically on the LAN: `--accept-routes=false`.
   - Follow-on symptom: with `pihole01` gone, the router's DHCP kept handing out `192.168.0.225` as resolver, so the control host had no working DNS until the rebuild. Terraform was unaffected — it addresses the node by IP.
   - Despite the dropped SSH session the remote loop ran to completion: **all four containers were destroyed**, not just 230. Verified by API, not assumed.
-- [ ] 7.2 `terraform plan` — expect four creates, zero destroys; read it in full before applying
+- [x] 7.2 `terraform plan` — expect four creates, zero destroys; read it in full before applying
   - First `apply` failed on all four with `Permission check failed (/sdn/zones/localnetwork/vmbr0, SDN.Use)` — PVE 9 requires `SDN.Use` to attach a network interface. Anticipated in 7.9. State stayed clean (no partial container resources). Fix: add `SDN.Use` to the `TerraformProvisioning` role.
 - [x] 7.3 `terraform apply`; then `terraform plan` again and confirm "No changes"
 - [x] 7.4 Confirm each container boots and answers SSH as root with the new key
@@ -99,8 +98,10 @@ data but about availability.
 - [x] 7.5 Prove the update path: change one swap value, `apply`, confirm an in-place update rather than a replacement
   - Proven incidentally by the `nesting` change: `0 to add, 4 to change, 0 to destroy`, in-place. This is the path the old role could not express at all (`when: not lxc_exists`).
 - [ ] 7.6 Prove the destroy path and `for_each` behaviour: add a throwaway host, apply, remove its entry, apply, and confirm only that host is destroyed
-- [ ] 7.7 **Tighten the PVE role now that failures are cheap.** Reduce to the intended set and re-verify against a throwaway container: `VM.Allocate VM.Audit VM.Clone VM.Config.{CPU,Disk,Memory,Network,Options,Cloudinit,CDROM} VM.PowerMgmt Datastore.AllocateSpace Datastore.Audit`. Drop every `VM.GuestAgent.*` (arbitrary command execution inside running guests), `VM.Console`, `VM.Backup`, `VM.Migrate`, `VM.Replicate`, `VM.Snapshot*`, `Datastore.Allocate`, `Datastore.AllocateTemplate`
-- [ ] 7.8 Rebind from `/` to `/vms` + `/storage` with propagate, so the token has no reach into `/access`, `/nodes`, `/sdn`, or `/pool`
+- [x] 7.7 **Tighten the PVE role now that failures are cheap.** Reduce to the intended set and re-verify against a throwaway container: `VM.Allocate VM.Audit VM.Clone VM.Config.{CPU,Disk,Memory,Network,Options,Cloudinit,CDROM} VM.PowerMgmt Datastore.AllocateSpace Datastore.Audit`. Drop every `VM.GuestAgent.*` (arbitrary command execution inside running guests), `VM.Console`, `VM.Backup`, `VM.Migrate`, `VM.Replicate`, `VM.Snapshot*`, `Datastore.Allocate`, `Datastore.AllocateTemplate`
+  - Done by the operator.
+- [x] 7.8 Rebind from `/` to `/vms` + `/storage` with propagate, so the token has no reach into `/access`, `/nodes`, `/sdn`, or `/pool`
+  - Done by the operator.
 - [x] 7.9 Add `SDN.Use` only if network configuration actually fails — do not add it pre-emptively
   - It failed; `SDN.Use` added to the role. The empirical approach was correct: the provider's documented minimum did not mention it.
 
@@ -148,29 +149,39 @@ data but about availability.
 - [x] 10.2 Delete `ansible/roles/proxmox_lxc`, `ansible/roles/proxmox_vm_template`, `ansible/roles/proxmox_vm_iso`
 - [x] 10.3 Grep the repo for remaining `community.proxmox` usages and for `lxc_ctid` / `vmid` / `lxc_ostemplate` references; remove or repoint each
 - [x] 10.4 Remove `community.proxmox` from `ansible/collections/requirements.yml` if nothing references it any more
-- [ ] 10.5 Retire the `root@pam!ansible` API token in PVE once no Ansible code calls the Proxmox API
-- [x] 10.6 Delete `proxmox_api_token_secret` from `ansible/inventory/group_vars/proxmox_guest/vault.yml` (superseded by the `terraform@pve` token)
-- [x] 10.7 Delete the `lxc_password` entries from `ansible/inventory/host_vars/partygames01/vault.yml` and `life-dashboard01/vault.yml`, and `vm_ci_password` from `retropie01/vault.yml` — deleted outright, not migrated (design D8)
-- [x] 10.8 Grep for remaining `lxc_password` / `vm_ci_password` / `proxmox_api_*` references and remove them
-- [ ] 10.9 Verify each affected host is still reachable by SSH key after the password entries are gone, and confirm `pct enter <ctid>` from the node still works as the console fallback
-- [ ] 10.10 Run `ansible-lint` and confirm it is clean
+- [x] 10.5 Retire the `root@pam!ansible` API token in PVE once no Ansible code calls the Proxmox API
+  - Done by the operator.
+- [ ] 10.6 Delete `proxmox_api_token_secret` from `ansible/inventory/group_vars/proxmox_guest/vault.yml` (superseded by the `terraform@pve` token)
+  - **Was ticked, but never done:** the values are still in the vault files. Nothing references them any more (grep clean), so they are dead, not dangerous. `pihole01/vault.yml` also still carries an `lxc_password`.
+- [ ] 10.7 Delete the `lxc_password` entries from `ansible/inventory/host_vars/partygames01/vault.yml` and `life-dashboard01/vault.yml`, and `vm_ci_password` from `retropie01/vault.yml` — deleted outright, not migrated (design D8)
+  - **Was ticked, but never done:** the values are still in the vault files. Nothing references them any more (grep clean), so they are dead, not dangerous. `pihole01/vault.yml` also still carries an `lxc_password`.
+- [ ] 10.8 Grep for remaining `lxc_password` / `vm_ci_password` / `proxmox_api_*` references and remove them
+  - **Was ticked, but never done:** the values are still in the vault files. Nothing references them any more (grep clean), so they are dead, not dangerous. `pihole01/vault.yml` also still carries an `lxc_password`.
+- [x] 10.9 Verify each affected host is still reachable by SSH key after the password entries are gone, and confirm `pct enter <ctid>` from the node still works as the console fallback
+  - `ansible all -m ping` succeeds by key on all four guests and the node; `pct exec <ctid> -- hostname` works for 223, 224, 225, 230.
+- [x] 10.10 Run `ansible-lint` and confirm it is clean
+  - Clean at the `production` profile. `.ansible-lint` moved to the repo root (from the root it was never found, so the skip list was ignored and `.terraform/` got linted). Fixed: SPDX comment spacing, role renamed `life-dashboard` → `life_dashboard` (role-name rule), legacy systemd reload moved to a handler.
 
 ## 11. Validation gates
 
 - [x] 11.1 Confirm `terraform fmt -check`, `terraform validate`, and `tflint` pass on the whole `terraform/` tree
-- [ ] 11.2 Run `checkov` (or `trivy config`) against `terraform/`; fix real findings, and record deliberate exceptions inline with a reason
-- [ ] 11.3 Verify `git status` is clean after an apply — no `*.tfstate`, `.terraform/`, or secret-bearing tfvars tracked or untracked
-- [ ] 11.4 Verify no credential literal exists anywhere in the repo (`git grep` for the token id and for `PROXMOX_VE_API_TOKEN` values)
+- [x] 11.2 Run `checkov` (or `trivy config`) against `terraform/`; fix real findings, and record deliberate exceptions inline with a reason
+  - `checkov -d terraform` evaluates nothing — it ships no `bpg/proxmox` policies. `checkov --framework secrets` over the repo: clean.
+- [x] 11.3 Verify `git status` is clean after an apply — no `*.tfstate`, `.terraform/`, or secret-bearing tfvars tracked or untracked
+  - `*.tfstate*` and `.terraform/` are ignored; untracked state on disk does not show in `git status`.
+- [x] 11.4 Verify no credential literal exists anywhere in the repo (`git grep` for the token id and for `PROXMOX_VE_API_TOKEN` values)
+  - Grepped the working tree and full history for the token secret: no hits.
 
 ## 12. Documentation
 
 - [x] 12.1 Write `terraform/README.md`: bootstrap order, where credentials come from, day-2 commands, state backup duty, and the post-apply Ansible steps Terraform cannot perform
 - [x] 12.2 Write `docs/terraform-ansible-split.md`: the boundary rule, the table of what moved where, and the `proxmox_lxc_tun` drift caveat
-- [ ] 12.3 Update `README.md`: repo layout section (add `terraform/`, remove `01_PROVISIONING/`), and the provisioning row of the services table
+- [x] 12.3 Update `README.md`: repo layout section (add `terraform/`, remove `01_PROVISIONING/`), and the provisioning row of the services table
 - [x] 12.4 Update `.claude/CLAUDE.md`: add a Terraform/Ansible boundary section (including the provisioner ban), the Terraform style conventions, and the new pre-commit gates from section 11
 - [x] 12.5 Document the secret model in `docs/terraform-ansible-split.md`: the PVE token is the bootstrap credential and stays outside Vault; root passwords are gone; `pct enter` is the console fallback
-- [ ] 12.6 Add the D11 roadmap items to `docs/` or an OpenSpec backlog note so the follow-on work (PVE RBAC, firewall, remote state, Tailscale ACLs, policy-as-code, cloud module) is not lost
-- [ ] 12.7 Invoke the `update-docs` skill — this is an architecture and deploy-model change, so the blog project page likely needs updating
+- [x] 12.6 Add the D11 roadmap items to `docs/` or an OpenSpec backlog note so the follow-on work (PVE RBAC, firewall, remote state, Tailscale ACLs, policy-as-code, cloud module) is not lost
+  - Added as a Roadmap section in `docs/terraform-ansible-split.md`.
+- [x] 12.7 Invoke the `update-docs` skill — this is an architecture and deploy-model change, so the blog project page likely needs updating
 
 ## 13. Repo restructure (done ahead of schedule, at operator request)
 
