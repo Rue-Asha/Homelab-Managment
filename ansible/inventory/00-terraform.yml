@@ -8,6 +8,12 @@
       "children":
         "lxc_container_proxmox":
           "children":
+            "github_runner":
+              "hosts":
+                "runner01":
+                  "ansible_host": "192.168.0.224"
+                  "ansible_user": "ansible"
+                  "lxc_ctid": 224
             "life_manager":
               "hosts":
                 "life-manager01":
