@@ -1,5 +1,5 @@
 output "lxc_hosts" {
-  description = "Hostname -> vmid and address, for operator inspection and for diffing against the old static inventory."
+  description   =   "Hostname -> vmid and address, for operator inspection and for diffing against the old static inventory."
   value = {
     for name, m in module.lxc : name => {
       vmid = m.vmid
