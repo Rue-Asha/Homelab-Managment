@@ -13,6 +13,9 @@ table inet egress_firewall {
 {% endif %}
         ct state established,related accept
 
+        # IPv6 needs these to reach its router; ARP is outside the inet family.
+        icmpv6 type { nd-router-solicit, nd-neighbor-solicit, nd-neighbor-advert } accept
+
         meta l4proto { tcp, udp } th dport 53 accept
 {% if egress_firewall_ssh_targets %}
         ip daddr { {{ egress_firewall_ssh_targets | join(', ') }} } tcp dport 22 accept
