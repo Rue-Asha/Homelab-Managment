@@ -5,11 +5,13 @@ life_manager_user: life-manager
 life_manager_group: life-manager
 life_manager_service_name: life-manager
 
-# --- Source: the separate app repo; pinned version is the "image tag" ---
-# Set life_manager_repo_url in host_vars. The repo is public and cloned over
-# HTTPS, so unlike partygames there is no deploy key.
-life_manager_repo_url: ""
-life_manager_version: main                # git tag / branch / commit to deploy
+# --- Source: the app repo's CI-built release tarball; the tag is the "image tag" ---
+# The repo is public, so unlike partygames there is no deploy key. Assets are
+# named without the tag's leading `v`.
+life_manager_releases_url: https://github.com/Rue-Asha/Life-Manager/releases/download
+life_manager_version: v0.2.0              # release tag to deploy
+life_manager_artifact: "life-manager-{{ life_manager_version | regex_replace('^v', '') }}.tgz"
+life_manager_artifact_url: "{{ life_manager_releases_url }}/{{ life_manager_version }}/{{ life_manager_artifact }}"
 
 # --- On-host layout (see docs/party-games-webservice-architecture.md) ---
 life_manager_base_dir: /opt/life-manager
@@ -32,8 +34,7 @@ life_manager_node_env: production
 # The nginx role sends X-Forwarded-Proto.
 life_manager_protocol_header: x-forwarded-proto
 
-# --- Build / deploy ---
+# --- Deploy ---
 # No migrate step: the app applies its migrations on start and exits non-zero
 # if one fails, so a bad migration surfaces as a failed restart.
-life_manager_build_command: "npm run build"
 life_manager_keep_releases: 5
