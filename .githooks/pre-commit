@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Commit gate for everyone, human or agent. Enabled by .envrc via
+# core.hooksPath; CI runs the same script in --all mode and is the authority.
+# Git runs this after staging, so `git add … && git commit` and `commit -a`
+# are covered by --staged.
+exec scripts/proof.sh --staged
