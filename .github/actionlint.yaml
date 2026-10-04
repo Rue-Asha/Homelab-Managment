@@ -1,0 +1,5 @@
+# Labels of the repository's self-hosted runner (runner01), which actionlint
+# cannot know about. Only .github/workflows/deploy.yml may request it.
+self-hosted-runner:
+  labels:
+    - homelab-deploy

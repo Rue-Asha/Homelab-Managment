@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: MIT-0
+---
+# --- Identity ---
+# No sudo, ever: deploy jobs run as this user, and the egress firewall only
+# holds while nothing in a job can become root.
+github_runner_user: github-runner
+github_runner_home: "/home/{{ github_runner_user }}"
+github_runner_dir: "{{ github_runner_home }}/actions-runner"
+github_runner_service_name: github-runner
+
+# --- Registration ---
+# Repository runner on this repo only. The token comes from Settings ->
+# Actions -> Runners -> New, is passed once with -e, expires in an hour and is
+# never stored. Without it the role configures everything but registration.
+github_runner_repo_url: https://github.com/Rue-Asha/Homelab-Managment
+github_runner_registration_token: ""
+github_runner_name: "{{ inventory_hostname }}"
+github_runner_labels: [homelab-deploy]
+
+# --- Runner release (self-update is disabled, so this pin holds) ---
+github_runner_version: 2.337.0
+github_runner_sha256: 70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613
+github_runner_archive: "actions-runner-linux-x64-{{ github_runner_version }}.tar.gz"
+github_runner_url: "https://github.com/actions/runner/releases/download/v{{ github_runner_version }}/{{ github_runner_archive }}"
+
+# --- Ansible for deploy jobs: the ansible-core CI lints against ---
+github_runner_venv: "{{ github_runner_home }}/ansible-venv"
+github_runner_ansible_core: >-
+  {{ lookup('ansible.builtin.file', role_path ~ '/../../../ci/requirements.txt').splitlines()
+     | select('match', 'ansible-core==') | first }}
+github_runner_packages:
+  - git
+  - openssh-client
+  - python3-venv
+
+# --- Deploy credentials, handed to jobs through the runner's .env ---
+github_runner_deploy_key: "{{ github_runner_home }}/.ssh/deploy_ed25519"
+github_runner_known_hosts: "{{ github_runner_home }}/.ssh/known_hosts"
+github_runner_vault_password_file: "{{ github_runner_home }}/.config/homelab/vault_pass"
+# Controller side: where the vault password is read from, and where the deploy
+# key's public half is fetched to for guest_bootstrap.
+github_runner_vault_password_src: ~/.config/homelab/vault_pass
+github_runner_public_key_dest: ~/.config/homelab/deploy_ed25519.pub
+# Guests whose host keys are pinned. Scanned while this role runs, which only
+# a human does, so trust-on-first-use never happens inside a deploy.
+github_runner_ssh_targets: []

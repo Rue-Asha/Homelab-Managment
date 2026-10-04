@@ -32,12 +32,20 @@ tf_changed=0
 tfstate=()
 ansible_yml=()
 playbooks=()
+workflows=()
+collection_reqs=()
+deploy_targets=0
 for f in "${files[@]}"; do
   case "$f" in
     *.tfstate|*.tfstate.*) tfstate+=("$f") ;;
   esac
   case "$f" in
+    scripts/deploy-targets.sh|scripts/tests/deploy-targets.sh) deploy_targets=1 ;;
+  esac
+  case "$f" in
     terraform/*) tf_changed=1 ;;
+    .github/workflows/*.yml|.github/workflows/*.yaml) workflows+=("$f") ;;
+    ansible/collections/requirements.yml) collection_reqs+=("$f"); ansible_yml+=("$f") ;;
     ansible/playbooks/*.yml) ansible_yml+=("$f"); playbooks+=("$f") ;;
     ansible/*.yml) ansible_yml+=("$f") ;;
   esac
@@ -97,6 +105,18 @@ fi
 for pb in "${playbooks[@]}"; do
   sensor "syntax-check $pb" "ANSIBLE_SYNTAX_CHECK_FAILED ($pb)" ansible-playbook --syntax-check "$pb"
 done
+
+if [ "${#collection_reqs[@]}" -gt 0 ]; then
+  sensor "collection pins" COLLECTION_NOT_PINNED python3 scripts/checks/collection-pins.py "${collection_reqs[@]}"
+fi
+
+if [ "${#workflows[@]}" -gt 0 ]; then
+  sensor "workflow triggers" SELF_HOSTED_ON_UNTRUSTED_TRIGGER python3 scripts/checks/workflow-triggers.py "${workflows[@]}"
+fi
+
+if [ "$deploy_targets" -eq 1 ]; then
+  sensor "deploy-targets fixtures" DEPLOY_TARGETS_FAILED scripts/tests/deploy-targets.sh
+fi
 
 if [ "$ran" -eq 0 ]; then
   echo "proof: nothing to check"

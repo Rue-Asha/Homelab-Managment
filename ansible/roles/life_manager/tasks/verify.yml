@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Smoke check on every run, deploy or not. The restart notified earlier has to
+# have happened before the request proves anything about the new release.
+- name: Restart the service now if this run changed it
+  ansible.builtin.meta: flush_handlers
+
+- name: Check the service through the reverse proxy, rolling back on failure
+  block:
+    - name: Request the service through the reverse proxy
+      ansible.builtin.uri:
+        url: "{{ life_manager_smoke_url }}"
+        headers: "{{ life_manager_smoke_headers }}"
+        status_code: "{{ range(200, 300) | list }}"
+      register: life_manager_smoke
+      until: life_manager_smoke is succeeded
+      retries: "{{ life_manager_smoke_retries }}"
+      delay: "{{ life_manager_smoke_delay }}"
+
+  rescue:
+    # Only a run that swapped `current` has something to undo.
+    - name: Decide whether there is a release to roll back to
+      ansible.builtin.set_fact:
+        life_manager_rolling_back: >-
+          {{ (life_manager_redeploy | bool) and (life_manager_previous_release | default('') | length > 0) }}
+
+    - name: Roll back to the release that was active before this run
+      when: life_manager_rolling_back | bool
+      block:
+        - name: Point current back at the previous release
+          ansible.builtin.file:
+            src: "{{ life_manager_previous_release }}"
+            dest: "{{ life_manager_current_link }}"
+            state: link
+            owner: "{{ life_manager_user }}"
+            group: "{{ life_manager_group }}"
+            force: true
+
+        - name: Restart the service on the previous release
+          ansible.builtin.systemd:
+            name: "{{ life_manager_service_name }}"
+            state: restarted
+
+    - name: Fail the run
+      ansible.builtin.fail:
+        msg: >-
+          {{ life_manager_smoke_url }} did not answer 2xx within
+          {{ life_manager_smoke_retries }} x {{ life_manager_smoke_delay }}s for
+          {{ life_manager_version }} ({{ life_manager_release_dir | default(life_manager_previous_release | default('no release')) }}).
+          {{ ('Rolled back to ' ~ life_manager_previous_release ~ '.') if life_manager_rolling_back | bool
+             else 'Nothing was rolled back: no previous release, or this run did not deploy one.' }}

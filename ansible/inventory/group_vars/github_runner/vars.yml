@@ -1,0 +1,18 @@
+---
+# The deploy runner (runner01). Applied by 02_BASE_CONFIGURATION/deploy_runner.yml
+# only; no 03_SERVICES playbook targets this group, so a deploy never touches it.
+
+# Guests the runner deploys to, by the address Ansible connects to.
+github_runner_deploy_targets: >-
+  {{ groups['proxmox_guest'] | difference([inventory_hostname])
+     | map('extract', hostvars, 'ansible_host') | list }}
+
+github_runner_ssh_targets: "{{ github_runner_deploy_targets }}"
+
+egress_firewall_ssh_targets: "{{ github_runner_deploy_targets }}"
+egress_firewall_blocked_targets: >-
+  {{ groups['proxmox_node'] | map('extract', hostvars, 'ansible_host') | list }}
+
+# The deploy key must not open ansible@runner01: its sudo would let a job drop
+# the egress firewall.
+guest_bootstrap_authorize_deploy_key: false

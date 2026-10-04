@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: MIT-0
+---
+# config.sh writes its own .env and .path, so these run after registration.
+# The runner hands .env to every job; environment variables beat ansible.cfg,
+# so the repo config stays as it is for the workstation.
+- name: Render the job environment
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ github_runner_dir }}/.env"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user }}"
+    mode: "0640"
+  notify: Restart github-runner
+
+- name: Put the pinned ansible-core first on the job PATH
+  ansible.builtin.copy:
+    content: "{{ github_runner_venv }}/bin:/usr/local/bin:/usr/bin:/bin\n"
+    dest: "{{ github_runner_dir }}/.path"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user }}"
+    mode: "0640"
+  notify: Restart github-runner

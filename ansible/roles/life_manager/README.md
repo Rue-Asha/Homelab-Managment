@@ -36,6 +36,9 @@ Role Variables
 | `life_manager_port` | `3000` | Port the Node process listens on (match `nginx_backend_port`). |
 | `life_manager_protocol_header` | `x-forwarded-proto` | `PROTOCOL_HEADER` for adapter-node. |
 | `life_manager_keep_releases` | `5` | Releases to retain as rollback targets. |
+| `life_manager_smoke_url` | `http://127.0.0.1/healthz` | Requested after every run, through nginx on the host. |
+| `life_manager_smoke_headers` | `{}` | Set `Host` to `nginx_server_name`, or the request lands on nginx's default site. |
+| `life_manager_smoke_retries` / `_delay` | `10` / `3` | Start-up migrations must finish within retries × delay seconds. |
 
 How a deploy works
 ------------------
@@ -49,7 +52,19 @@ How a deploy works
 4. The app applies its own migrations on start; a failing migration exits
    non-zero and shows up as a failed restart. `GET /healthz` answers `200 ok`
    once the database is open.
-5. Prune all but the newest `life_manager_keep_releases` releases.
+5. Smoke check (`tasks/verify.yml`), on every run: flush handlers so the
+   restart has happened, then request `life_manager_smoke_url` until it
+   answers 2xx. If it never does and this run swapped `current`, `current` is
+   pointed back at the release that was active before the run, the service is
+   restarted on it, and the play fails naming both releases. With no previous
+   release (first deploy) or no swap, the play just fails.
+6. Prune all but the newest `life_manager_keep_releases` releases. This runs
+   after the check, so pruning never removes the rollback target.
+
+**Rollback restores code, not data.** Migrations run forward only, so a rolled
+back release starts against a database the failed release may already have
+migrated. Life Manager migrations must therefore stay additive: an old release
+has to run on a newer schema.
 
 Redeploy is gated by a string comparison against the tag, so re-running with
 the same tag never re-fetches.

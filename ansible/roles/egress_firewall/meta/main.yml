@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: >-
+    Default-drop outbound firewall (nftables): only loopback, established
+    traffic, DNS, SSH to a host list and selected TCP ports to the internet
+    leave the host. Host-level, service-agnostic.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - firewall
+    - nftables
+    - security
+
+dependencies: []

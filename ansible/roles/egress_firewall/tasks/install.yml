@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+    update_cache: true
+    cache_valid_time: 3600

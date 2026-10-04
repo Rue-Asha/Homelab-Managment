@@ -1,0 +1,21 @@
+---
+# The self-hosted GitHub Actions runner the deploy workflow runs on.
+#
+# Human-run only. It lives outside 03_SERVICES so scripts/deploy-targets.sh
+# never selects it: a deploy that restarted or re-registered its own runner
+# would kill the job running it. Re-run after recreating any guest, so its new
+# host key is pinned, and to rotate the deploy key.
+#
+#   ansible-playbook playbooks/02_BASE_CONFIGURATION/deploy_runner.yml \
+#     -e github_runner_registration_token=<token from Settings -> Actions -> Runners>
+#
+# The token is only needed the first time; without it the runner stays
+# unregistered and its service is not started.
+
+- name: Configure the deploy runner
+  hosts: github_runner
+  become: true
+  roles:
+    - common
+    - egress_firewall
+    - github_runner

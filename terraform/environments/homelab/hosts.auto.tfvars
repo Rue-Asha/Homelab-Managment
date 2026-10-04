@@ -21,6 +21,22 @@ lxc_hosts = {
     swap    = 512
     disk_gb = 10
   }
+
+  # Self-hosted GitHub Actions runner for the deploy workflow. Configured by
+  # 02_BASE_CONFIGURATION/deploy_runner.yml, never by a deploy. Debian 13
+  # because the ansible-core pinned in ci/requirements.txt needs Python 3.12+.
+  "runner01" = {
+    vmid    = 224
+    ipv4    = "192.168.0.224/24"
+    groups  = ["github_runner"]
+    tags    = ["ci", "terraform"]
+    cores   = 2
+    memory  = 2048
+    swap    = 512
+    disk_gb = 12
+
+    template_file_id = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
+  }
 }
 
 # retropie01 is deliberately absent: the box is not currently provisioned. Its

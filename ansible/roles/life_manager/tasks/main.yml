@@ -20,6 +20,12 @@
 - name: Manage the systemd service
   ansible.builtin.import_tasks: service.yml
 
+# Before pruning, so a small life_manager_keep_releases can never remove the
+# release a failed check rolls back to.
+- name: Smoke-check the service and roll back a failed release
+  ansible.builtin.import_tasks: verify.yml
+  tags: [deploy]
+
 - name: Prune old releases
   ansible.builtin.import_tasks: prune.yml
   tags: [deploy]

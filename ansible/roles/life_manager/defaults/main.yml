@@ -38,3 +38,14 @@ life_manager_protocol_header: x-forwarded-proto
 # No migrate step: the app applies its migrations on start and exits non-zero
 # if one fails, so a bad migration surfaces as a failed restart.
 life_manager_keep_releases: 5
+
+# --- Smoke check (tasks/verify.yml) ---
+# Requested through nginx on the host, so proxy and app are checked together.
+# /healthz answers 200 once the app has opened its database.
+life_manager_smoke_url: http://127.0.0.1/healthz
+# The vhost matches on server_name; without a matching Host the request lands
+# on nginx's default site instead of the app.
+life_manager_smoke_headers: {}
+# Start-up migrations must finish inside retries x delay seconds.
+life_manager_smoke_retries: 10
+life_manager_smoke_delay: 3

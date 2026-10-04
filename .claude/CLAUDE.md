@@ -77,13 +77,16 @@ and the secret model, in `docs/terraform-ansible-split.md`.
 
 ## Service delivery model
 
-Application services are deployed **app-per-LXC**, not via container images. Each service runs in its own Proxmox LXC; Ansible converges the box into the service (no Docker/OCI images, no registry, no CI required). `systemd` supervises the process (restart, boot-start, journald) — it is the runtime supervisor in place of a container runtime.
+Application services are deployed **app-per-LXC**, not via container images. Each service runs in its own Proxmox LXC; Ansible converges the box into the service (no Docker/OCI images, no registry). `systemd` supervises the process (restart, boot-start, journald) — it is the runtime supervisor in place of a container runtime.
 
-- **Two repos:** this repo configures the host; the application lives in its **own repo**, referenced from the service's host/group vars by URL + a **pinned version** (git tag/commit, the equivalent of an image tag). A deploy is a playbook run (Ansible checks out + builds), not host-side polling.
-- **Build on host:** the service role checks out the pinned ref and builds on the LXC (e.g. `npm ci && npm run build`); no prebuilt artifact. Graduate to a shipped tarball only if a host must stay toolchain-free or builds need CI — only the checkout/build steps change.
-- **Release layout:** build into `/opt/<svc>/releases/<ts>`, flip a `current` symlink, restart — atomic deploy + instant rollback. Persistent data (e.g. a SQLite file) lives outside releases (e.g. `/var/lib/<svc>/`) and is never touched by a redeploy.
+- **Two repos:** this repo configures the host; the application lives in its **own repo**, referenced from the service's host/group vars by URL + a **pinned version** (release tag, the equivalent of an image tag).
+- **Deploy = merge to `main`:** `.github/workflows/deploy.yml` runs on the self-hosted runner `runner01`, maps the merged diff to the `03_SERVICES` playbooks it affects (`scripts/deploy-targets.sh`) and runs each in full. Bumping a service is a PR that changes its pinned version. A manual `ansible-playbook` run from the workstation still works and gets the same smoke check; see `docs/deploy-runner.md`.
+- **CI-built artifact:** the app repo's CI builds and tests a release tarball per tag; the service role downloads it, verifies its sha256 and unpacks it. Nothing is built on the host.
+- **Smoke check + rollback:** a service role that deploys releases ends by requesting the service through nginx on the host; a failed check points `current` back at the previous release, restarts it and fails the play (`roles/life_manager/tasks/verify.yml`). Migrations must stay additive, because a rollback restores code, not data.
+- **Release layout:** unpack into `/opt/<svc>/releases/<ts>`, flip a `current` symlink, restart — atomic deploy + instant rollback. Persistent data (e.g. a SQLite file) lives outside releases (e.g. `/var/lib/<svc>/`) and is never touched by a redeploy.
 - **Role split:** reusable machine-config concerns are their own roles (runtime e.g. `nodejs`, `nginx`, base/hardening in `common`); a service gets its **own role** only when it has config/deps beyond a declarative `03_SERVICES` playbook. **Host-level concerns (firewall, runtime install) must not live in a service/app role.**
-- **nginx** is a host-level reverse proxy in front of the service (`:80` → `127.0.0.1:<port>`), enabled via the service host's vars.
+- **nginx** is a host-level reverse proxy in front of the service (`:80` → `127.0.0.1:<port>`), enabled via the service host's vars. It comes before the service role in the playbook, so the smoke check can go through it.
+- **The runner never manages itself:** `runner01` is configured only by `02_BASE_CONFIGURATION/deploy_runner.yml`, run by hand. Nothing under `03_SERVICES` may target the `github_runner` group.
 
 Worked example: `docs/party-games-webservice-architecture.md`.
 
@@ -147,7 +150,19 @@ violation instead. A second gate asks for confirmation before
 
 CI (`.github/workflows/ci.yml`) runs `proof.sh --all` plus the shared
 `Rue-Asha/ci` security baseline on every PR and is the merge authority for
-`main`. A new check goes into `proof.sh`, never into the workflow.
+`main`. A new check goes into `proof.sh`, never into the workflow. Merging
+then deploys (`.github/workflows/deploy.yml`), so `main` must be green and up
+to date before a merge.
+
+Repo-wide (`proof.sh`):
+
+- `scripts/checks/workflow-triggers.py` — no workflow may pair an untrusted
+  trigger (`pull_request`, `pull_request_target`, `issues`, `issue_comment`,
+  `discussion*`, `fork`, `watch`, `workflow_run`) with a `self-hosted` runner
+- `scripts/checks/collection-pins.py` — every collection in
+  `ansible/collections/requirements.yml` pinned to an exact version
+- `scripts/tests/deploy-targets.sh` — fixture tests for the change-to-playbook
+  mapping, whenever `scripts/deploy-targets.sh` or its tests change
 
 Ansible:
 

@@ -1,0 +1,100 @@
+# Merge to main is the deploy. Maps the pushed commits to the 03_SERVICES
+# playbooks they affect (scripts/deploy-targets.sh) and runs each in full on
+# the homelab's self-hosted runner, runner01.
+#
+# Trust boundary: only `push` to main and `workflow_dispatch` start this, and
+# the production environment admits only main, so the runner only ever runs
+# code already on main. scripts/checks/workflow-triggers.py fails any
+# workflow that pairs an untrusted trigger with a self-hosted runner.
+#
+# No secret is referenced. The deploy key, vault password file and pinned
+# host keys live on runner01 and reach the job through the runner's .env
+# (ansible/roles/github_runner). Logs are public: no --diff, no -v.
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      playbook:
+        description: 03_SERVICES playbook to run regardless of the diff
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - life-manager
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    name: deploy
+    runs-on: [self-hosted, homelab-deploy]
+    environment: production
+    env:
+      ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
+    steps:
+      # The runner is persistent; nothing from an earlier job may leak in.
+      - name: Wipe the workspace
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -delete
+
+      # Full history: deploy-targets.sh diffs the push's before..after.
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          clean: true
+
+      - name: Install Ansible collections
+        run: ansible-galaxy collection install -r ansible/collections/requirements.yml
+
+      - name: Select playbooks
+        env:
+          EVENT: ${{ github.event_name }}
+          PLAYBOOK: ${{ inputs.playbook }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            if [ "$PLAYBOOK" = all ]; then args=(--all); else args=("$PLAYBOOK"); fi
+          else
+            args=("$BEFORE" "$AFTER")
+          fi
+          scripts/deploy-targets.sh "${args[@]}" > "$RUNNER_TEMP/targets"
+          echo "Playbooks to run:"
+          sed 's/^/  /' "$RUNNER_TEMP/targets"
+
+      - name: Run playbooks
+        run: |
+          mapfile -t targets < "$RUNNER_TEMP/targets"
+          if [ "${#targets[@]}" -eq 0 ]; then
+            echo "Nothing to deploy: no 03_SERVICES playbook is affected by this change."
+            exit 0
+          fi
+          for i in "${!targets[@]}"; do
+            pb=${targets[$i]}
+            echo "::group::$pb"
+            if ansible-playbook "$pb" --limit proxmox_guest; then
+              echo "::endgroup::"
+              continue
+            fi
+            echo "::endgroup::"
+            echo "::error::$pb failed"
+            for skipped in "${targets[@]:i+1}"; do
+              echo "Not run: $skipped"
+            done
+            exit 1
+          done

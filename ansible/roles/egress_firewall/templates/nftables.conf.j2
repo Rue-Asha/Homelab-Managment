@@ -1,0 +1,25 @@
+#!/usr/sbin/nft -f
+# {{ ansible_managed }}
+
+flush ruleset
+
+table inet egress_firewall {
+    chain output {
+        type filter hook output priority filter; policy drop;
+
+        oif "lo" accept
+{% if egress_firewall_blocked_targets %}
+        ip daddr { {{ egress_firewall_blocked_targets | join(', ') }} } drop
+{% endif %}
+        ct state established,related accept
+
+        meta l4proto { tcp, udp } th dport 53 accept
+{% if egress_firewall_ssh_targets %}
+        ip daddr { {{ egress_firewall_ssh_targets | join(', ') }} } tcp dport 22 accept
+{% endif %}
+{% if egress_firewall_public_tcp_ports %}
+        ip daddr != { {{ egress_firewall_private_networks | join(', ') }} } tcp dport { {{ egress_firewall_public_tcp_ports | join(', ') }} } accept
+        ip6 daddr != { {{ egress_firewall_private_networks6 | join(', ') }} } tcp dport { {{ egress_firewall_public_tcp_ports | join(', ') }} } accept
+{% endif %}
+    }
+}
