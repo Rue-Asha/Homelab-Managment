@@ -25,7 +25,7 @@ module "lxc" {
   disk_gb      = each.value.disk_gb
   datastore_id = var.lxc_datastore_id
 
-  template_file_id = var.lxc_template_file_id
+  template_file_id = coalesce(each.value.template_file_id, var.lxc_template_file_id)
   ssh_public_keys  = local.ssh_public_keys
 
   features = each.value.features

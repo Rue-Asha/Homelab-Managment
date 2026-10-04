@@ -18,6 +18,8 @@ its own lightweight LXC, and a playbook is the only way in.
 | `common` | Base host hardening shared by every guest |
 | `guest_bootstrap` | First run on a fresh guest: `ansible` user + sudo |
 | `proxmox_lxc_tun` | `/dev/net/tun` passthrough on the node (for a future Tailscale guest) |
+| `github_runner` | Self-hosted GitHub Actions runner that deploys merges to `main` |
+| `egress_firewall` | Default-drop outbound nftables firewall (on the runner) |
 
 Provisioning (creating, resizing, destroying LXCs/VMs) is not an Ansible role —
 it is `terraform/`, with the host catalogue in
@@ -50,6 +52,7 @@ ansible/                      # configuration layer — everything inside a gues
   roles/                      #   standard Galaxy role structure
 .ansible-lint                 # at the root so lint and the pre-commit hook find it
 scripts/proof.sh              # every check; run by the git pre-commit hook and CI
+scripts/deploy-targets.sh     # which 03_SERVICES playbooks a change deploys
 .githooks/pre-commit          # commit gate, enabled by .envrc
 ci/requirements.txt           # pinned ansible-core, ansible-lint, checkov for CI
 docs/                         # architecture notes and implementation plans
@@ -69,6 +72,12 @@ ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l life-m
 ansible-playbook ansible/playbooks/03_SERVICES/life-manager.yml -l life-manager01
 ```
 
+Normally you don't run that last line yourself: **merging to `main` deploys.**
+`.github/workflows/deploy.yml` runs the affected `03_SERVICES` playbooks on the
+self-hosted runner `runner01`, and a service that fails its smoke check rolls
+back to its previous release. Setup, key rotation and the manual fallback:
+`docs/deploy-runner.md`.
+
 Credentials live outside the repo: the PVE API token in
 `~/.config/homelab/terraform.env` (loaded by direnv) and the ansible-vault
 password in `~/.config/homelab/vault_pass`. Terraform state is local and
@@ -78,7 +87,7 @@ git-ignored — back it up with the control host. Full setup and day-2 commands:
 ## Checks
 
 ```sh
-scripts/proof.sh          # fmt, validate, tflint, checkov, ansible-lint, syntax-check — staged files only
+scripts/proof.sh          # fmt, validate, tflint, checkov, ansible-lint, syntax-check, workflow/pin sensors — staged files only
 scripts/proof.sh --all    # the same, whole repo
 ```
 
@@ -92,8 +101,9 @@ Each failing check prints `INVARIANT_VIOLATION: <CODE>`.
   push to `main`, plus the shared
   [`Rue-Asha/ci`](https://github.com/Rue-Asha/ci) security baseline (workflow
   lint, secret scan, dependency review). CI is the authority: `main` only
-  merges with `proof` and every `security-baseline / …` check green. It never
-  reaches the homelab and holds no secrets. Tool versions CI uses are pinned in
+  merges with `proof` and every `security-baseline / …` check green. CI never
+  reaches the homelab; only `deploy.yml` does, with credentials that live on
+  the runner. The repo holds no GitHub secrets. Tool versions CI uses are pinned in
   `ci/requirements.txt` and the workflow; `pip install -r ci/requirements.txt`
   matches them locally.
 - **Claude Code** — `.claude/settings.json` blocks an agent `git commit

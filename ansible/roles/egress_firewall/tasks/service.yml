@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure nftables is enabled and running
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: true
+    state: started

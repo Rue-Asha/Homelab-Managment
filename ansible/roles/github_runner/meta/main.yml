@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: >-
+    Self-hosted GitHub Actions runner for the deploy workflow: unprivileged
+    user, pinned runner release, pinned ansible-core, a dedicated deploy key,
+    pinned guest host keys, and the Ansible overrides in the runner's .env.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+  galaxy_tags:
+    - github
+    - ci
+    - runner
+
+dependencies: []

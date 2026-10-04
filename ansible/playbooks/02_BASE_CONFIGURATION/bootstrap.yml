@@ -9,7 +9,9 @@
 # ONE-SHOT for fresh guests. The first play connects as root, which `common`
 # disables at the end of the run -- by design. Re-running it against an already
 # hardened host will fail to connect, and does not need to succeed: the state it
-# establishes is already in place. To re-bootstrap, recreate the guest.
+# establishes is already in place. To re-bootstrap, recreate the guest. To
+# re-authorise keys on hardened guests (e.g. a new deploy runner key), connect
+# as ansible instead: -e guest_bootstrap_connect_user=ansible --become
 #
 #   terraform -chdir=terraform/environments/homelab apply
 #   ansible-playbook playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l <host>

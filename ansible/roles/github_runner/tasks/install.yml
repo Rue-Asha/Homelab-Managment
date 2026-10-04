@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install runner packages
+  ansible.builtin.apt:
+    name: "{{ github_runner_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure the runner directory exists
+  ansible.builtin.file:
+    path: "{{ github_runner_dir }}"
+    state: directory
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user }}"
+    mode: "0750"
+
+- name: Download the runner release and verify its checksum
+  ansible.builtin.get_url:
+    url: "{{ github_runner_url }}"
+    dest: "{{ github_runner_home }}/{{ github_runner_archive }}"
+    checksum: "sha256:{{ github_runner_sha256 }}"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_user }}"
+    mode: "0644"
+
+- name: Unpack the runner release
+  ansible.builtin.unarchive:
+    src: "{{ github_runner_home }}/{{ github_runner_archive }}"
+    dest: "{{ github_runner_dir }}"
+    remote_src: true
+  become: true
+  become_user: "{{ github_runner_user }}"
+  notify: Restart github-runner
+
+# The vendor script knows the runtime libraries for each distro release.
+- name: Install the runner's runtime dependencies
+  ansible.builtin.command: "{{ github_runner_dir }}/bin/installdependencies.sh"
+  register: github_runner_dependencies
+  changed_when: github_runner_dependencies['stdout'] is search('[1-9][0-9]* newly installed')
+
+- name: Install the pinned ansible-core for deploy jobs
+  ansible.builtin.pip:
+    name: "{{ github_runner_ansible_core }}"
+    virtualenv: "{{ github_runner_venv }}"
+    virtualenv_command: python3 -m venv
+  become: true
+  become_user: "{{ github_runner_user }}"

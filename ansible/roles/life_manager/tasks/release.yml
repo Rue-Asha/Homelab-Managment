@@ -2,6 +2,16 @@
 ---
 # Atomic go-live: repoint `current` at the freshly built release in a single
 # symlink swap. Rollback = repoint `current` at a previous release.
+- name: Read the release that is active before this run
+  ansible.builtin.stat:
+    path: "{{ life_manager_current_link }}"
+  register: life_manager_previous_link
+
+# verify.yml rolls back to this if the new release fails its smoke check.
+- name: Remember the release that is active before this run
+  ansible.builtin.set_fact:
+    life_manager_previous_release: "{{ life_manager_previous_link['stat']['lnk_target'] | default('', true) }}"
+
 - name: Activate the new release
   ansible.builtin.file:
     src: "{{ life_manager_release_dir }}"

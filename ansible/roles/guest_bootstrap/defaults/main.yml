@@ -10,6 +10,14 @@ guest_bootstrap_user_home: "/home/{{ guest_bootstrap_user }}"
 # root SSH login can be closed afterwards by the common role.
 guest_bootstrap_ssh_public_key: "{{ lookup('ansible.builtin.file', '~/.ssh/Proxmox.pub') }}"
 
+# The deploy runner's public key (fetched by the github_runner role), authorised
+# next to the workstation key. Skipped while the file does not exist, i.e.
+# before the runner has been set up.
+guest_bootstrap_deploy_public_key_path: ~/.config/homelab/deploy_ed25519.pub
+# False on the runner itself: the key would give its jobs ansible's sudo there
+# over loopback, and with it the power to drop the egress firewall.
+guest_bootstrap_authorize_deploy_key: true
+
 guest_bootstrap_packages:
   - sudo
 
