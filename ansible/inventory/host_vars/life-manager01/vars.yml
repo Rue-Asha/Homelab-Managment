@@ -2,7 +2,7 @@
 # --- life_manager service (03_SERVICES) ---
 # Pinned to a commit until the app repo cuts its first tag.
 life_manager_repo_url: "https://github.com/Rue-Asha/Life-Manager.git"
-life_manager_version: 0b332ce2dd33a07a5ca7159c7763dd912c4b7d11
+life_manager_version: 58ecf7007ba908793bee4c3cf18f86fac718e76d
 
 common_timezone: Europe/Berlin
 
