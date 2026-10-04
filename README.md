@@ -48,7 +48,9 @@ ansible/                      # configuration layer — everything inside a gues
     03_SERVICES/              #   application install & config
   roles/                      #   standard Galaxy role structure
 .ansible-lint                 # at the root so lint and the pre-commit hook find it
-scripts/proof.sh              # pre-commit checks, also run by the Claude Code commit gate
+scripts/proof.sh              # every check; run by the git pre-commit hook and CI
+.githooks/pre-commit          # commit gate, enabled by .envrc
+ci/requirements.txt           # pinned ansible-core, ansible-lint, checkov for CI
 docs/                         # architecture notes and implementation plans
 openspec/                     # OpenSpec change proposals for larger pieces of work
 ```
@@ -75,13 +77,25 @@ git-ignored — back it up with the control host. Full setup and day-2 commands:
 ## Checks
 
 ```sh
-scripts/proof.sh          # fmt, validate, tflint, ansible-lint, syntax-check — staged files only
+scripts/proof.sh          # fmt, validate, tflint, checkov, ansible-lint, syntax-check — staged files only
 scripts/proof.sh --all    # the same, whole repo
-uvx checkov -d terraform --skip-path .terraform   # not part of proof.sh yet
 ```
 
-Each failing check prints `INVARIANT_VIOLATION: <CODE>`. In Claude Code, two
-hooks in `.claude/settings.json` use this as a harness: an agent `git commit`
-is blocked until `proof.sh` passes, and `terraform apply`/`destroy` or an
-`ansible-playbook` run without `--check` always asks for confirmation.
-`/proof` runs the sensors on demand.
+Each failing check prints `INVARIANT_VIOLATION: <CODE>`.
+
+- **Commit gate** — `.githooks/pre-commit` runs `proof.sh` on every commit,
+  from a terminal, neovim or Claude Code alike. `direnv allow` points
+  `core.hooksPath` at it. `git commit --no-verify` skips it on purpose; the
+  agent is blocked from doing so.
+- **CI** — `.github/workflows/ci.yml` runs `proof.sh --all` on every PR and
+  push to `main`, plus the shared
+  [`Rue-Asha/ci`](https://github.com/Rue-Asha/ci) security baseline (workflow
+  lint, secret scan, dependency review). CI is the authority: `main` only
+  merges with `proof` and every `security-baseline / …` check green. It never
+  reaches the homelab and holds no secrets. Tool versions CI uses are pinned in
+  `ci/requirements.txt` and the workflow; `pip install -r ci/requirements.txt`
+  matches them locally.
+- **Claude Code** — `.claude/settings.json` blocks an agent `git commit
+  --no-verify`, and asks for confirmation before `terraform apply`/`destroy` or
+  an `ansible-playbook` run without `--check`. `/proof` runs the sensors on
+  demand.

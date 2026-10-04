@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs the "Before committing" checks from .claude/CLAUDE.md against what
-# changed. Shared by the commit gate (.claude/hooks/iac-proof-gate.sh), the
+# changed. Shared by the git commit gate (.githooks/pre-commit), CI, the
 # /proof command, and humans. Never contacts the Proxmox node or a guest.
 #
 #   scripts/proof.sh [--staged]   files in the git index (default)
@@ -85,6 +85,7 @@ if [ "$tf_changed" -eq 1 ]; then
   fi
   sensor "terraform validate" TERRAFORM_VALIDATE_FAILED terraform -chdir="$TF_DIR" validate -no-color
   sensor "tflint" TFLINT_FAILED tflint --chdir="$TF_DIR" --no-color
+  sensor "checkov" CHECKOV_FAILED checkov -d "$TF_DIR" --framework terraform --compact --quiet
 fi
 
 if [ "$mode" = all ]; then
