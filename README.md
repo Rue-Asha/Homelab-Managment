@@ -95,8 +95,8 @@ Each failing check prints `INVARIANT_VIOLATION: <CODE>`.
 
 - **Commit gate** — `.githooks/pre-commit` runs `proof.sh` on every commit,
   from a terminal, neovim or Claude Code alike. `direnv allow` points
-  `core.hooksPath` at it. `git commit --no-verify` skips it on purpose; the
-  agent is blocked from doing so.
+  `core.hooksPath` at it. `git commit --no-verify` skips it, but CI runs the
+  same checks before anything merges.
 - **CI** — `.github/workflows/ci.yml` runs `proof.sh --all` on every PR and
   push to `main`, plus the shared
   [`Rue-Asha/ci`](https://github.com/Rue-Asha/ci) security baseline (workflow
@@ -106,7 +106,7 @@ Each failing check prints `INVARIANT_VIOLATION: <CODE>`.
   the runner. The repo holds no GitHub secrets. Tool versions CI uses are pinned in
   `ci/requirements.txt` and the workflow; `pip install -r ci/requirements.txt`
   matches them locally.
-- **Claude Code** — `.claude/settings.json` blocks an agent `git commit
-  --no-verify`, and asks for confirmation before `terraform apply`/`destroy` or
-  an `ansible-playbook` run without `--check`. `/proof` runs the sensors on
+- **Claude Code** — `.claude/settings.json` asks for confirmation before
+  `terraform apply`/`destroy`, an `ansible-playbook` run without `--check`,
+  and `gh pr merge` / `gh workflow run`, which deploy. `/proof` runs the sensors on
   demand.
