@@ -151,9 +151,13 @@ bootstrap run, with `no_log`. It expires in an hour and is never stored.
    `life_manager_previous_release`. This uses a new variable name, never
    `set_fact` over a default.
 2. `meta: flush_handlers`, so the restart has happened.
-3. In a `block`: `ansible.builtin.uri` against `http://127.0.0.1/` on the host
-   (through nginx, so proxy and app are both checked), `until` 2xx, with
-   bounded `retries`/`delay` as role defaults.
+3. In a `block`: `ansible.builtin.uri` against `http://127.0.0.1/healthz` on
+   the host (through nginx, so proxy and app are both checked), `until` 2xx,
+   with bounded `retries`/`delay` as role defaults. The request carries
+   `Host: <nginx_server_name>` (set in host_vars): without it nginx's default
+   site answers instead of the app, so the check could never fail. `nginx`
+   runs before `life_manager` in the playbook so the proxy exists on a fresh
+   host, and the check runs before pruning so the rollback target survives.
 4. `rescue`: if a previous release exists and differs from the new one,
    repoint `current` and restart. Then `ansible.builtin.fail` naming both
    releases.
@@ -237,6 +241,8 @@ working, because `ansible.cfg` is untouched.
 ## Open Questions
 
 - Should `runner01` be an LXC (cheaper, matches everything else) or a VM
-  (stronger isolation from the Proxmox kernel)? Default: LXC, unprivileged.
+  (stronger isolation from the Proxmox kernel)? Default: LXC, unprivileged,
+  on the Debian 13 template: the pinned ansible-core 2.21 needs Python 3.12+,
+  which Debian 12 lacks.
 - Retry budget for the smoke check. Default 10 × 3 s, assuming Life-Manager's
   start-up migrations finish within 30 s.

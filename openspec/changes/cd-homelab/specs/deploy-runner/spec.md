@@ -34,7 +34,8 @@ job.
 The runner SHALL authenticate to guests with a dedicated SSH key pair
 generated on `runner01`, never with the workstation's key. Its public key SHALL
 be authorised for the `ansible` user on `proxmox_guest` hosts and SHALL NOT be
-authorised on `proxmox_node` hosts. The private key and the Ansible vault
+authorised on `proxmox_node` hosts or on the runner itself, where `ansible`'s
+sudo would let a job drop the egress firewall. The private key and the Ansible vault
 password file SHALL be readable only by `github-runner`, and SHALL be supplied
 to jobs through the runner's environment, not through GitHub secrets.
 
