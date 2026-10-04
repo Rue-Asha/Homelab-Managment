@@ -25,17 +25,17 @@
 - [x] 4.1 Add `ci/requirements.txt` with exact versions of ansible-core, ansible-lint, checkov
 - [x] 4.2 Add `.github/workflows/ci.yml`: `proof` job (setup Python/Terraform/tflint, install collections, dummy vault password file, `scripts/proof.sh --all`) and a `security-baseline` job calling `Rue-Asha/ci@<sha> # v1.0.0`
 - [x] 4.3 Add `.github/dependabot.yml` (`github-actions`, weekly)
-- [ ] 4.4 ⚠ Ask first: push a branch and open a PR; confirm both checks green
-- [ ] 4.5 Prove red: push a commit that breaks `terraform fmt`, confirm `TERRAFORM_FMT_FAILED` in the log, then revert
+- [x] 4.4 ⚠ Ask first: push a branch and open a PR; confirm both checks green
+- [x] 4.5 Prove red: push a commit that breaks `terraform fmt`, confirm `TERRAFORM_FMT_FAILED` in the log, then revert
 
 ## 5. Adopt the baseline in Rue-Asha.github.io
 
 - [x] 5.1 Add a `security-baseline` job to `publish.yml` (or a separate PR-triggered workflow) calling the pinned baseline
 - [x] 5.2 Add `.github/dependabot.yml` there
-- [ ] 5.3 ⚠ Ask first: open the PR; confirm the site still publishes
+- [x] 5.3 ⚠ Ask first: open the PR; confirm the site still publishes
 
 ## 6. Enforce
 
-- [ ] 6.1 ⚠ Ask first: create a `main` ruleset requiring `proof` and each `security-baseline / <job>` check by exact name, no admin bypass
-- [ ] 6.2 Verify: a PR with a red check cannot be merged
-- [ ] 6.3 Update `CLAUDE.md` "Before committing" and the README "Checks" section (checkov is a sensor; the commit gate is the git hook for everyone; CI is the authority) and run `update-docs`
+- [x] 6.1 ⚠ Ask first: create a `main` ruleset requiring `proof` and each `security-baseline / <job>` check by exact name, no admin bypass
+- [x] 6.2 Verify: a PR with a red check cannot be merged
+- [x] 6.3 Update `CLAUDE.md` "Before committing" and the README "Checks" section (checkov is a sensor; the commit gate is the git hook for everyone; CI is the authority) and run `update-docs`
