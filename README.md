@@ -25,8 +25,9 @@ it is `terraform/`, with the host catalogue in
 
 Application services follow an **app-per-LXC, two-repo model**: this repo
 configures the host and installs the runtime; the application code lives in
-its own repo and is checked out + built on the host at a pinned git tag (no
-Docker, no CI required — `systemd` supervises the process). See
+its own repo, whose CI builds and tests a release tarball; the host downloads
+that exact artifact at a pinned tag (no Docker — `systemd` supervises the
+process). See
 `docs/party-games-webservice-architecture.md` for a worked example.
 
 ## Repo layout

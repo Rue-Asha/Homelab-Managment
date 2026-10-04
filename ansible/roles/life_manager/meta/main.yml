@@ -3,8 +3,8 @@
 galaxy_info:
   author: Rue Asha
   description: >-
-    Deploy the Life Manager SvelteKit web service: build-on-host release
-    management with atomic symlink go-live, a persistent SQLite database, an
+    Deploy the Life Manager SvelteKit web service: CI-built release tarball
+    with atomic symlink go-live, a persistent SQLite database, an
     environment file, and a systemd unit. Requires the Node.js runtime
     (provided by the nodejs role) and an nginx reverse proxy in front.
   license: MIT

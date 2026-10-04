@@ -6,12 +6,8 @@
 - name: Ensure the on-host directory layout exists
   ansible.builtin.import_tasks: directories.yml
 
-- name: Check out the pinned application version
-  ansible.builtin.import_tasks: checkout.yml
-  tags: [deploy]
-
-- name: Build the release
-  ansible.builtin.import_tasks: build.yml
+- name: Fetch the pinned release artifact
+  ansible.builtin.import_tasks: fetch.yml
   tags: [deploy]
 
 - name: Render the service configuration
