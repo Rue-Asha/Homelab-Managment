@@ -43,15 +43,15 @@
 
 - [x] 7.1 Write `.github/workflows/deploy.yml` per design D9: `push: main` + `workflow_dispatch` (choice input incl. `all`), `contents: read`, concurrency `deploy-production` without cancel, `runs-on: [self-hosted, homelab-deploy]`, `environment: production`, SHA-pinned checkout with `persist-credentials: false` and `fetch-depth: 0`
 - [x] 7.2 Steps: install pinned collections → `deploy-targets.sh` → sequential `ansible-playbook <pb> --limit proxmox_guest`, no `--diff`/`-v`; log "nothing to deploy" for an empty target list; list unrun playbooks on failure
-- [ ] 7.3 Confirm the security baseline and the new trigger sensor pass on the PR
+- [x] 7.3 Confirm the security baseline and the new trigger sensor pass on the PR
 
 ## 8. Specs, docs, settings
 
 - [x] 8.1 Update `.claude/CLAUDE.md` "Service delivery model" (deploy = merge to `main`, CI-built tarball) and the "Before committing" section (new sensors)
 - [x] 8.2 Document the runner (bootstrap, token, key rotation, re-keyscan after recreating a guest) and the manual-deploy fallback in `README.md` or `docs/`
-- [ ] 8.3 **Outward, ask first:** set fork-PR approval to all external contributors (`gh api -X PUT repos/Rue-Asha/Homelab-Managment/actions/permissions/fork-pr-contributor-approval`)
-- [ ] 8.4 **Outward, ask first:** create the `production` environment with deployment branch policy `main` only; enable "require branches to be up to date" on the `main` ruleset
-- [ ] 8.5 Verify no Actions or environment secrets exist (`gh secret list`, `gh secret list --env production`)
+- [x] 8.3 **Outward, ask first:** set fork-PR approval to all external contributors (`gh api -X PUT repos/Rue-Asha/Homelab-Managment/actions/permissions/fork-pr-contributor-approval`)
+- [x] 8.4 **Outward, ask first:** create the `production` environment with deployment branch policy `main` only; enable "require branches to be up to date" on the `main` ruleset
+- [x] 8.5 Verify no Actions or environment secrets exist (`gh secret list`, `gh secret list --env production`)
 
 ## 9. Go live and prove it
 

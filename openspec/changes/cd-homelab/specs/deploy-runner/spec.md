@@ -60,7 +60,8 @@ SHALL fail the deploy for that host.
 ### Requirement: The runner's network reach is restricted
 
 `runner01` SHALL drop outbound traffic except DNS, TCP 22 to `proxmox_guest`
-hosts, and TCP 443 to addresses outside the local network. Traffic to
+hosts, and TCP 80 and 443 to addresses outside the local network (80 because
+Debian's apt sources are plain http). Traffic to
 `proxmox_node` hosts SHALL be dropped. Because the runner user has no root,
 jobs SHALL NOT be able to change these rules.
 
