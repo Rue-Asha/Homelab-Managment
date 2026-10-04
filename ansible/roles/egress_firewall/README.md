@@ -4,6 +4,7 @@ Default-drop outbound firewall in nftables. A host with this role can reach:
 
 - loopback, and replies on connections it is already part of
 - DNS (TCP/UDP 53)
+- IPv6 neighbour and router discovery and MLD reports, without which IPv6 stops working
 - SSH (TCP 22) to `egress_firewall_ssh_targets`
 - `egress_firewall_public_tcp_ports` (default 80, 443) on any address outside
   `egress_firewall_private_networks`

@@ -26,8 +26,8 @@
 ## 5. Runner host
 
 - [x] 5.1 Add `runner01` (own vmid/IP, group `github_runner`, unprivileged) to `hosts.auto.tfvars`; `terraform plan` shows only the new container and the inventory file
-- [ ] 5.2 **Manual, ask first:** `terraform apply`; commit the regenerated `00-terraform.yml`
-- [ ] 5.3 **Manual, ask first:** run `02_BASE_CONFIGURATION/bootstrap.yml` against `runner01`
+- [x] 5.2 **Manual, ask first:** `terraform apply`; commit the regenerated `00-terraform.yml`
+- [x] 5.3 **Manual, ask first:** run `02_BASE_CONFIGURATION/bootstrap.yml` against `runner01`
 
 ## 6. Roles for the runner
 
@@ -55,8 +55,8 @@
 
 ## 9. Go live and prove it
 
-- [ ] 9.1 **Manual, ask first:** run `deploy_runner.yml` with a fresh registration token; runner shows `idle` with label `homelab-deploy`
-- [ ] 9.2 **Manual, ask first:** re-run `bootstrap.yml` on `proxmox_guest` to authorise the deploy key; from `runner01`, prove SSH to `life-manager01` works and to `proxmox1` is refused, and `curl https://192.168.0.22:8006` fails while `curl https://github.com` succeeds
-- [ ] 9.3 Merge the PR; the merge deploys `life-manager.yml` (it touches the role) and goes green with the smoke check passing
+- [x] 9.1 **Manual, ask first:** run `deploy_runner.yml` with a fresh registration token; runner shows `idle` with label `homelab-deploy`
+- [x] 9.2 **Manual, ask first:** re-run `bootstrap.yml` on `proxmox_guest` to authorise the deploy key; from `runner01`, prove SSH to `life-manager01` works and to `proxmox1` is refused, and `curl https://192.168.0.22:8006` fails while `curl https://github.com` succeeds
+- [x] 9.3 Merge the PR; the merge deploys `life-manager.yml` (it touches the role) and goes green with the smoke check passing
 - [ ] 9.4 Prove rollback: merge a bump to a broken version (or unreachable port), confirm a red run and `current` back on the previous release, then revert the bump and confirm a green redeploy
 - [ ] 9.5 Prove the trust boundary: dispatching `deploy` on a feature branch is rejected by the environment policy
