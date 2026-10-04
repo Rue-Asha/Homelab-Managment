@@ -32,6 +32,8 @@ github_runner_packages:
   - git
   - openssh-client
   - python3-venv
+  # The pip module imports packaging on the system Python before it creates the venv.
+  - python3-packaging
 
 # --- Deploy credentials, handed to jobs through the runner's .env ---
 github_runner_deploy_key: "{{ github_runner_home }}/.ssh/deploy_ed25519"

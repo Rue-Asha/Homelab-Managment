@@ -26,8 +26,8 @@
 ## 5. Runner host
 
 - [x] 5.1 Add `runner01` (own vmid/IP, group `github_runner`, unprivileged) to `hosts.auto.tfvars`; `terraform plan` shows only the new container and the inventory file
-- [ ] 5.2 **Manual, ask first:** `terraform apply`; commit the regenerated `00-terraform.yml`
-- [ ] 5.3 **Manual, ask first:** run `02_BASE_CONFIGURATION/bootstrap.yml` against `runner01`
+- [x] 5.2 **Manual, ask first:** `terraform apply`; commit the regenerated `00-terraform.yml`
+- [x] 5.3 **Manual, ask first:** run `02_BASE_CONFIGURATION/bootstrap.yml` against `runner01`
 
 ## 6. Roles for the runner
 
