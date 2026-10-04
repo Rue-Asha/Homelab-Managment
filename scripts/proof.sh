@@ -47,6 +47,8 @@ for f in "${files[@]}"; do
     .github/workflows/*.yml|.github/workflows/*.yaml) workflows+=("$f") ;;
     ansible/collections/requirements.yml) collection_reqs+=("$f"); ansible_yml+=("$f") ;;
     ansible/playbooks/*.yml) ansible_yml+=("$f"); playbooks+=("$f") ;;
+    # Excluded in .ansible-lint, but explicit file arguments bypass exclude_paths.
+    ansible/inventory/00-terraform.yml) ;;
     ansible/*.yml) ansible_yml+=("$f") ;;
   esac
 done
