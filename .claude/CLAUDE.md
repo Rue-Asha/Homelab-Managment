@@ -138,15 +138,22 @@ These are choices the team has made that differ from defaults or are worth keepi
 
 ---
 
+## Harness
+- proof: `scripts/proof.sh --all`
+- ship: pr
+
 ## Before committing
 
 `scripts/proof.sh` (or `/proof`) runs every check below that applies to the
 staged files; `--all` covers the whole repo. The commit gate is the git hook
 `.githooks/pre-commit` (enabled by `.envrc`): it runs `proof.sh --staged` on
 every commit, Rue's and the agent's, and aborts on any `INVARIANT_VIOLATION`.
-Never pass `--no-verify` — `.claude/settings.json` blocks it — and fix the
-violation instead. A second gate asks for confirmation before
-`terraform apply`/`destroy` or any `ansible-playbook` run without `--check`.
+Don't pass `--no-verify`; fix the violation instead — CI runs the same checks
+and won't let the commit merge anyway. A Claude Code gate
+(`.claude/settings.json`) asks for confirmation before `terraform
+apply`/`destroy`, any `ansible-playbook` run without `--check`, and the `gh`
+commands that deploy: `gh pr merge`, `gh workflow run`, and `gh api`
+merge/dispatch calls.
 
 CI (`.github/workflows/ci.yml`) runs `proof.sh --all` plus the shared
 `Rue-Asha/ci` security baseline on every PR and is the merge authority for
