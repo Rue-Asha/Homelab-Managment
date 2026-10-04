@@ -1,6 +1,8 @@
 ---
 # --- life_manager service (03_SERVICES) ---
-life_manager_version: v0.2.0
+life_manager_version: v0.1.0
+# Rollback proof (cd-homelab 9.4): a path the app 404s on fails the smoke check.
+life_manager_smoke_url: http://127.0.0.1/rollback-proof-404
 life_manager_smoke_headers:
   Host: "{{ nginx_server_name }}"
 
