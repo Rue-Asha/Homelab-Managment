@@ -80,3 +80,27 @@ Life-Manager vs origin/main: 1 file, 15 insertions (.github/workflows/release.ym
 Screenshots: none.
 
 Notes: `03_SERVICES` reference at openspec/changes/auto-version-bump/tasks.md:30 (5.2, `03_SERVICES/life-manager.yml`); no `02_BASE_CONFIGURATION` references.
+
+## Review
+
+Three rounds (verifier + fresh-context reviewer, fixer after rounds 1 and 2). Round 3 stopped at the round limit; the open items are listed for the human at Gate 2.
+
+### Resolved in rounds 1 and 2
+- Partial failure left a branch without PR or without auto-merge; a re-run now completes the missing steps (`ensure-bump-pr.sh`).
+- Tag with `&` or `|` broke the rewrite; the tag and variable now reach perl through the environment.
+- Quotes and trailing comments on the pin line are preserved; "unchanged" is detected for those forms.
+- `jq` filter uses `--arg`; a missing file has its own error and its own test.
+- `target_repo` input kept and documented in design.md and the spec.
+- A value that cannot be rewritten (`""`, `{{ x }}`) and an unsafe tag now fail loudly.
+- The supersede loop also runs before the MERGED early exit.
+- Weak tests tightened (stub pins `--head`, `--state all`, JSON fields; pushed commit content; no second push on re-run from a fresh clone).
+- `create-github-app-token` gets explicit `permission-contents` and `permission-pull-requests`.
+- `Rue-Asha/ci` is public (checked with gh), so the unauthenticated checkout of it works.
+
+### Open after round 3 (not fixed; the human decides)
+- **Version ordering**: no check that the new tag is higher than the pinned one. A re-run of an older tag's job after `main` moved on opens a downgrade PR that auto-merges and deploys the older version. Out-of-order releases (a `v0.2.9` hotfix after `v0.3.0`) behave the same. The supersede step also closes newer open bump PRs when an older tag's job re-runs, and a closed PR is never reopened. Recommended: bump only upward and supersede only older PRs.
+- **PR closed without merge** (by hand or superseded): the job exits 0 "nothing to do" while `main` still pins the old version. Not in the spec; documented in docs/release-bump.md ("tag again").
+- **No `concurrency` group**: two releases tagged close together can close each other's PRs. Recommended: one group per variable.
+- **Hyphenated stable tags** (`v1.2.3-hotfix`) count as pre-releases and are skipped silently.
+- Low: quoted value with spaces or `#` passes the value check but is not rewritten (prints `unchanged`); tags `&x`, `*x` and an empty tag are written as YAML anchor, alias and null; test gaps (open PR with auto-merge does not assert "no push"; `&`/`|`/single-quote "unchanged" cases).
+- Manual only, by design: everything that needs real GitHub (PR creation, CI on the bot PR, auto-merge, deploy after merge, R1).
