@@ -26,7 +26,7 @@ Role Variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `rues_arcade_version` | `v0.1.0` | Release tag to deploy (the "image tag"). |
+| `rues_arcade_version` | `v0.2.0` | Release tag to deploy (the "image tag"). |
 | `rues_arcade_releases_url` | `…/Rues-Arcade/releases/download` | Base URL of the GitHub release assets. |
 | `rues_arcade_user` / `_group` | `rues-arcade` | Unprivileged service account. |
 | `rues_arcade_base_dir` | `/opt/rues-arcade` | Holds `releases/` and the `current` symlink. |

@@ -1,6 +1,6 @@
 ---
 # --- rues_arcade service (03_SERVICES) ---
-rues_arcade_version: v0.1.0
+rues_arcade_version: v0.2.0
 rues_arcade_smoke_headers:
   Host: "{{ nginx_server_name }}"
 

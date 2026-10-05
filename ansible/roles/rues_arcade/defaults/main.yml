@@ -9,7 +9,7 @@ rues_arcade_service_name: rues-arcade
 # The repo is public, so there is no deploy key. Assets are
 # named without the tag's leading `v`.
 rues_arcade_releases_url: https://github.com/Rue-Asha/Rues-Arcade/releases/download
-rues_arcade_version: v0.1.0              # release tag to deploy
+rues_arcade_version: v0.2.0              # release tag to deploy
 rues_arcade_artifact: "rues-arcade-{{ rues_arcade_version | regex_replace('^v', '') }}.tgz"
 rues_arcade_artifact_url: "{{ rues_arcade_releases_url }}/{{ rues_arcade_version }}/{{ rues_arcade_artifact }}"
 
