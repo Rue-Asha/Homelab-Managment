@@ -1,0 +1,6 @@
+---
+# --- pihole service (03_SERVICES) ---
+# pi-hole/pi-hole core tag, with the v. Bump = PR changing this line.
+pihole_version: v6.4.3
+
+common_timezone: Europe/Berlin

@@ -18,3 +18,28 @@ schema: spec-driven
 #       - Always include a "Non-goals" section
 #     tasks:
 #       - Break tasks into chunks of max 2 hours
+
+context: |
+  This repo is worked on with the flow skill (solo, AI-driven). Its harness command is
+  declared under "## Harness" in CLAUDE.md as `proof`. Evidence beats self-report:
+  a task is done only when `proof` is green.
+
+rules:
+  proposal:
+    - Always include a "Non-Goals" section; it must not be empty.
+    - Always include "Done criteria" as a short checklist an outsider could verify.
+    - State the "Appetite" in one line (e.g. "one evening"). Exceeding it means renegotiating scope.
+  specs:
+    - Every scenario ends with a line `- **proof:** unit | e2e | manual (<reason>)`.
+    - Use `manual` only with a concrete reason (e.g. visual judgement, real hardware).
+    - 'The test that proves a scenario is named "Scenario: <scenario title>". If one test proves several scenarios, write its name into their proof lines: e2e ("<test name>").'
+  design:
+    - For small changes one paragraph is enough; don't pad.
+    - If several task groups share an interface (types, signatures, props, routes, schema), list it under "## Contracts".
+  tasks:
+    - Mark every irreversible step (data migration, deletion, infra apply, publish) with `⚠ irreversible`.
+    - If CLAUDE.md declares no `proof` command, group 1 is "Establish the harness" (proof, proof-full, run) per ~/.claude/skills/flow/references/repo-setup.md.
+    - If the repo has a GitHub remote but no .github/workflows/ci.yml, the next group is "Establish CI" per ~/.claude/skills/flow/references/repo-setup.md; its ruleset task is ⚠.
+    - 'Tasks that add behaviour include writing the scenario''s test ("Scenario: <title>") from its THEN clauses, before the code.'
+    - 'Each "## N." group is a build unit. Directly under its heading, add one line: "> unit: depends=<group numbers|none> · files=<files it creates or edits>".'
+    - Groups in parallel must touch disjoint files. If later groups share a contract, group 1 creates only the contract (types + stubs that typecheck).

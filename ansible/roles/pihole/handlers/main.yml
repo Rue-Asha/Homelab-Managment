@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT-0
+---
+# The only restart path for pihole-FTL.
+- name: Restart pihole-FTL
+  ansible.builtin.systemd:
+    name: pihole-FTL
+    state: restarted
+  listen: pihole_restart_ftl

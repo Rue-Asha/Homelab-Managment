@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Check that pihole-FTL is installed
+  ansible.builtin.stat:
+    path: /usr/bin/pihole-FTL
+  register: pihole_ftl_binary
+
+- name: Ensure pihole-FTL is enabled and running
+  ansible.builtin.systemd:
+    name: pihole-FTL
+    enabled: true
+    state: started
+  register: pihole_ftl_service
+  when: pihole_ftl_binary['stat']['exists'] | bool

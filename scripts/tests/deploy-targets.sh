@@ -9,6 +9,9 @@ set -uo pipefail
 
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
+# A git hook exports these; left set they would point the fixture repo at ours.
+unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
+
 repo=$(mktemp -d)
 trap 'command rm -rf "$repo"' EXIT
 
@@ -50,11 +53,14 @@ all:
         life_manager: {hosts: {life-manager01: {}}}
         static_site: {hosts: {static01: {}}}
         github_runner: {hosts: {runner01: {}}}
+        pihole: {hosts: {pihole01: {}}}
     proxmox_node: {hosts: {proxmox1: {}}}'
 put ansible/inventory/group_vars/all.yml '--- {}'
 put ansible/inventory/group_vars/proxmox_guest/vars.yml '--- {}'
 put ansible/inventory/group_vars/static_site.yml '--- {}'
+put ansible/inventory/group_vars/pihole.yml '--- {}'
 put ansible/inventory/host_vars/life-manager01/vars.yml 'life_manager_version: v1'
+put ansible/inventory/host_vars/pihole01/vars.yml 'pihole_version: v6'
 put ansible/inventory/host_vars/static01.yml '--- {}'
 role common
 role nodejs
@@ -63,9 +69,11 @@ role life_manager
 role proxy_site nginx
 role egress_firewall
 role github_runner
+role pihole
 play ansible/playbooks/03_SERVICES/life-manager.yml life_manager 'common, nodejs, life_manager, nginx'
 play ansible/playbooks/03_SERVICES/static-site.yml static_site 'common, proxy_site'
 play ansible/playbooks/03_SERVICES/batch-job.yml static_site 'nodejs'
+play ansible/playbooks/03_SERVICES/pihole.yml pihole 'common, pihole'
 play ansible/playbooks/02_BASE_CONFIGURATION/deploy_runner.yml github_runner 'common, egress_firewall, github_runner'
 put README.md fixture
 put terraform/main.tf '# fixture'
@@ -77,9 +85,11 @@ git commit -qm base
 SVC=ansible/playbooks/03_SERVICES
 LIFE=$SVC/life-manager.yml
 STATIC=$SVC/static-site.yml
+PIHOLE=$SVC/pihole.yml
 BATCH=$SVC/batch-job.yml
 ALL="$BATCH
 $LIFE
+$PIHOLE
 $STATIC"
 
 failed=0
@@ -126,7 +136,14 @@ change "group_vars/all reaches every playbook" "$ALL" ansible/inventory/group_va
 change "ansible.cfg runs everything" "$ALL" ansible/ansible.cfg
 change "collection requirements run everything" "$ALL" ansible/collections/requirements.yml
 change "common runs its services, never the runner playbook" "$LIFE
+$PIHOLE
 $STATIC" ansible/roles/common/tasks/main.yml
+change "Scenario: Role change runs only the pihole playbook" "$PIHOLE" ansible/roles/pihole/tasks/main.yml
+change "Scenario: Version bump runs only the pihole playbook" "$PIHOLE" ansible/inventory/host_vars/pihole01/vars.yml
+change "Scenario: Group vars of the pihole group run the pihole playbook" "$PIHOLE" ansible/inventory/group_vars/pihole.yml
+change "Scenario: A terraform-only diff deploys nothing" "" terraform/main.tf
+change "Scenario: A diff touching two services runs both" "$LIFE
+$PIHOLE" ansible/inventory/host_vars/pihole01/vars.yml ansible/inventory/host_vars/life-manager01/vars.yml
 change "runner roles deploy nothing" "" ansible/roles/github_runner/tasks/main.yml ansible/roles/egress_firewall/tasks/main.yml
 change "runner playbook deploys nothing" "" ansible/playbooks/02_BASE_CONFIGURATION/deploy_runner.yml
 
@@ -142,6 +159,7 @@ git rm -q "$STATIC"
 printf '# deleted\n' >>"$repo/ansible/roles/common/tasks/main.yml"
 git add -A
 git commit -qm "delete a playbook"
-expect "deleted playbook is skipped" "$LIFE" "$before" "$(git rev-parse HEAD)"
+expect "deleted playbook is skipped" "$LIFE
+$PIHOLE" "$before" "$(git rev-parse HEAD)"
 
 [ "$failed" -eq 0 ]

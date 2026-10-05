@@ -1,0 +1,8 @@
+---
+- name: Deploy Pi-hole DNS
+  hosts: pihole
+  become: true
+  gather_facts: true
+  roles:
+    - common  # base host config (02 layer)
+    - pihole  # service: pinned install, config, FTL on :80, smoke check (dig + /admin/)

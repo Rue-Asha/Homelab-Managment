@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Everything here either reads or fails, so a bad input stops the play before
+# a running Pi-hole is touched.
+- name: Ensure the required variables are set
+  ansible.builtin.assert:
+    that:
+      - pihole_version is defined
+      - pihole_version | length > 0
+      - pihole_password is defined
+      - pihole_password | length > 0
+    quiet: true
+    fail_msg: >-
+      pihole_version (host_vars/pihole01/vars.yml) and pihole_password
+      (host_vars/pihole01/vault.yml) must both be set; Pi-hole was left untouched.
+
+- name: Read the installed Pi-hole versions
+  ansible.builtin.slurp:
+    src: "{{ pihole_config_dir }}/versions"
+  register: pihole_versions_file
+  failed_when: false
+
+- name: Work out whether the installer has to run
+  ansible.builtin.set_fact:
+    pihole_installed_core: >-
+      {{ (pihole_versions_file['content'] | default('') | b64decode
+          | regex_findall('(?m)^CORE_VERSION=(\S+)') | first | default('')) }}
+    pihole_install_needed: >-
+      {{ (pihole_versions_file['content'] | default('') | b64decode
+          | regex_findall('(?m)^CORE_VERSION=(\S+)') | first | default('')
+          | regex_replace('^v', '')) is not match('^' ~ (pihole_version | regex_replace('^v', '') | regex_escape) ~ '$') }}
+
+- name: Ensure the Pi-hole config directory exists
+  ansible.builtin.file:
+    path: "{{ pihole_config_dir }}"
+    state: directory
+    mode: "0755"

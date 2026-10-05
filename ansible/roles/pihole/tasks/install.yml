@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: MIT-0
+---
+# The installer cannot be pinned, so it runs from a pre-cloned core checkout at
+# pihole_version, and only when Pi-hole is absent or its core version differs.
+# Web and FTL still follow "latest" at install time (design.md, Spike result).
+- name: Pin the core and run the installer
+  when: pihole_install_needed | bool
+  notify: pihole_restart_ftl
+  block:
+    - name: Check out the pinned core tag
+      ansible.builtin.git:
+        repo: "{{ pihole_core_repo }}"
+        dest: "{{ pihole_core_dir }}"
+        version: "{{ pihole_version }}"
+        depth: 20
+        force: true
+
+    # The installer's own update step pulls; a detached HEAD would abort it.
+    - name: Put the checkout on a local branch that has itself as upstream
+      ansible.builtin.command:
+        argv:
+          - git
+          - -C
+          - "{{ pihole_core_dir }}"
+          - checkout
+          - -B
+          - "{{ pihole_pinned_branch }}"
+          - "{{ pihole_version }}"
+      changed_when: true
+
+    - name: Set the pinned branch's remote to the checkout itself
+      ansible.builtin.command:
+        argv:
+          - git
+          - -C
+          - "{{ pihole_core_dir }}"
+          - config
+          - "branch.{{ pihole_pinned_branch }}.{{ item['key'] }}"
+          - "{{ item['value'] }}"
+      loop:
+        - key: remote
+          value: .
+        - key: merge
+          value: "refs/heads/{{ pihole_pinned_branch }}"
+      changed_when: false
+
+    # --unattended only skips the dialogs when a config already exists; FTL
+    # then fills in its defaults. force: false because FTL rewrites the file.
+    - name: Seed a minimal pihole.toml
+      ansible.builtin.template:
+        src: pihole.toml.j2
+        dest: "{{ pihole_config_dir }}/pihole.toml"
+        mode: "0644"
+        force: false
+
+    - name: Run the Pi-hole installer from the pinned checkout
+      ansible.builtin.command:
+        argv:
+          - bash
+          - "{{ pihole_core_dir }}/automated install/basic-install.sh"
+          - --unattended
+      timeout: "{{ pihole_install_timeout }}"
+      changed_when: true

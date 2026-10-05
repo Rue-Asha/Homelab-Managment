@@ -1,0 +1,82 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Not a managed template: FTL rewrites pihole.toml, so settings are converged
+# through pihole-FTL --config and compared with --config -q.
+- name: Converge Pi-hole settings
+  when: pihole_ftl_binary['stat']['exists'] | bool
+  block:
+    - name: Read the current settings
+      ansible.builtin.command:
+        argv:
+          - pihole-FTL
+          - --config
+          - -q
+          - "{{ item['key'] }}"
+      loop: "{{ pihole_settings }}"
+      register: pihole_current_settings
+      changed_when: false
+      check_mode: false
+
+    # Arrays print with brackets and spaces; compare without them.
+    - name: Set the settings that differ
+      ansible.builtin.command:
+        argv:
+          - pihole-FTL
+          - --config
+          - "{{ item['item']['key'] }}"
+          - "{{ item['item']['value'] }}"
+      loop: "{{ pihole_current_settings['results'] }}"
+      loop_control:
+        label: "{{ item['item']['key'] }}"
+      when: >-
+        (item['stdout'] | regex_replace('[\s"\[\]]', ''))
+        is not match('^' ~ (item['item']['compare'] | regex_escape) ~ '$')
+      changed_when: true
+      notify: pihole_restart_ftl
+
+    - name: Read the stored admin password hash
+      ansible.builtin.command:
+        argv:
+          - pihole-FTL
+          - --config
+          - -q
+          - webserver.api.pwhash
+      register: pihole_pwhash
+      changed_when: false
+      check_mode: false
+      no_log: true
+
+    # In --check mode a stopped FTL is only reported as would-start, so a live
+    # login would be refused.
+    - name: Converge the admin password
+      when: not (ansible_check_mode and pihole_ftl_service['changed'])
+      block:
+        # pihole setpassword salts every call, so the hash cannot be compared;
+        # logging in with the vault password is the comparison. Only 401 (or no
+        # hash at all, where any login would succeed) means it has to be set.
+        - name: Try to log in with the vault password
+          ansible.builtin.uri:
+            url: http://127.0.0.1/api/auth
+            method: POST
+            body_format: json
+            body:
+              password: "{{ pihole_password }}"
+            status_code: [200, 401]
+          register: pihole_login
+          until: pihole_login['status'] is defined and pihole_login['status'] > 0
+          retries: "{{ pihole_smoke_retries }}"
+          delay: "{{ pihole_smoke_delay }}"
+          check_mode: false
+          no_log: true
+
+        - name: Set the admin password
+          ansible.builtin.command:
+            argv:
+              - pihole
+              - setpassword
+              - "{{ pihole_password }}"
+          when: >-
+            (pihole_login['status'] in [401])
+            or (pihole_pwhash['stdout'] | trim | length == 0)
+          changed_when: true
+          no_log: true

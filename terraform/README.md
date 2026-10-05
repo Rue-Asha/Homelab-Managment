@@ -81,8 +81,9 @@ Consequences to know before starting:
 - **There is no rollback.** The old containers must be gone before Terraform can
   create guests with the same vmids. Existing guest data is discarded by
   decision — the SQLite databases and uploaded images are not preserved.
-- **The LAN loses DNS** while `pihole01` is gone. Set a fallback resolver on the
-  router first, or rebuild it last.
+- **The LAN loses DNS** while `pihole01` is down, if the router points at it.
+  `pihole01` is declared again (see `docs/pihole.md`); set a fallback resolver
+  on the router first, or rebuild it last.
 
 ```sh
 terraform -chdir=terraform/environments/homelab init    # commit .terraform.lock.hcl
