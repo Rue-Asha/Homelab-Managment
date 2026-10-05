@@ -1,4 +1,4 @@
-verified-at: 9fed845
+verified-at: c4c59f1
 
 ## Layer 1 — `scripts/proof.sh --all` (green)
 
@@ -58,13 +58,13 @@ Gaps: none.
 - Rue: second real `pihole.yml` run shows `changed=0` and the installer task skipped.
 - Rue: first real run output shows no password; `no_log` present in diff.
 - Rue: confirm spike S9 install shape on the first apply.
-- Rue: fresh host gets the pinned `pihole_version` (real run).
-- Rue: deliberately bad pin fails the play and leaves the installed version (real host).
+- Rue: fresh host gets the pinned `pihole_version` (real run); first real run, check `packages.yml` "Check that the pinned core tag exists upstream" runs after git is installed (moved from prepare.yml in c4c59f1) and is skipped once the pin is installed.
+- Rue: deliberately bad pin fails the play at the `git ls-remote` tag check, before the installer runs, and leaves the installed version (real host).
 - Rue: DNS keeps answering during the re-run, no FTL restart in the second run.
 - Rue: `http://192.168.0.225/admin` accepts the vault password (needs vault file).
 - Rue: unchanged password not re-applied (second run `changed=0`).
 - Rue: `--check` against `pihole01` without the vault file fails the play.
-- Rue: optional, stop FTL and confirm the smoke check fails the play.
+- Rue: stop FTL (or point `pihole_smoke_url` at a dead port) and confirm the play fails with the "Web: ... answered ..." message after retries; on a healthy host confirm `verify.yml` web check passes on 200/30x (it now retries on a status check, not task failure, since c4c59f1).
 - Rue: review `tasks/verify.yml` diff, smoke check needs no vault.
 - Rue: review diff, no firewall/runtime install in the pihole role, no `github_runner` target.
 - Rue: read `docs/pihole.md` for first apply, bump, recovery; outage risk and router fallback; stale "removed" mentions corrected.
@@ -72,7 +72,7 @@ Gaps: none.
 
 ## Diffstat (main...flow/add-pihole)
 
-27 files changed, 1076 insertions(+), 12 deletions(-) (excluding this file)
+28 files changed, 1157 insertions(+), 12 deletions(-) (excluding this file)
 
 ## Screenshots
 
