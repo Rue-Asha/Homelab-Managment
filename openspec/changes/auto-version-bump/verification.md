@@ -1,42 +1,48 @@
-verified-at: 2e83e49
+verified-at: f665e3b
 
 Sibling worktrees (verified, read-only):
-- ci `flow/auto-version-bump` @ 36cde9a
+- ci `flow/auto-version-bump` @ e1613f7 (includes e08a653)
 - Life-Manager `flow/auto-version-bump` @ 6ae8e8e
 
 ## Layer 1
 
-- `scripts/proof.sh --all` (this repo): exit 1, RED (2 sensors, both environmental, reproduced twice from a clean .terraform): `TERRAFORM_VALIDATE_FAILED` and `TFLINT_FAILED`, both "Failed to read any lines from plugin's stdout ... go-plugin protocol handshake" for the bpg/proxmox provider binary (ELF x86_64, mode rwxr-xr-x). The provider cannot start in the agent shell; no check of this change's files failed. All other sensors PASS.
+Run with a short `TMPDIR` (/tmp/claude-1001/t); a long one breaks terraform's plugin socket (that caused the red in round 2). Lock file and `.terraform` were clean before the run and restored/removed after it, never staged.
+
+- `scripts/proof.sh --all` (this repo): exit 0
 - `bash tests/bump-pin.sh` (ci worktree): exit 0
 - `bash tests/ensure-bump-pr.sh` (ci worktree): exit 0
 - `actionlint` (ci worktree): exit 0
 - `actionlint .github/workflows/release.yml` (Life-Manager worktree): exit 0
 
 ```
+PASS: syntax-check ansible/playbooks/03_SERVICES/pihole.yml
 PASS: collection pins
 PASS: workflow triggers
 PASS: deploy-targets fixtures
 PASS: plan-protected fixtures
 PASS: retired key path
-proof: 15 sensor(s), 2 failed
+proof: 15 sensor(s), 0 failed
 ```
 
 ## Layer 2
 
-Fixtures print `ok   Scenario: <title> (<assertion>)`; counts are ok lines across `tests/bump-pin.sh` and `tests/ensure-bump-pr.sh`.
+Fixtures print `ok   Scenario: <title> (<assertion>)`; counts are ok lines across `tests/bump-pin.sh` and `tests/ensure-bump-pr.sh`; no non-ok lines.
 
 | Scenario | proof | Evidence |
 |---|---|---|
-| A new tag is bumped | unit + manual | "Scenario: A new tag is bumped" 9 ok lines ✓; branch push and PR manual |
+| A new tag is bumped | unit + manual | "Scenario: A new tag is bumped" 10 ok ✓; branch push and PR manual |
 | The line has quotes, a comment or special characters | unit | "Scenario: The line has quotes, a comment or special characters" 4 ok ✓ |
+| The value is not a plain or quoted token | unit | "Scenario: The value is not a plain or quoted token" 20 ok ✓ |
+| The tag is not a safe YAML scalar | unit | "Scenario: The tag is not a safe YAML scalar" 36 ok ✓ |
 | The variable line is missing | unit | "Scenario: The variable line is missing" 3 ok ✓ |
 | The value already equals the tag | unit | "Scenario: The value already equals the tag" 6 ok ✓ |
 | Branch or PR for the tag already exists | unit + manual | "Scenario: Branch or PR for the tag already exists" 4 ok ✓ (stubbed gh); real re-run manual |
-| A previous run stopped before the PR or auto-merge | unit + manual | "Scenario: A previous run stopped before the PR or auto-merge" 7 ok ✓ (stubbed gh); real failure manual |
+| A previous run stopped before the PR or auto-merge | unit + manual | "Scenario: A previous run stopped before the PR or auto-merge" 9 ok ✓ (stubbed gh); real failure manual |
 | A pre-release tag is not bumped | unit | "Scenario: A pre-release tag is not bumped" 3 ok ✓ |
 | CI runs on the bump PR | manual | checklist |
 | The App lacks access | manual | checklist; actionlint clean |
-| An older bump PR is still open | unit + manual | "Scenario: An older bump PR is still open" 2 ok ✓ (stubbed gh); two real PRs manual |
+| An older bump PR is still open | unit + manual | "Scenario: An older bump PR is still open" 5 ok ✓ (stubbed gh); two real PRs manual |
+| The current PR is already merged but an older one is still open | unit | "Scenario: An older bump PR is still open (merged current PR: exit / older closed / only the older)" ✓ |
 | The older PR was already merged | manual | checklist |
 | CI is green | manual | checklist |
 | CI is red | manual | checklist |
@@ -48,7 +54,7 @@ Fixtures print `ok   Scenario: <title> (<assertion>)`; counts are ok lines acros
 | Auto-merge can be enabled | manual | checklist |
 | Rue sets up a third app | manual | checklist |
 
-Gaps: none in spec coverage. Layer 1 proof.sh is red for the environmental reason above.
+Gaps: none.
 
 ## Manual checklist
 
@@ -65,9 +71,9 @@ Gaps: none in spec coverage. Layer 1 proof.sh is red for the environmental reaso
 
 ## Diffstat
 
-This repo, `main...flow/auto-version-bump`: 9 files, 599 insertions (docs/release-bump.md 145, openspec/changes/auto-version-bump/*).
+This repo, `main...flow/auto-version-bump`: 9 files, 620 insertions (docs/release-bump.md, openspec/changes/auto-version-bump/*).
 
-ci vs origin/main: 7 files, 449 insertions (.github/actionlint.yaml, .github/workflows/bump-pin.yml, README.md, scripts/bump-pin.sh, scripts/ensure-bump-pr.sh, tests/bump-pin.sh, tests/ensure-bump-pr.sh).
+ci vs origin/main: 7 files, 517 insertions (.github/actionlint.yaml, .github/workflows/bump-pin.yml, README.md, scripts/bump-pin.sh, scripts/ensure-bump-pr.sh, tests/bump-pin.sh, tests/ensure-bump-pr.sh).
 
 Life-Manager vs origin/main: 1 file, 15 insertions (.github/workflows/release.yml).
 
