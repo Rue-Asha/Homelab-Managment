@@ -122,6 +122,18 @@ rendered inventory SHALL fail the script with a message naming it.
 - **THEN** the script prints its usage and exits 64
 - **proof:** unit ("Scenario: Created guests are refused outside the diff form")
 
+### Requirement: Every guest is declared with an Ansible group
+
+`terraform/environments/homelab/variables.tf` SHALL refuse an `lxc_hosts` entry
+whose `groups` is empty, with an error saying that a guest without a group is
+unreachable for Ansible, because the rendered inventory places a guest only
+under its groups and a created guest missing from it fails the deploy.
+
+#### Scenario: A guest declared without a group is refused at plan
+- **WHEN** `hosts.auto.tfvars` declares an LXC host with `groups = []`
+- **THEN** `terraform plan` fails on the `lxc_hosts` validation and nothing is applied or deployed
+- **proof:** manual (terraform plan with a group-less host; checked locally with a throwaway `terraform test` using a mock provider, not committed)
+
 ### Requirement: The created-guest mapping is proven by fixtures
 
 `scripts/tests/deploy-targets.sh` SHALL contain a fixture for every scenario of

@@ -51,11 +51,13 @@ all:
   children:
     proxmox_guest:
       children:
-        life_manager: {hosts: {life-manager01: {}}}
-        static_site: {hosts: {static01: {}}}
-        github_runner: {hosts: {runner01: {}}}
-        pihole: {hosts: {pihole01: {}}}
-      hosts: {bare01: {}}
+        lxc_container_proxmox:
+          children:
+            life_manager: {hosts: {life-manager01: {}}}
+            static_site: {hosts: {static01: {}}}
+            github_runner: {hosts: {runner01: {}}}
+            pihole: {hosts: {pihole01: {}}}
+            scratch: {hosts: {bare01: {}}}
     proxmox_node: {hosts: {proxmox1: {}}}'
 put ansible/inventory/group_vars/all.yml '--- {}'
 put ansible/inventory/group_vars/proxmox_guest/vars.yml '--- {}'
@@ -208,6 +210,14 @@ expect_split "unknown created host fails when before is zero" 1 "" "deploy-targe
   --created ghost01 0000000000000000000000000000000000000000 "$(git rev-parse HEAD)"
 expect_split "Scenario: Created guests are refused outside the diff form (--all)" 64 "" "$USAGE" --created pihole01 --all
 expect_split "Scenario: Created guests are refused outside the diff form (name)" 64 "" "$USAGE" --created pihole01 static-site
+expect_split "Scenario: Created guests are refused outside the diff form (--all before two positionals)" 64 "" "$USAGE" \
+  --created pihole01 --all static-site
+expect_split "Scenario: Created guests are refused outside the diff form (name before a commit)" 64 "" "$USAGE" \
+  --created pihole01 static-site "$(git rev-parse HEAD)"
+created "Scenario: A created guest without a service playbook (diff runs everything)" bare01 0 "$ALL" \
+  "deploy-targets: bare01 has no 03_SERVICES playbook" ansible/ansible.cfg
+expect_split "Scenario: A created guest without a service playbook (before is zero)" 0 "$ALL" \
+  "deploy-targets: bare01 has no 03_SERVICES playbook" --created bare01 0000000000000000000000000000000000000000 "$(git rev-parse HEAD)"
 
 before=$(git rev-parse HEAD)
 git rm -q "$STATIC"

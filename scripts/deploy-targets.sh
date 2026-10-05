@@ -28,6 +28,10 @@ usage() {
 created=()
 if [ "${1:-}" = --created ]; then
   [ $# -eq 4 ] || usage
+  # Commits are not checked out: a force-pushed before may no longer exist.
+  for arg in "$3" "$4"; do
+    [ "$arg" != --all ] && [ ! -f "$SERVICES/${arg%.yml}.yml" ] || usage
+  done
   read -ra created <<<"$2"
   shift 2
 fi
@@ -64,25 +68,27 @@ sys.exit(1 if unknown else 0)
 ' "${created[@]}"
 fi
 
+everything=false
+changed=()
 if [[ $before =~ ^0+$ ]] || ! git merge-base --is-ancestor "$before" "$after" 2>/dev/null; then
+  everything=true
+else
+  mapfile -t changed < <(git diff --name-only --no-renames "$before" "$after" -- ansible/)
+  for f in "${changed[@]}"; do
+    case "$f" in
+      ansible/ansible.cfg|ansible/collections/requirements.yml) everything=true ;;
+    esac
+  done
+fi
+
+if $everything && [ "${#created[@]}" -eq 0 ]; then
   printf '%s\n' "${playbooks[@]}"
   exit 0
 fi
 
-mapfile -t changed < <(git diff --name-only --no-renames "$before" "$after" -- ansible/)
-
-for f in "${changed[@]}"; do
-  case "$f" in
-    ansible/ansible.cfg|ansible/collections/requirements.yml)
-      printf '%s\n' "${playbooks[@]}"
-      exit 0
-      ;;
-  esac
-done
-
 [ $((${#changed[@]} + ${#created[@]})) -gt 0 ] && [ "${#playbooks[@]}" -gt 0 ] || exit 0
 
-python3 - "${#playbooks[@]}" "${playbooks[@]}" "${#created[@]}" "${created[@]}" "${changed[@]}" <<'PY'
+python3 - "$everything" "${#playbooks[@]}" "${playbooks[@]}" "${#created[@]}" "${created[@]}" "${changed[@]}" <<'PY'
 import json
 import subprocess
 import sys
@@ -91,6 +97,7 @@ from pathlib import Path
 import yaml
 
 args = sys.argv[1:]
+everything = args.pop(0) == "true"
 count = int(args.pop(0))
 playbooks, args = args[:count], args[count:]
 count = int(args.pop(0))
@@ -174,7 +181,8 @@ def groups_of(host):
 for playbook in sorted(playbooks):
     targets = hosts.get(playbook, set())
     if (
-        Path(playbook) in changed
+        everything
+        or Path(playbook) in changed
         or roles_of(playbook) & changed_roles
         or targets & (changed_hosts | created)
         or set().union(*map(groups_of, targets)) & changed_groups

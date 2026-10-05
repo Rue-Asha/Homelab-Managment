@@ -28,6 +28,12 @@ guests, no bootstrap run, no `pihole` dispatch option, no `pihole01` rebuild her
   empty again — the bug this change fixes.
 - **A created guest without a service playbook is logged, not an error** (bare guests are legitimate;
   `github_runner` guests are never in a `03_SERVICES` playbook by the existing rule).
+- **A guest without a group is refused at plan, not handled in the deploy** (review fix). `ansible.tf`
+  places an LXC only under its groups, so a group-less guest would be missing from the rendered
+  inventory and fail the deploy as an unknown created host. A `validation` on `lxc_hosts` in
+  `variables.tf` stops it before `apply`; a bare guest is declared in a group no playbook targets.
+  The bigger alternative, rendering group-less guests directly under `lxc_container_proxmox`, would
+  have allowed them but changes the generated inventory shape for no current need.
 
 ## Contracts
 

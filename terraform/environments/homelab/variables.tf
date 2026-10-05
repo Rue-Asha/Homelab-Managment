@@ -120,6 +120,13 @@ variable "lxc_hosts" {
     }), {})
   }))
   default = {}
+
+  # ansible.tf places an LXC only under its groups, so a group-less one is
+  # missing from the rendered inventory.
+  validation {
+    condition     = alltrue([for h in var.lxc_hosts : length(h.groups) > 0])
+    error_message = "Every LXC host needs at least one group: a guest without a group is not in the rendered inventory and unreachable for Ansible."
+  }
 }
 
 variable "vm_hosts" {
