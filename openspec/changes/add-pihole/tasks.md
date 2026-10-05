@@ -31,9 +31,9 @@
 - [x] 5.3 `ansible-playbook --syntax-check`, `ansible-lint`, `scripts/proof.sh --all`
 
 ## 6. Docs
-> unit: depends=1 · scope=S8 · files=docs/pihole.md, terraform/README.md, docs/tailscale-subnet-router.md
+> unit: depends=1 · scope=S8 · files=docs/pihole.md, terraform/README.md
 - [x] 6.1 Write `docs/pihole.md`: what it is, first-time apply order (router fallback, vault file, plan/apply, commit regenerated `00-terraform.yml`, bootstrap, `--check`, real run, `dig` check), version bump via PR, recovery; state the DNS-outage risk and the router-fallback step as manual
-- [x] 6.2 One-paragraph correction in `terraform/README.md` and `docs/tailscale-subnet-router.md` where pihole01 is described as removed
+- [x] 6.2 One-paragraph correction in `terraform/README.md` where pihole01 is described as removed (`docs/tailscale-subnet-router.md` only shows pihole01 as a host behind the router and needed no change)
 - [x] 6.3 `scripts/proof.sh --all`
 
 ## 7. Lint housekeeping
