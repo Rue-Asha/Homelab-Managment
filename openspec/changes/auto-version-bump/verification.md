@@ -124,3 +124,14 @@ Open after round 4:
 - PR closed without merge is a silent no-op (known, documented); `.[0]` of `gh pr list --head ... --state all` may pick the wrong PR when an old closed and a new open PR share a head.
 - Test gaps: open PR with auto-merge does not assert "no push"; no tests for very long numbers, `v0.03.0` or a pre-release pin; `--body`/`--repo` of `gh pr create` not asserted.
 - Known, human-only: the Life-Manager caller is pinned to the early local ci commit `340bc99` with a `# v1.1.0` comment; no `v1.1.0` tag exists yet (only `v1.0.0`). Task 4.5 re-pins it to the final merged ci SHA after 4.4. Until then the caller would run the old workflow.
+
+### Round 5 (fixer round 4, human asked to fix all surfaced bugs)
+Resolved: supersede after a merge (the workflow always passes the `bump-pin.sh` result to `ensure-bump-pr.sh`, which supersedes on `unchanged` when the tag's PR is MERGED), long-number overflow (digit-string compare in `scripts/version.sh`), PR pick when several share a head (open, then merged, then the rest), test gaps (no-push, `gh pr create` repo/head/body, long numbers, `v0.03.0`, pre-release pin). Deviation, to be confirmed by the human: a file with the variable on more than one line now fails (`<variable> is set more than once`) instead of rewriting both; new scenario "The variable is set more than once".
+
+Verifier: Layer 1 green, no gaps. Reviewer (fresh context): no weakened tests, no weak tests, no correctness findings.
+
+Open after round 5 (known, not fixed):
+- A tag's PR closed without merge: a re-run exits 0 and does nothing (documented in docs/release-bump.md, "tag again"); no test pins it.
+- A tag without a leading `v` (`1.2.4` against `v1.2.3`) is accepted and written as-is, so the pin loses its `v`. A test pins this; no scenario asks for it.
+- The step ordering "workflow always runs the supersede step" is proved by a text grep on `bump-pin.yml:113` plus actionlint, not by running the workflow.
+- Manual only: everything that needs real GitHub, as in the checklist above.

@@ -4,7 +4,7 @@
 - [x] 1.2 Write `scripts/bump-pin.sh` per the Contracts in design.md until `bash tests/bump-pin.sh` is green
 - [x] 1.3 Write `.github/workflows/bump-pin.yml` (`workflow_call`, inputs/secrets per Contracts): checkout of the target repo with the App token (`actions/create-github-app-token`, SHA-pinned, no `GITHUB_TOKEN` fallback), checkout of `Rue-Asha/ci` at `github.job_workflow_sha`, idempotence checks for branch/PR, push `bump/<variable>-<tag>`, `gh pr create` with title `chore(<app>): bump to <tag>`, `gh pr merge --auto --squash`, close older open `bump/<variable>-*` PRs
 - [x] 1.4 `actionlint` over the new workflow is clean and every `uses:` is a full SHA with a version comment (SHAs looked up read-only with `gh api`)
-- [x] 1.5 Add a `bump-pin` section to `../ci/README.md` (inputs, secrets, call example, job name `bump` is interface); commit locally on the sibling branch, record the commit hash here. Do not push — ci branch flow/auto-version-bump @ 340bc99
+- [x] 1.5 Add a `bump-pin` section to `../ci/README.md` (inputs, secrets, call example, job name `bump` is interface); commit locally on the sibling branch, record the commit hash here. Do not push — ci branch flow/auto-version-bump @ e061c74
 
 ## 2. docs/release-bump.md
 > unit: depends=none · scope=S7,S8 · files=docs/release-bump.md

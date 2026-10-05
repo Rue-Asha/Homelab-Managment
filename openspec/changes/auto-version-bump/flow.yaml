@@ -7,3 +7,4 @@ learnings:
   - "New workflow using github.job_workflow_sha → actionlint (even the version CI pins) rejects it; scope an ignore in .github/actionlint.yaml to that workflow"
   - "Agents in the main checkout while Rue switches branches → run flow work in its own worktree from the start, never in the primary checkout (a fixer's commit landed on Rue's new branch and proof went red on Rue's uncommitted files)"
   - "Proof in agent shells → set TMPDIR to a SHORT path (/tmp/claude-1001/t), never the long scratchpad path (98 chars): terraform's go-plugin unix socket overflows and terraform validate + tflint fail with a handshake error; also restore .terraform.lock.hcl and rm .terraform after each run"
+  - "Bug lives in glue (workflow condition) that fixture tests bypass by calling the script directly → test through the entrypoint the workflow calls, or assert on the workflow text; a fixer's first test passed against the unfixed script (auto-version-bump round 5)"
