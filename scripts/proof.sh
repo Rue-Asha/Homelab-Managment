@@ -35,12 +35,14 @@ playbooks=()
 workflows=()
 collection_reqs=()
 deploy_targets=0
+plan_protected=0
 for f in "${files[@]}"; do
   case "$f" in
     *.tfstate|*.tfstate.*) tfstate+=("$f") ;;
   esac
   case "$f" in
     scripts/deploy-targets.sh|scripts/tests/deploy-targets.sh) deploy_targets=1 ;;
+    scripts/checks/plan-protected.sh|scripts/tests/plan-protected.sh) plan_protected=1 ;;
   esac
   case "$f" in
     terraform/*) tf_changed=1 ;;
@@ -119,6 +121,13 @@ fi
 if [ "$deploy_targets" -eq 1 ]; then
   sensor "deploy-targets fixtures" DEPLOY_TARGETS_FAILED scripts/tests/deploy-targets.sh
 fi
+
+if [ "$plan_protected" -eq 1 ]; then
+  sensor "plan-protected fixtures" PLAN_PROTECTED_FAILED scripts/tests/plan-protected.sh
+fi
+
+# The retired all-purpose key must not come back; see credential-separation.
+sensor "retired key path" RETIRED_KEY_REFERENCED sh -c '! git grep -n "ssh/Proxmox" -- . ":!openspec" ":!scripts/proof.sh"'
 
 if [ "$ran" -eq 0 ]; then
   echo "proof: nothing to check"

@@ -48,9 +48,9 @@ Everything here is run by hand from the repo root. Order matters.
        terraform -chdir=terraform/environments/homelab plan
        terraform -chdir=terraform/environments/homelab apply
 
-4. **Commit the regenerated `ansible/inventory/00-terraform.yml`.** Apply
-   rewrites it and `pihole01` appears in group `pihole`. Until then
-   `hosts: pihole` matches nothing.
+4. **Refresh the inventory** with `scripts/fetch-inventory.sh` (the file is
+   gitignored and rendered on the runner). `pihole01` appears in group
+   `pihole`. Until then `hosts: pihole` matches nothing.
 5. **Bootstrap** the new guest:
 
        ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l pihole01
@@ -79,7 +79,7 @@ Everything here is run by hand from the repo root. Order matters.
 
 **A merge before the apply is a no-op.** `deploy.yml` maps the diff to
 `pihole.yml`, but with no `pihole01` in the committed inventory the play is
-skipped, not failed. Apply first, commit `00-terraform.yml`, then merge.
+skipped, not failed. Apply first, then merge.
 
 ## What the pin covers
 

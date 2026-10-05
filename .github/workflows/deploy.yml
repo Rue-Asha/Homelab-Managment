@@ -1,15 +1,20 @@
-# Merge to main is the deploy. Maps the pushed commits to the 03_SERVICES
-# playbooks they affect (scripts/deploy-targets.sh) and runs each in full on
-# the homelab's self-hosted runner, runner01.
+# Merge to main is the deploy. Three jobs on the homelab's self-hosted runner,
+# runner01, in order: `plan` (only when terraform/ changed), `apply` (waits for
+# approval in the `infrastructure` environment, then applies exactly that plan),
+# and `deploy`, which maps the pushed commits to the 03_SERVICES playbooks they
+# affect (scripts/deploy-targets.sh) and runs each in full. One workflow and one
+# concurrency group, so an infrastructure change and a service change in the same
+# push never overlap.
 #
 # Trust boundary: only `push` to main and `workflow_dispatch` start this, and
 # the production environment admits only main, so the runner only ever runs
 # code already on main. scripts/checks/workflow-triggers.py fails any
 # workflow that pairs an untrusted trigger with a self-hosted runner.
 #
-# No secret is referenced. The deploy key, vault password file and pinned
-# host keys live on runner01 and reach the job through the runner's .env
-# (ansible/roles/github_runner). Logs are public: no --diff, no -v.
+# No secret is referenced. The deploy key, vault password file, pinned host
+# keys and Terraform environment file live on runner01 and reach the job through
+# the runner's .env (ansible/roles/github_runner). Logs are public: no --diff,
+# no -v, and scripts/tf-ci.sh prints only `address action` lines.
 
 name: deploy
 
@@ -26,6 +31,11 @@ on:
         options:
           - all
           - life-manager
+      terraform:
+        description: Plan and apply Terraform even if the diff does not touch terraform/
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -39,8 +49,70 @@ defaults:
     shell: bash
 
 jobs:
+  plan:
+    name: plan
+    runs-on: [self-hosted, homelab-deploy]
+    environment: production
+    outputs:
+      changed: ${{ steps.changed.outputs.changed }}
+    steps:
+      - name: Wipe the workspace
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -delete
+
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          clean: true
+
+      - name: Detect Terraform changes
+        id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+          FORCE: ${{ inputs.terraform }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            changed=$FORCE
+          elif git diff --name-only "$BEFORE" "$AFTER" | grep -q '^terraform/'; then
+            changed=true
+          else
+            changed=false
+          fi
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Plan
+        if: steps.changed.outputs.changed == 'true'
+        run: scripts/tf-ci.sh plan
+
+  # Waits for approval: the `infrastructure` environment has a required reviewer
+  # and only admits main. Applies the plan saved by the job above; Terraform
+  # refuses it if the state moved since.
+  apply:
+    name: apply
+    needs: plan
+    if: needs.plan.outputs.changed == 'true'
+    runs-on: [self-hosted, homelab-deploy]
+    environment: infrastructure
+    steps:
+      - name: Wipe the workspace
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -delete
+
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          clean: true
+
+      - name: Apply
+        run: scripts/tf-ci.sh apply
+
   deploy:
     name: deploy
+    needs: [plan, apply]
+    if: always() && needs.plan.result == 'success' && (needs.apply.result == 'success' || needs.apply.result == 'skipped')
     runs-on: [self-hosted, homelab-deploy]
     environment: production
     env:
@@ -57,6 +129,9 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           clean: true
+
+      - name: Render the inventory from Terraform state
+        run: scripts/tf-ci.sh render
 
       - name: Install Ansible collections
         run: ansible-galaxy collection install -r ansible/collections/requirements.yml

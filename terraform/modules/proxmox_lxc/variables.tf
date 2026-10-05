@@ -106,14 +106,11 @@ variable "os_type" {
 
 # Access -----------------------------------------------------------------
 
+# No ssh_public_keys variable either: the homelab template already carries the
+# ansible user and its keys, and root gets none. See guest-template.
 # No root_password variable by design. `pct enter <ctid>` gives passwordless
 # root from the node, so a container root password protects nothing while
 # still being a secret to store, rotate, and keep out of state. See design D8.
-
-variable "ssh_public_keys" {
-  description = "Public keys seeded into the container's root account, replacing the old pct-exec bootstrap."
-  type        = list(string)
-}
 
 # Behaviour --------------------------------------------------------------
 

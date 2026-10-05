@@ -50,7 +50,8 @@ ansible/playbooks/
 
 **Terraform** declares anything the Proxmox API owns: guest existence, vmid,
 hostname, CPU/memory/swap/disk, network interface and IP, boot behaviour,
-template/ISO reference, and the SSH key seeded at creation.
+template/ISO reference (the homelab LXC template carries the `ansible` user and
+template-baked public keys).
 
 **Ansible** declares anything inside the guest: users, sudo, SSH hardening,
 packages, runtimes, services, application releases.
@@ -64,6 +65,7 @@ packages, runtimes, services, application releases.
   deletion and proposes recreating unrelated containers.
 - **vmid and IP are independent declarations** — deriving one from the other
   welds the address plan to container IDs.
+- **Terraform applies run on `runner01` only**, from `deploy.yml` (plan → `infrastructure` approval → apply), with an API token and no SSH to the node. The workstation does not hold state.
 - **No guest root passwords.** `pct enter <ctid>` is the console fallback.
 - Terraform follows HashiCorp style (`terraform fmt`, snake_case,
   `main.tf`/`variables.tf`/`outputs.tf`/`versions.tf` per module) — the Ansible

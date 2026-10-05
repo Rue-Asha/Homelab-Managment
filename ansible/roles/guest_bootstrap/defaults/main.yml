@@ -1,24 +1,17 @@
 # SPDX-License-Identifier: MIT-0
 ---
-# The unprivileged account every later playbook connects as.
+# The unprivileged account every later playbook connects as. It exists already:
+# the guest template creates it.
 guest_bootstrap_user: ansible
-guest_bootstrap_user_shell: /bin/bash
-guest_bootstrap_user_home: "/home/{{ guest_bootstrap_user }}"
 
-# Public key authorised for that account. Terraform seeds the same key into the
-# guest's root account at creation; this hands it to the unprivileged user so
-# root SSH login can be closed afterwards by the common role.
-guest_bootstrap_ssh_public_key: "{{ lookup('ansible.builtin.file', '~/.ssh/Proxmox.pub') }}"
-
-# The deploy runner's public key (fetched by the github_runner role), authorised
-# next to the workstation key. Skipped while the file does not exist, i.e.
-# before the runner has been set up.
-guest_bootstrap_deploy_public_key_path: ~/.config/homelab/deploy_ed25519.pub
-# False on the runner itself: the key would give its jobs ansible's sudo there
-# over loopback, and with it the power to drop the egress firewall.
+# Keys authorised for that account, read from the repo: public keys are not
+# secrets, and the template build script reads the same files.
+guest_bootstrap_ssh_public_key: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../../keys/guest_ed25519.pub') }}"
+# The deploy runner's key. False on the runner itself: the key would give its
+# jobs ansible's sudo there over loopback, and with it the power to drop the
+# egress firewall.
+guest_bootstrap_deploy_public_key_path: "{{ playbook_dir }}/../../keys/deploy_ed25519.pub"
 guest_bootstrap_authorize_deploy_key: true
-
-guest_bootstrap_packages:
-  - sudo
-
-guest_bootstrap_sudoers_path: "/etc/sudoers.d/{{ guest_bootstrap_user }}"
+# Only for re-keying: authorised alongside the keys above for one run, so the
+# old key keeps working until ansible.cfg points at the new one.
+guest_bootstrap_extra_public_keys: []

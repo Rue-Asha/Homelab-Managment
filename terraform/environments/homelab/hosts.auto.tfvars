@@ -34,8 +34,6 @@ lxc_hosts = {
     memory  = 2048
     swap    = 512
     disk_gb = 12
-
-    template_file_id = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
   }
 
   # Retired in efa9f49 and brought back with the same identity, so the router
@@ -49,8 +47,6 @@ lxc_hosts = {
     memory  = 512
     swap    = 512
     disk_gb = 4
-
-    template_file_id = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
   }
 }
 

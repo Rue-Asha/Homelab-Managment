@@ -1,7 +1,3 @@
-locals {
-  ssh_public_keys = [trimspace(file(pathexpand(var.ssh_public_key_path)))]
-}
-
 module "lxc" {
   source = "../../modules/proxmox_lxc"
 
@@ -26,7 +22,6 @@ module "lxc" {
   datastore_id = var.lxc_datastore_id
 
   template_file_id = coalesce(each.value.template_file_id, var.lxc_template_file_id)
-  ssh_public_keys  = local.ssh_public_keys
 
   features = each.value.features
   tags     = each.value.tags

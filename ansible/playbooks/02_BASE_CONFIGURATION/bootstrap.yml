@@ -1,43 +1,23 @@
 ---
-# Baseline configuration for a freshly provisioned guest.
+# Baseline configuration for a guest created from the homelab template.
 #
-# Runs after `terraform apply` has created the guest. Terraform seeds the SSH
-# key into the guest's root account; this playbook creates the unprivileged
-# ansible account every later playbook connects as, then hands over to `common`
-# which closes root SSH login.
+# The template already carries the ansible user, its sudo rule and the guest and
+# deploy public keys, so a fresh guest is reachable the moment it boots. This
+# playbook converges the authorised keys from ansible/keys/ (exclusive, so it is
+# also how a rotated key reaches existing guests and how the deploy key leaves
+# runner01) and applies `common`. Safe to re-run.
 #
-# ONE-SHOT for fresh guests. The first play connects as root, which `common`
-# disables at the end of the run -- by design. Re-running it against an already
-# hardened host will fail to connect, and does not need to succeed: the state it
-# establishes is already in place. To re-bootstrap, recreate the guest. To
-# re-authorise keys on hardened guests (e.g. a new deploy runner key), connect
-# as ansible instead: -e guest_bootstrap_connect_user=ansible --become
+#   ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l <host>
 #
-#   terraform -chdir=terraform/environments/homelab apply
-#   ansible-playbook playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l <host>
+# Re-keying guests without locking yourself out: authorise the old key for one
+# run, then switch ansible.cfg to the new key and run again without it.
+#
+#   ansible-playbook ... -e '{"guest_bootstrap_extra_public_keys": ["<old pub>"]}' \
+#     --private-key ~/.ssh/<old key>
 
-- name: Bootstrap the ansible account on a freshly provisioned guest
-  hosts: proxmox_guest
-  gather_facts: false
-  # Must be a play var, not the `remote_user` keyword: the inventory sets
-  # ansible_user=ansible per host, and an inventory host var beats the keyword.
-  # Play vars sit above inventory host vars in the precedence chain, so this
-  # wins -- and the account does not exist yet, so root is the only way in.
-  vars:
-    ansible_user: "{{ guest_bootstrap_connect_user | default('root') }}"
-  roles:
-    - guest_bootstrap
-
-- name: Verify the ansible account is reachable before hardening
-  hosts: proxmox_guest
-  gather_facts: false
-  tasks:
-    - name: Wait for SSH as the unprivileged ansible user
-      ansible.builtin.wait_for_connection:
-        timeout: 60
-
-- name: Apply baseline configuration
+- name: Converge the baseline on guests
   hosts: proxmox_guest
   become: true
   roles:
+    - guest_bootstrap
     - common

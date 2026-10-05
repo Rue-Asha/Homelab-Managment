@@ -1,18 +1,16 @@
 # SPDX-License-Identifier: MIT-0
 ---
-# One task with both keys: `exclusive` removes every key not in this call.
+# One task with every key: `exclusive` removes every key not in this call, which
+# is also how the template's baked-in deploy key leaves runner01.
 - name: Authorise the SSH keys for the ansible user
   ansible.posix.authorized_key:
     user: "{{ guest_bootstrap_user }}"
-    key: "{{ ([guest_bootstrap_ssh_public_key] + guest_bootstrap_deploy_public_key) | join('\n') }}"
+    key: "{{ guest_bootstrap_public_keys | join('\n') }}"
     state: present
     exclusive: true
   vars:
-    guest_bootstrap_deploy_public_key: >-
-      {{ [lookup('ansible.builtin.file', guest_bootstrap_deploy_public_key_path)]
-         if (guest_bootstrap_authorize_deploy_key | bool)
-            and (guest_bootstrap_deploy_public_key_path | expanduser) is file
-         else [] }}
-# Reachability as the ansible user is verified by a separate play in
-# playbooks/02_BASE_CONFIGURATION/bootstrap.yml -- overriding ansible_user on a
-# single task does not reliably re-establish the already-open SSH connection.
+    guest_bootstrap_public_keys: >-
+      {{ [guest_bootstrap_ssh_public_key | trim]
+         + ([lookup('ansible.builtin.file', guest_bootstrap_deploy_public_key_path) | trim]
+            if (guest_bootstrap_authorize_deploy_key | bool) else [])
+         + guest_bootstrap_extra_public_keys }}

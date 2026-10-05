@@ -4,6 +4,9 @@
 .vault_pass
 vault_pass.txt
 
+# Generated from runner state by scripts/render-inventory.sh / fetch-inventory.sh
+ansible/inventory/00-terraform.yml
+
 # Terraform
 # State is never committed: it records the full address and container-ID plan,
 # and Terraform makes no guarantee a future resource attribute stays non-secret.

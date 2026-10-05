@@ -9,9 +9,16 @@ github_runner_deploy_targets: >-
 
 github_runner_ssh_targets: "{{ github_runner_deploy_targets }}"
 
-egress_firewall_ssh_targets: "{{ github_runner_deploy_targets }}"
-egress_firewall_blocked_targets: >-
+# New guests inside this range are reachable without re-running deploy_runner.yml.
+# The node sits in the same range and is dropped first (blocked, below), so the
+# range never reaches it. The runner's Terraform jobs get the API port only.
+github_runner_guest_cidrs:
+  - 192.168.0.0/24
+
+egress_firewall_ssh_targets: "{{ github_runner_guest_cidrs }}"
+egress_firewall_api_targets: >-
   {{ groups['proxmox_node'] | map('extract', hostvars, 'ansible_host') | list }}
+egress_firewall_blocked_targets: "{{ egress_firewall_api_targets }}"
 
 # The deploy key must not open ansible@runner01: its sudo would let a job drop
 # the egress firewall.

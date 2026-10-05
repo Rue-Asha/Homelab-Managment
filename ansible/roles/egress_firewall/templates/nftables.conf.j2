@@ -8,6 +8,9 @@ table inet egress_firewall {
         type filter hook output priority filter; policy drop;
 
         oif "lo" accept
+{% if egress_firewall_api_targets %}
+        ip daddr { {{ egress_firewall_api_targets | join(', ') }} } tcp dport 8006 accept
+{% endif %}
 {% if egress_firewall_blocked_targets %}
         ip daddr { {{ egress_firewall_blocked_targets | join(', ') }} } drop
 {% endif %}

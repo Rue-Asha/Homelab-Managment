@@ -1,3 +1,11 @@
+locals {
+  # VMs are not on the template: cloud-init still seeds the ansible user.
+  vm_ssh_public_keys = [
+    for k in ["guest_ed25519.pub", "deploy_ed25519.pub"] :
+    trimspace(file("${path.module}/../../../ansible/keys/${k}"))
+  ]
+}
+
 module "vm" {
   source = "../../modules/proxmox_vm"
 
@@ -21,7 +29,7 @@ module "vm" {
   disk_gb      = each.value.disk_gb
   datastore_id = var.vm_datastore_id
 
-  ssh_public_keys = local.ssh_public_keys
+  ssh_public_keys = local.vm_ssh_public_keys
   agent_enabled   = each.value.agent_enabled
   tags            = each.value.tags
 }
