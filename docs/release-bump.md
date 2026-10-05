@@ -17,10 +17,10 @@ setup, adding an app, and recovering a PR that does not merge.
    `scripts/bump-pin.sh <host_vars_path> <variable> <tag>` from `Rue-Asha/ci`.
    Only the value on the line `^<variable>: ` changes (quotes and a trailing
    comment stay); the rest of the file is byte-identical.
-3. On `changed` (`scripts/ensure-bump-pr.sh`) it pushes branch `bump/<variable>-<tag>`, opens a PR titled
+3. `scripts/ensure-bump-pr.sh` gets the script's result. On `changed` it pushes branch `bump/<variable>-<tag>`, opens a PR titled
    `chore(<app>): bump to <tag>` (the commit message is the same line), runs
    `gh pr merge --auto --squash`, and closes open `bump/<variable>-*` PRs for an
-   older tag with a comment naming the new one (newer ones are left alone).
+   older tag with a comment naming the new one (newer ones are left alone). On `unchanged` with a merged PR for the tag it only runs that closing step.
 4. `ci.yml` runs on the PR. When the four required checks pass, GitHub
    squash-merges it.
 5. The merge to `main` starts `deploy.yml`, which maps the changed host_vars
@@ -46,7 +46,8 @@ A re-run finishes what a failed run left: a branch without a PR gets its PR, a
 PR without auto-merge gets auto-merge, a still-open older bump PR is closed. A PR closed without merging is left
 alone (tag again to bump).
 
-It fails when the variable line is missing (`bump-pin: <file>: <variable> not found`),
+It fails when the variable line is missing (`bump-pin: <file>: <variable> not found`)
+or appears more than once (`bump-pin: <file>: <variable> is set more than once`),
 when its value is empty, templated or not a bare or simply quoted token
 (`bump-pin: <file>: <variable> has no plain or quoted value`), when the tag is
 not a safe plain YAML scalar (whitespace, `#`, quotes, `{}[],`, backslash,

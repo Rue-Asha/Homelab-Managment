@@ -29,10 +29,15 @@
 - **THEN** the script exits non-zero with a message naming the file and the variable, and the job fails
 - **proof:** unit ("Scenario: The variable line is missing")
 
+#### Scenario: The variable is set more than once
+- **WHEN** the file has two or more `<variable>:` lines
+- **THEN** the script exits non-zero with `bump-pin: <file>: <variable> is set more than once`, prints nothing on stdout and leaves the file untouched
+- **proof:** unit ("Scenario: The variable is set more than once")
+
 #### Scenario: The value already equals the tag
 - **WHEN** the job is re-run for a tag the file already pins
-- **THEN** the script prints `unchanged`, no branch or PR is created, and the job succeeds
-- **proof:** unit ("Scenario: The value already equals the tag")
+- **THEN** the script prints `unchanged`, no branch or PR is created, and the job succeeds; if the PR for the tag is merged and an older bump PR is still open, that PR is closed (see "The current PR is already merged but an older one is still open")
+- **proof:** unit ("Scenario: The value already equals the tag", including the unchanged result without a PR for the tag)
 
 #### Scenario: Branch or PR for the tag already exists
 - **WHEN** a PR for `bump/<variable>-<tag>` is merged, or open with auto-merge enabled
@@ -97,9 +102,9 @@ After opening the PR for a tag, the workflow SHALL close every other open PR who
 - **proof:** unit ("Scenario: Only older bump PRs are superseded", stubbed `gh`); manual (an older tag's job re-run with a newer PR open)
 
 #### Scenario: The current PR is already merged but an older one is still open
-- **WHEN** a re-run finds the PR for the tag merged and an older `bump/<variable>-*` PR still open (closing it failed earlier)
+- **WHEN** a re-run finds the PR for the tag merged (so the file already pins the tag and the script printed `unchanged`, or `changed` on a branch behind) and an older `bump/<variable>-*` PR still open (closing it failed earlier)
 - **THEN** the older PR is closed with a comment naming the merged PR
-- **proof:** unit ("Scenario: An older bump PR is still open (merged current PR)", stubbed `gh`)
+- **proof:** unit ("Scenario: An older bump PR is still open (merged current PR)" and "Scenario: The current PR is already merged but an older one is still open", stubbed `gh`); the workflow hands the script's result to `ensure-bump-pr.sh` unconditionally (asserted on the workflow text)
 
 #### Scenario: The older PR was already merged
 - **WHEN** the previous bump PR for the variable is merged
