@@ -36,10 +36,14 @@ The job ends green without a PR when:
 | The PR for `bump/<variable>-<tag>` is merged, or open with auto-merge on | nothing created |
 
 A re-run finishes what a failed run left: a branch without a PR gets its PR, a
-PR without auto-merge gets auto-merge. A PR closed without merging is left
+PR without auto-merge gets auto-merge, a still-open older bump PR is closed. A PR closed without merging is left
 alone (tag again to bump).
 
 It fails when the variable line is missing (`bump-pin: <file>: <variable> not found`),
+when its value is empty, templated or not a bare or simply quoted token
+(`bump-pin: <file>: <variable> has no plain or quoted value`), when the tag is
+not a safe plain YAML scalar (whitespace, `#`, quotes, `{}[],`, backslash,
+trailing `:`; `bump-pin: <tag>: not a safe YAML scalar`),
 when the file is not on `main` yet (`bump-pin: <file>: file not found`), or when the
 App token cannot be created. There is no fallback to `GITHUB_TOKEN`: a bump PR
 opened by it would not trigger `ci.yml`.

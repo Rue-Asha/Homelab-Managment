@@ -14,6 +14,16 @@
 - **THEN** only the value changes, quotes and comment are kept, the tag is written literally, and a line that already holds the tag in those forms prints `unchanged`
 - **proof:** unit ("Scenario: The line has quotes, a comment or special characters"; "Scenario: The value already equals the tag")
 
+#### Scenario: The value is not a plain or quoted token
+- **WHEN** the `<variable>:` line holds an empty value (`""`, nothing before a comment), a templated value (`{{ x }}`) or an unterminated quote
+- **THEN** the script exits non-zero with a message naming the file and the variable, prints nothing on stdout, and leaves the file untouched, so the job fails instead of reporting `unchanged`
+- **proof:** unit ("Scenario: The value is not a plain or quoted token")
+
+#### Scenario: The tag is not a safe YAML scalar
+- **WHEN** the tag contains whitespace, `#`, a quote, `{`, `}`, `[`, `]`, `,`, a backslash, or ends in `:`
+- **THEN** the script exits non-zero with `bump-pin: <tag>: not a safe YAML scalar` and leaves the file untouched
+- **proof:** unit ("Scenario: The tag is not a safe YAML scalar")
+
 #### Scenario: The variable line is missing
 - **WHEN** the file has no `<variable>:` line
 - **THEN** the script exits non-zero with a message naming the file and the variable, and the job fails
@@ -61,6 +71,11 @@ After opening the PR for a tag, the workflow SHALL close every other open PR who
 - **WHEN** `bump/life_manager_version-v0.3.0` is open and the job opens `bump/life_manager_version-v0.3.1`
 - **THEN** the v0.3.0 PR is closed with a comment pointing at the v0.3.1 PR
 - **proof:** unit ("Scenario: An older bump PR is still open", stubbed `gh`); manual (two real PRs)
+
+#### Scenario: The current PR is already merged but an older one is still open
+- **WHEN** a re-run finds the PR for the tag merged and an older `bump/<variable>-*` PR still open (closing it failed earlier)
+- **THEN** the older PR is closed with a comment naming the merged PR
+- **proof:** unit ("Scenario: An older bump PR is still open (merged current PR)", stubbed `gh`)
 
 #### Scenario: The older PR was already merged
 - **WHEN** the previous bump PR for the variable is merged
