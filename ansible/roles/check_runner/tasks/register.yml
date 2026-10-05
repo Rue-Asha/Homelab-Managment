@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Check whether the runner is registered
+  ansible.builtin.stat:
+    path: "{{ check_runner_dir }}/.runner"
+  register: check_runner_registration
+
+# --disableupdate keeps the runner on the pinned, checksummed release.
+- name: Register the runner with the repository
+  ansible.builtin.command:
+    argv:
+      - "{{ check_runner_dir }}/config.sh"
+      - --unattended
+      - --disableupdate
+      - --url
+      - "{{ check_runner_repo_url }}"
+      - --token
+      - "{{ check_runner_registration_token }}"
+      - --name
+      - "{{ check_runner_name }}"
+      - --labels
+      - "{{ check_runner_labels | join(',') }}"
+      - --work
+      - _work
+    chdir: "{{ check_runner_dir }}"
+  become: true
+  become_user: "{{ check_runner_user }}"
+  no_log: true
+  changed_when: true
+  when:
+    - not check_runner_registration['stat']['exists']
+    - check_runner_registration_token | length > 0
+
+- name: Record whether the runner is registered
+  ansible.builtin.stat:
+    path: "{{ check_runner_dir }}/.runner"
+  register: check_runner_registered_stat
+
+- name: Remember whether the runner is registered
+  ansible.builtin.set_fact:
+    check_runner_registered: "{{ check_runner_registered_stat['stat']['exists'] }}"

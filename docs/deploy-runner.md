@@ -8,8 +8,9 @@ every guest that apply created, to the `02_SERVICES` playbooks they affect
 (`scripts/deploy-targets.sh`) and runs each one in full with
 `--limit proxmox_guest`. So a merge that only adds a guest to
 `hosts.auto.tfvars` also runs that guest's service playbooks in the same run.
-This page covers the runner itself: setting it up, rotating its credentials,
-and deploying without it.
+CI checks run on a separate runner, `check01` (`docs/check-runner.md`), so
+this one never executes PR code. This page covers the runner itself: setting it
+up, rotating its credentials, and deploying without it.
 
 ## What the runner holds
 

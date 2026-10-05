@@ -56,6 +56,7 @@ all:
             life_manager: {hosts: {life-manager01: {}}}
             static_site: {hosts: {static01: {}}}
             github_runner: {hosts: {runner01: {}}}
+            check_runner: {hosts: {check01: {}}}
             pihole: {hosts: {pihole01: {}}}
             scratch: {hosts: {bare01: {}}}
     proxmox_node: {hosts: {proxmox1: {}}}'
@@ -63,6 +64,7 @@ put ansible/inventory/group_vars/all.yml '--- {}'
 put ansible/inventory/group_vars/proxmox_guest/vars.yml '--- {}'
 put ansible/inventory/group_vars/static_site.yml '--- {}'
 put ansible/inventory/group_vars/pihole.yml '--- {}'
+put ansible/inventory/group_vars/check_runner.yml '--- {}'
 put ansible/inventory/host_vars/life-manager01/vars.yml 'life_manager_version: v1'
 put ansible/inventory/host_vars/pihole01/vars.yml 'pihole_version: v6'
 put ansible/inventory/host_vars/static01.yml '--- {}'
@@ -73,12 +75,14 @@ role life_manager
 role proxy_site nginx
 role egress_firewall
 role github_runner
+role check_runner
 role pihole
 play ansible/playbooks/02_SERVICES/life-manager.yml life_manager 'common, nodejs, life_manager, nginx'
 play ansible/playbooks/02_SERVICES/static-site.yml static_site 'common, proxy_site'
 play ansible/playbooks/02_SERVICES/batch-job.yml static_site 'nodejs'
 play ansible/playbooks/02_SERVICES/pihole.yml pihole 'common, pihole'
 play ansible/playbooks/01_BASE_CONFIGURATION/deploy_runner.yml github_runner 'common, egress_firewall, github_runner'
+play ansible/playbooks/01_BASE_CONFIGURATION/check_runner.yml check_runner 'common, egress_firewall, check_runner'
 put README.md fixture
 put terraform/main.tf '# fixture'
 
@@ -182,6 +186,7 @@ change "Scenario: A diff touching two services runs both" "$LIFE
 $PIHOLE" ansible/inventory/host_vars/pihole01/vars.yml ansible/inventory/host_vars/life-manager01/vars.yml
 change "runner roles deploy nothing" "" ansible/roles/github_runner/tasks/main.yml ansible/roles/egress_firewall/tasks/main.yml
 change "runner playbook deploys nothing" "" ansible/playbooks/01_BASE_CONFIGURATION/deploy_runner.yml
+change "Scenario: deploy-targets ignores the check runner" "" ansible/roles/check_runner/tasks/main.yml ansible/inventory/group_vars/check_runner.yml ansible/playbooks/01_BASE_CONFIGURATION/check_runner.yml
 
 expect "zero before runs everything" "$ALL" 0000000000000000000000000000000000000000 "$(git rev-parse HEAD)"
 expect "non-ancestor before runs everything" "$ALL" "$(git commit-tree 'HEAD^{tree}' -m unrelated)" "$(git rev-parse HEAD)"

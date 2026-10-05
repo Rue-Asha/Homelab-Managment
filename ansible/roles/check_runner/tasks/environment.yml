@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the job-hook directory exists
+  ansible.builtin.file:
+    path: "{{ check_runner_hook_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install the job-started hook
+  ansible.builtin.template:
+    src: job-started.sh.j2
+    dest: "{{ check_runner_hook_path }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+# config.sh writes its own .env and .path, so these run after registration.
+- name: Render the job environment
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ check_runner_dir }}/.env"
+    owner: "{{ check_runner_user }}"
+    group: "{{ check_runner_user }}"
+    mode: "0640"
+  notify: Restart check-runner
+
+- name: Put the pinned Python tools first on the job PATH
+  ansible.builtin.copy:
+    content: "{{ check_runner_venv }}/bin:/usr/local/bin:/usr/bin:/bin\n"
+    dest: "{{ check_runner_dir }}/.path"
+    owner: "{{ check_runner_user }}"
+    group: "{{ check_runner_user }}"
+    mode: "0640"
+  notify: Restart check-runner

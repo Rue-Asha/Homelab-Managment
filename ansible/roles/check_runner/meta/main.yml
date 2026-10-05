@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: >-
+    Self-hosted GitHub Actions runner for the CI checks: unprivileged user,
+    pinned runner release, root-owned pinned toolchain, a workspace wiped before
+    every job, and no credentials of any kind.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+  galaxy_tags:
+    - github
+    - ci
+    - runner
+
+dependencies: []

@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the runner user exists
+  ansible.builtin.user:
+    name: "{{ check_runner_user }}"
+    home: "{{ check_runner_home }}"
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Ensure the runner user has no sudoers entry
+  ansible.builtin.file:
+    path: "/etc/sudoers.d/{{ check_runner_user }}"
+    state: absent

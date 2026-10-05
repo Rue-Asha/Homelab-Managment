@@ -1,0 +1,9 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# Runs before every job. Nothing from an earlier job may be left in the
+# workspace. The directory is emptied, not removed, because the runner has
+# already made it the job's working directory; it does not exist before the
+# first job.
+if [ -d "{{ check_runner_workspace }}" ]; then
+  find "{{ check_runner_workspace }}" -mindepth 1 -delete
+fi

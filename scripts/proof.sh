@@ -36,6 +36,7 @@ workflows=()
 collection_reqs=()
 deploy_targets=0
 plan_protected=0
+workflow_triggers=0
 for f in "${files[@]}"; do
   case "$f" in
     *.tfstate|*.tfstate.*) tfstate+=("$f") ;;
@@ -43,6 +44,7 @@ for f in "${files[@]}"; do
   case "$f" in
     scripts/deploy-targets.sh|scripts/tests/deploy-targets.sh) deploy_targets=1 ;;
     scripts/checks/plan-protected.sh|scripts/tests/plan-protected.sh) plan_protected=1 ;;
+    scripts/checks/workflow-triggers.py|scripts/tests/workflow-triggers.sh) workflow_triggers=1 ;;
   esac
   case "$f" in
     terraform/*) tf_changed=1 ;;
@@ -125,6 +127,13 @@ fi
 if [ "$plan_protected" -eq 1 ]; then
   sensor "plan-protected fixtures" PLAN_PROTECTED_FAILED scripts/tests/plan-protected.sh
 fi
+
+if [ "$workflow_triggers" -eq 1 ]; then
+  sensor "workflow-triggers fixtures" WORKFLOW_TRIGGERS_FAILED scripts/tests/workflow-triggers.sh
+fi
+
+# The check runner runs PR code, so no deploy credential may be wired into it.
+sensor "check runner role has no deploy credentials" CHECK_RUNNER_HAS_CREDENTIALS sh -c '! git grep -nE "deploy_ed25519|vault_pass|terraform\.env|github_runner_" -- ansible/roles/check_runner ansible/inventory/group_vars/check_runner'
 
 # The retired all-purpose key must not come back; see credential-separation.
 sensor "retired key path" RETIRED_KEY_REFERENCED sh -c '! git grep -n "ssh/Proxmox" -- . ":!openspec" ":!scripts/proof.sh"'

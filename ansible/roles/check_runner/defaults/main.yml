@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: MIT-0
+---
+# --- Identity ---
+# No sudo, ever: PR code runs as this user, and the egress firewall only holds
+# while nothing in a job can become root.
+check_runner_user: check-runner
+check_runner_home: "/home/{{ check_runner_user }}"
+check_runner_dir: "{{ check_runner_home }}/actions-runner"
+check_runner_service_name: check-runner
+
+# --- Registration ---
+# Repository runner on this repo only. The token comes from Settings ->
+# Actions -> Runners -> New, is passed once with -e, expires in an hour and is
+# never stored. Without it the role configures everything but registration.
+check_runner_repo_url: https://github.com/Rue-Asha/Homelab-Managment
+check_runner_registration_token: ""
+check_runner_name: "{{ inventory_hostname }}"
+check_runner_labels: [homelab-check]
+
+# --- Runner release (self-update is disabled, so this pin holds) ---
+check_runner_version: 2.337.0
+check_runner_sha256: 70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613
+check_runner_archive: "actions-runner-linux-x64-{{ check_runner_version }}.tar.gz"
+check_runner_url: "https://github.com/actions/runner/releases/download/v{{ check_runner_version }}/{{ check_runner_archive }}"
+
+# --- Toolchain for proof.sh, root-owned so a job cannot replace it ---
+# Keep terraform in step with the deploy runner's pin: CI validates the same
+# configuration that runner applies.
+check_runner_terraform_version: 1.15.9
+check_runner_terraform_sha256: 76edd0b22d2f27d3d2e097cd793209646f719cf60f02ff3af626b07361137da1
+check_runner_terraform_url: "https://releases.hashicorp.com/terraform/{{ check_runner_terraform_version }}/terraform_{{ check_runner_terraform_version }}_linux_amd64.zip"
+check_runner_tflint_version: 0.64.0
+check_runner_tflint_sha256: cca9d13e2e1d7a2c627af60ff899a3c9b74212899416aeb96ec764d2ef954537
+check_runner_tflint_url: "https://github.com/terraform-linters/tflint/releases/download/v{{ check_runner_tflint_version }}/tflint_linux_amd64.zip"
+
+# ansible-core, ansible-lint and checkov exactly as CI pins them.
+check_runner_venv: /opt/check-runner/venv
+check_runner_python_requirements: >-
+  {{ lookup('ansible.builtin.file', role_path ~ '/../../../ci/requirements.txt').splitlines()
+     | select('match', '^[A-Za-z]') | list }}
+check_runner_packages:
+  - git
+  # proof.sh's fixture tests read plans and diffs with it.
+  - jq
+  - python3-venv
+  # The pip module imports packaging on the system Python before it creates the venv.
+  - python3-packaging
+  # Unpacks the terraform and tflint releases.
+  - unzip
+
+# Runs before every job as root-owned code, so a job cannot rewrite it.
+check_runner_hook_path: /usr/local/lib/check-runner/job-started.sh
+check_runner_workspace: >-
+  {{ check_runner_dir }}/_work/{{ check_runner_repo_url | basename }}/{{ check_runner_repo_url | basename }}

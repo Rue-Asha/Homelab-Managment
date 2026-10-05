@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install runner packages
+  ansible.builtin.apt:
+    name: "{{ check_runner_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure the runner directory exists
+  ansible.builtin.file:
+    path: "{{ check_runner_dir }}"
+    state: directory
+    owner: "{{ check_runner_user }}"
+    group: "{{ check_runner_user }}"
+    mode: "0750"
+
+- name: Download the runner release and verify its checksum
+  ansible.builtin.get_url:
+    url: "{{ check_runner_url }}"
+    dest: "{{ check_runner_home }}/{{ check_runner_archive }}"
+    checksum: "sha256:{{ check_runner_sha256 }}"
+    owner: "{{ check_runner_user }}"
+    group: "{{ check_runner_user }}"
+    mode: "0644"
+
+- name: Unpack the runner release
+  ansible.builtin.unarchive:
+    src: "{{ check_runner_home }}/{{ check_runner_archive }}"
+    dest: "{{ check_runner_dir }}"
+    remote_src: true
+  become: true
+  become_user: "{{ check_runner_user }}"
+  notify: Restart check-runner
+
+# The vendor script knows the runtime libraries for each distro release.
+- name: Install the runner's runtime dependencies
+  ansible.builtin.command: "{{ check_runner_dir }}/bin/installdependencies.sh"
+  register: check_runner_dependencies
+  changed_when: check_runner_dependencies['stdout'] is search('[1-9][0-9]* newly installed')
