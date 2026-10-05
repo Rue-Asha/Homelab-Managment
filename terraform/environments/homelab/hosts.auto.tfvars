@@ -37,6 +37,21 @@ lxc_hosts = {
 
     template_file_id = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
   }
+
+  # Retired in efa9f49 and brought back with the same identity, so the router
+  # needs no new address. Configured by 03_SERVICES/pihole.yml.
+  "pihole01" = {
+    vmid    = 225
+    ipv4    = "192.168.0.225/24"
+    groups  = ["pihole"]
+    tags    = ["dns", "terraform"]
+    cores   = 1
+    memory  = 512
+    swap    = 512
+    disk_gb = 4
+
+    template_file_id = "local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst"
+  }
 }
 
 # retropie01 is deliberately absent: the box is not currently provisioned. Its
