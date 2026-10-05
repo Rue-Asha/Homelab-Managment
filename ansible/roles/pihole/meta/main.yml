@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: >-
+    Install a pinned Pi-hole v6 natively (core tag checked out before the
+    upstream installer runs) and converge its settings and admin password.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - trixie
+  galaxy_tags:
+    - pihole
+    - dns
+    - networking
+    - adblock
+
+dependencies: []

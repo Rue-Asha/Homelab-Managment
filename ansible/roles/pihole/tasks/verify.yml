@@ -1,0 +1,68 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Smoke check on every run. Uses no vaulted value. A failure fails the play and
+# never restarts or reinstalls anything.
+- name: Restart pihole-FTL now if this run changed it
+  ansible.builtin.meta: flush_handlers
+
+- name: Check the installed Pi-hole and answer DNS and the web UI
+  when: not ansible_check_mode
+  block:
+    - name: Read the installed Pi-hole versions
+      ansible.builtin.slurp:
+        src: "{{ pihole_config_dir }}/versions"
+      register: pihole_versions_after
+
+    - name: Assert the installed core is the pinned one
+      ansible.builtin.assert:
+        that:
+          - pihole_core_installed | length > 0
+          - pihole_core_installed is match('^' ~ (pihole_version | regex_replace('^v', '') | regex_escape) ~ '$')
+        quiet: true
+        fail_msg: "Installed Pi-hole core is '{{ pihole_core_installed }}', pihole_version is {{ pihole_version }}."
+      vars:
+        pihole_core_installed: >-
+          {{ (pihole_versions_after['content'] | b64decode
+              | regex_findall('(?m)^CORE_VERSION=(\S+)') | first | default('')
+              | regex_replace('^v', '')) }}
+
+    - name: Show the installed component versions
+      ansible.builtin.debug:
+        msg: "{{ pihole_versions_after['content'] | b64decode | regex_findall('(?m)^(?:CORE|WEB|FTL)_VERSION=\\S+') }}"
+
+    - name: Query DNS on the loopback address
+      ansible.builtin.command:
+        argv:
+          - dig
+          - +short
+          - +time=2
+          - +tries=1
+          - "@127.0.0.1"
+          - "{{ pihole_smoke_domain }}"
+      register: pihole_smoke_dns
+      until: pihole_smoke_dns['rc'] in [0] and pihole_smoke_dns['stdout'] | trim | length > 0
+      retries: "{{ pihole_smoke_retries }}"
+      delay: "{{ pihole_smoke_delay }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Request the admin page
+      ansible.builtin.uri:
+        url: "{{ pihole_smoke_url }}"
+        follow_redirects: none
+        status_code: [200, 301, 302, 303, 307, 308]
+      register: pihole_smoke_web
+      until: pihole_smoke_web is succeeded
+      retries: "{{ pihole_smoke_retries }}"
+      delay: "{{ pihole_smoke_delay }}"
+      failed_when: false
+
+    - name: Fail the play when a check failed
+      ansible.builtin.fail:
+        msg: >-
+          Smoke check failed:
+          {{ ('DNS: dig @127.0.0.1 ' ~ pihole_smoke_domain ~ ' gave no answer. ')
+             if (pihole_smoke_dns['stdout'] | trim | length == 0) else '' }}
+          {{ ('Web: ' ~ pihole_smoke_url ~ ' answered ' ~ pihole_smoke_web['status'] | default('nothing') ~ '.')
+             if pihole_smoke_web is failed else '' }}
+      when: (pihole_smoke_dns['stdout'] | trim | length == 0) or (pihole_smoke_web is failed)

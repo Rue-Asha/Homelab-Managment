@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: MIT-0
+---
+# git is needed before the installer's own dependency step; dig is for verify.yml.
+- name: Install the packages the role itself uses
+  ansible.builtin.apt:
+    name:
+      - bind9-dnsutils
+      - ca-certificates
+      - curl
+      - git
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
