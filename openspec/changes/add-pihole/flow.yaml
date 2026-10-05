@@ -1,0 +1,4 @@
+triage: "feature — new guest, new role and playbook, LAN-wide DNS. Appetite: two evenings."
+base: main
+gate0: 2026-10-05
+gate1: 2026-10-05
