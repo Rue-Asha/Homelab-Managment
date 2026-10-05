@@ -13,8 +13,8 @@
 
 ## 3. Life-Manager release.yml hookup
 > unit: depends=1 · scope=S5 · files=../Life-Manager/.github/workflows/release.yml
-- [ ] 3.1 In a worktree of `../Life-Manager` from `origin/main` (`flow/auto-version-bump`) append the `bump` job from the Contracts (`needs: publish`, `life_manager_version`, `life-manager01/vars.yml`), pinned to the local `ci` commit SHA from unit 1 with `# v1.1.0` comment (re-pinned in 4.5)
-- [ ] 3.2 `actionlint .github/workflows/release.yml` clean; commit locally, record the hash here. Do not push
+- [x] 3.1 In a worktree of `../Life-Manager` from `origin/main` (`flow/auto-version-bump`) append the `bump` job from the Contracts (`needs: publish`, `life_manager_version`, `life-manager01/vars.yml`), pinned to the local `ci` commit SHA from unit 1 with `# v1.1.0` comment (re-pinned in 4.5)
+- [x] 3.2 `actionlint .github/workflows/release.yml` clean; commit locally, record the hash here. Do not push — Life-Manager branch flow/auto-version-bump @ 6ae8e8e
 
 ## 4. Human-only setup (Rue, never an agent)
 > unit: depends=none · scope=S7 · files=none (GitHub UI and settings only; not built by an agent)
