@@ -1,10 +1,10 @@
 ---
 # The self-hosted GitHub Actions runner the CI checks run on.
 #
-# Human-run only. It lives outside 03_SERVICES so scripts/deploy-targets.sh
+# Human-run only. It lives outside 02_SERVICES so scripts/deploy-targets.sh
 # never selects it. Holds no credentials and cannot reach guests or the node.
 #
-#   ansible-playbook playbooks/02_BASE_CONFIGURATION/check_runner.yml \
+#   ansible-playbook playbooks/01_BASE_CONFIGURATION/check_runner.yml \
 #     -e check_runner_registration_token=<token from Settings -> Actions -> Runners>
 #
 # The token is only needed the first time; without it the runner stays

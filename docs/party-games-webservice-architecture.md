@@ -82,7 +82,7 @@ the process supervisor (the role a container runtime plays elsewhere).
   (git tag/commit) — the equivalent of an image tag. A private repo needs a
   read-only deploy key on the host.
 
-**Roles applied by `playbooks/03_SERVICES/partygames.yml` (`hosts: partygames`):**
+**Roles applied by `playbooks/02_SERVICES/partygames.yml` (`hosts: partygames`):**
 `common` (02 base layer) → `nodejs` → `partygames` → `nginx`. `partygames01`
 host_vars enable the proxy (`nginx_reverse_proxy_enabled: true`,
 `nginx_backend_port: 3000`, `nginx_service_description`).

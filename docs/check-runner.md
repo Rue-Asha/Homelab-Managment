@@ -38,13 +38,13 @@ PR that edits the check itself.
 2. **Converge it** like any guest from the template (this removes the deploy key
    the template put on it, see `group_vars/check_runner`):
 
-       ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l check01
+       ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml -l check01
 
 3. **Configure and register the runner.** Get a registration token from GitHub →
    Settings → Actions → Runners → New self-hosted runner (valid one hour, not
    stored):
 
-       ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/check_runner.yml \
+       ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/check_runner.yml \
          -e check_runner_registration_token=<token>
 
    The runner shows as `idle` with the label `homelab-check`.
@@ -81,7 +81,7 @@ PR that edits the check itself.
 - **Re-register:** delete `~check-runner/actions-runner/.runner` and re-run with a
   fresh token.
 - **Changes to the role never deploy on merge:** the playbook is outside
-  `03_SERVICES`.
+  `02_SERVICES`.
 
 ## When `check01` is down
 

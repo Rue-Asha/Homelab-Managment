@@ -21,13 +21,13 @@ none either; `pct enter <ctid>` from the node is the console fallback. See
 
 ## Usage
 
-Via `playbooks/02_BASE_CONFIGURATION/bootstrap.yml`, which runs this role and
+Via `playbooks/01_BASE_CONFIGURATION/bootstrap.yml`, which runs this role and
 then `common` as `ansible`. Safe to re-run.
 
 To re-key without locking yourself out, authorise the old key for one run and
 connect with it, then switch `ansible.cfg` to the new key and run again:
 
-    ansible-playbook playbooks/02_BASE_CONFIGURATION/bootstrap.yml \
+    ansible-playbook playbooks/01_BASE_CONFIGURATION/bootstrap.yml \
       -e '{"guest_bootstrap_extra_public_keys": ["<old public key>"]}' \
       --private-key ~/.ssh/<old key>
 

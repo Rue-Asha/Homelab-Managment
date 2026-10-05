@@ -1,6 +1,6 @@
 ---
-# The check runner (check01). Applied by 02_BASE_CONFIGURATION/check_runner.yml
-# only; no 03_SERVICES playbook targets this group, so a deploy never touches it.
+# The check runner (check01). Applied by 01_BASE_CONFIGURATION/check_runner.yml
+# only; no 02_SERVICES playbook targets this group, so a deploy never touches it.
 
 # Explicit empties: this host runs PR code, so it opens no connection to a
 # guest or the Proxmox node. Only DNS and TCP 80/443 to non-private addresses

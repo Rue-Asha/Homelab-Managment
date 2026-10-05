@@ -4,7 +4,7 @@ Merging to `main` deploys. `.github/workflows/deploy.yml` runs on `runner01`,
 a self-hosted GitHub Actions runner in its own LXC. When `terraform/` changed it
 first plans and, after approval in the `infrastructure` environment, applies
 (`scripts/tf-ci.sh`); then it maps the merged commits' `ansible/` diff, plus
-every guest that apply created, to the `03_SERVICES` playbooks they affect
+every guest that apply created, to the `02_SERVICES` playbooks they affect
 (`scripts/deploy-targets.sh`) and runs each one in full with
 `--limit proxmox_guest`. So a merge that only adds a guest to
 `hosts.auto.tfvars` also runs that guest's service playbooks in the same run.
@@ -70,13 +70,13 @@ runner's key.
 2. **Converge it** like any guest from the template (this also removes the
    deploy key the template put on it, see `group_vars/github_runner`):
 
-       ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l runner01
+       ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml -l runner01
 
 3. **Configure and register the runner.** Get a registration token from
    GitHub → Settings → Actions → Runners → New self-hosted runner. It expires
    after an hour and is not stored anywhere:
 
-       ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/deploy_runner.yml \
+       ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/deploy_runner.yml \
          -e github_runner_registration_token=<token>
 
    The runner shows as `idle` with the label `homelab-deploy`. The play also
@@ -86,7 +86,7 @@ runner's key.
 4. **Authorise the deploy key on the guests.** Guests built from the template
    already carry it. For older ones, converge them:
 
-       ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml
+       ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml
 
 5. **Check the boundaries** from `runner01` as `github-runner`:
    `ssh ansible@192.168.0.223 true` works, `ssh ansible@192.168.0.22 true` is
@@ -99,9 +99,9 @@ runner's key.
   host-key verification error. That is deliberate. Re-run `deploy_runner.yml`
   (no token needed) to re-scan, then re-run the failed deploy.
 - **A guest was added by the pipeline:** nothing to do. The `apply` job pins its
-  host key and hands the guest to `deploy`, which runs every `03_SERVICES`
+  host key and hands the guest to `deploy`, which runs every `02_SERVICES`
   playbook targeting it in the same workflow run; the firewall allows the whole
-  guest range. A bare guest that no `03_SERVICES` playbook targets gets none,
+  guest range. A bare guest that no `02_SERVICES` playbook targets gets none,
   and the log says so. This covers created guests only: a recreated one still
   needs `deploy_runner.yml`, see above.
 - **A guest was added by hand** (outside the pipeline): run `deploy_runner.yml`
@@ -118,7 +118,7 @@ runner's key.
   re-run `deploy_runner.yml`. Self-update is disabled.
 
 Changes to the runner's roles never deploy on merge: the runner playbook is
-outside `03_SERVICES` because a deploy that restarted its own runner would kill
+outside `02_SERVICES` because a deploy that restarted its own runner would kill
 the job running it. They take effect at the next manual `deploy_runner.yml`.
 
 ## Deploying without the runner
@@ -127,7 +127,7 @@ Everything the workflow does is a plain playbook run, so the workstation can
 always deploy directly, with the same smoke check and rollback:
 
     scripts/deploy-targets.sh <before-sha> <after-sha>   # or --all, or a name
-    ansible-playbook ansible/playbooks/03_SERVICES/life-manager.yml
+    ansible-playbook ansible/playbooks/02_SERVICES/life-manager.yml
 
 To redeploy from GitHub without a code change, run the `deploy` workflow by
 hand (Actions → deploy → Run workflow) with a playbook name or `all`. It only

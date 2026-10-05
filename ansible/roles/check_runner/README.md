@@ -22,7 +22,7 @@ homelab; it is the PR-facing counterpart to `github_runner`.
 
 ## Usage
 
-Via `playbooks/02_BASE_CONFIGURATION/check_runner.yml`, by hand only. See
+Via `playbooks/01_BASE_CONFIGURATION/check_runner.yml`, by hand only. See
 `docs/check-runner.md`.
 
 ## Variables

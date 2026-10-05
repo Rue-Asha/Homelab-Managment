@@ -1,6 +1,6 @@
 ---
-# The deploy runner (runner01). Applied by 02_BASE_CONFIGURATION/deploy_runner.yml
-# only; no 03_SERVICES playbook targets this group, so a deploy never touches it.
+# The deploy runner (runner01). Applied by 01_BASE_CONFIGURATION/deploy_runner.yml
+# only; no 02_SERVICES playbook targets this group, so a deploy never touches it.
 
 # Guests the runner deploys to, by the address Ansible connects to.
 github_runner_deploy_targets: >-
