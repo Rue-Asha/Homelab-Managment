@@ -134,8 +134,8 @@ attribute values.
 
 ### Requirement: Terraform never destroys its own runner
 
-A plan that deletes or replaces `runner01`, which runs Terraform and holds its
-state, SHALL fail before approval is requested.
+A plan that deletes or replaces `runner01` SHALL fail before approval is
+requested, because `runner01` runs Terraform and holds its state.
 
 #### Scenario: A protected host would be replaced
 - **WHEN** a plan JSON contains a `delete` or `replace` action for `runner01`
