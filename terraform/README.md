@@ -93,8 +93,8 @@ Consequences to know before starting:
   create guests with the same vmids. Existing guest data is discarded by
   decision — the SQLite databases and uploaded images are not preserved.
 - **The LAN loses DNS** while `pihole01` is down, if the router points at it.
-  `pihole01` is declared again (see `docs/pihole.md`); set a fallback resolver
-  on the router first, or rebuild it last.
+  `pihole01` is currently not declared (see `docs/pihole.md`); set a fallback
+  resolver on the router first, or rebuild it last.
 
 ```sh
 terraform -chdir=terraform/environments/homelab init    # commit .terraform.lock.hcl
