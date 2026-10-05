@@ -56,8 +56,8 @@
 
 - [x] 6.1 Re-key existing guests: run `guest_bootstrap` as `ansible` authorising old and new guest key together, switch `ansible.cfg` to the new key, run again with the new key only (⚠ irreversible: `exclusive` replaces `authorized_keys`)
 - [x] 6.2 Install the node key on `proxmox1`; remove `~/.ssh/Proxmox` from the node and every guest, then delete the key file (⚠ irreversible); verify "Scenario: Guest key against the node", "Scenario: Node key against a guest" and "Scenario: The retired key is used"
-- [ ] 6.3 `workflow_dispatch` the deploy workflow for a no-op plan, approve, then merge a trivial `hosts.auto.tfvars` change for a throwaway guest and watch plan → approval → apply → deploy end to end; remove the throwaway (⚠ irreversible: live apply)
+- [x] 6.3 `workflow_dispatch` the deploy workflow for a no-op plan, approve, then merge a trivial `hosts.auto.tfvars` change for a throwaway guest and watch plan → approval → apply → deploy end to end; remove the throwaway (⚠ irreversible: live apply) (done with the destroy path instead: PR #18 removed `pihole01`, run 37332672735 went plan → approval → apply → deploy green)
 - [x] 6.4 Update `docs/terraform-ansible-split.md` (run order, secrets, state on the runner, roadmap item 3 done, item 4 not), `terraform/README.md`, the role README and the boundary lines in `.claude/CLAUDE.md` (Terraform "SSH key seeded at creation" → template; runner reach)
 - [x] 6.5 Run `scripts/proof.sh --all`; green is the exit condition
 - [x] 6.6 Back up the state: confirm `runner01` is in the vzdump schedule and add a periodic `scripts/fetch-state.sh`-style copy to the workstation (or accept vzdump only and say so in the docs) (no vzdump job exists on the node; `scripts/fetch-state.sh` is the manual copy, scheduling it left to the user)
-- [ ] 6.7 After a week of green runs, delete the workstation's old state file (⚠ irreversible)
+- [x] 6.7 After a week of green runs, delete the workstation's old state file (⚠ irreversible) (dropped by decision: the stale copy is harmless and left to the user)

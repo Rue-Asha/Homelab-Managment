@@ -57,7 +57,7 @@ Two evenings: template + key split + bootstrap trim in the first, runner workflo
 - [ ] `bootstrap.yml` contains no root-connecting play; root SSH keys are absent on a fresh guest.
 - [ ] Four distinct key pairs exist; the guest key does not open `proxmox1`, the node key does not open any guest.
 - [ ] Bumping the template version produces no replacement in `terraform plan` for existing containers.
-- [ ] A merge to `main` that changes `hosts.auto.tfvars` runs plan, waits for `production` approval, applies the saved plan, then deploys.
+- [x] A merge to `main` that changes `hosts.auto.tfvars` runs plan, waits for `production` approval, applies the saved plan, then deploys.
 - [ ] Terraform state exists only on `runner01`, outside the job workspace, and survives the workspace wipe; the workstation can fetch the inventory from it.
 - [ ] A plan that would destroy `runner01` is refused.
 - [ ] `proxmox1` is reachable from the runner only on the API port; guest-key and deploy-key SSH to `proxmox1` is refused.
