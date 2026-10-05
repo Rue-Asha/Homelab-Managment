@@ -1,10 +1,10 @@
 # Merge to main is the deploy. Three jobs on the homelab's self-hosted runner,
 # runner01, in order: `plan` (only when terraform/ changed), `apply` (waits for
 # approval in the `infrastructure` environment, then applies exactly that plan),
-# and `deploy`, which maps the pushed commits to the 03_SERVICES playbooks they
-# affect (scripts/deploy-targets.sh) and runs each in full. One workflow and one
-# concurrency group, so an infrastructure change and a service change in the same
-# push never overlap.
+# and `deploy`, which maps the pushed commits, plus the guests `apply` created,
+# to the 03_SERVICES playbooks they affect (scripts/deploy-targets.sh) and runs
+# each in full. One workflow and one concurrency group, so an infrastructure
+# change and a service change in the same push never overlap.
 #
 # Trust boundary: only `push` to main and `workflow_dispatch` start this, and
 # the production environment admits only main, so the runner only ever runs
@@ -96,6 +96,8 @@ jobs:
     if: needs.plan.outputs.changed == 'true'
     runs-on: [self-hosted, homelab-deploy]
     environment: infrastructure
+    outputs:
+      created: ${{ steps.apply.outputs.created }}
     steps:
       - name: Wipe the workspace
         run: find "$GITHUB_WORKSPACE" -mindepth 1 -delete
@@ -107,6 +109,7 @@ jobs:
           clean: true
 
       - name: Apply
+        id: apply
         run: scripts/tf-ci.sh apply
 
   deploy:
@@ -142,11 +145,12 @@ jobs:
           PLAYBOOK: ${{ inputs.playbook }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
+          CREATED: ${{ needs.apply.outputs.created }}
         run: |
           if [ "$EVENT" = workflow_dispatch ]; then
             if [ "$PLAYBOOK" = all ]; then args=(--all); else args=("$PLAYBOOK"); fi
           else
-            args=("$BEFORE" "$AFTER")
+            args=(--created "$CREATED" "$BEFORE" "$AFTER")
           fi
           scripts/deploy-targets.sh "${args[@]}" > "$RUNNER_TEMP/targets"
           echo "Playbooks to run:"

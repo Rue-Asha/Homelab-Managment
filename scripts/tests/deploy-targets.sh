@@ -13,7 +13,8 @@ cd "$(git rev-parse --show-toplevel)" || exit 1
 unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
 
 repo=$(mktemp -d)
-trap 'command rm -rf "$repo"' EXIT
+err=$(mktemp)
+trap 'command rm -rf "$repo" "$err"' EXIT
 
 git() { command git -C "$repo" -c user.name=fixture -c user.email=fixture@localhost -c core.hooksPath=/dev/null "$@"; }
 
@@ -50,10 +51,13 @@ all:
   children:
     proxmox_guest:
       children:
-        life_manager: {hosts: {life-manager01: {}}}
-        static_site: {hosts: {static01: {}}}
-        github_runner: {hosts: {runner01: {}}}
-        pihole: {hosts: {pihole01: {}}}
+        lxc_container_proxmox:
+          children:
+            life_manager: {hosts: {life-manager01: {}}}
+            static_site: {hosts: {static01: {}}}
+            github_runner: {hosts: {runner01: {}}}
+            pihole: {hosts: {pihole01: {}}}
+            scratch: {hosts: {bare01: {}}}
     proxmox_node: {hosts: {proxmox1: {}}}'
 put ansible/inventory/group_vars/all.yml '--- {}'
 put ansible/inventory/group_vars/proxmox_guest/vars.yml '--- {}'
@@ -109,17 +113,49 @@ expect() {
   fi
 }
 
-# change <scenario> <expected output> <file>... -- appends to each file, commits, diffs
-change() {
-  local name=$1 want=$2 before f
-  shift 2
+# expect_split <scenario> <status> <stdout> <stderr> <deploy-targets args...>
+expect_split() {
+  local name=$1 want_status=$2 want_out=$3 want_err=$4 got_out got_err got_status
+  shift 4
+  got_out=$(cd "$repo" && ANSIBLE_CONFIG="$repo/ansible/ansible.cfg" scripts/deploy-targets.sh "$@" 2>"$err")
+  got_status=$?
+  got_err=$(<"$err")
+  if [ "$got_status" = "$want_status" ] && [ "$got_out" = "$want_out" ] && [ "$got_err" = "$want_err" ]; then
+    echo "ok: $name"
+  else
+    echo "FAIL: $name"
+    echo "  want: status $want_status, stdout ${want_out//$'\n'/ }, stderr ${want_err//$'\n'/ }"
+    echo "  got:  status $got_status, stdout ${got_out//$'\n'/ }, stderr ${got_err//$'\n'/ }"
+    failed=1
+  fi
+}
+
+# commit <scenario> <file>... -- appends to each file and commits; sets $before
+commit() {
+  local name=$1 f
+  shift
   before=$(git rev-parse HEAD)
   for f in "$@"; do
     printf '# %s\n' "$name" >>"$repo/$f"
   done
   git add -A
   git commit -qm "$name"
+}
+
+# change <scenario> <expected output> <file>... -- commits, diffs
+change() {
+  local name=$1 want=$2
+  shift 2
+  commit "$name" "$@"
   expect "$name" "$want" "$before" "$(git rev-parse HEAD)"
+}
+
+# created <scenario> <created hosts> <status> <stdout> <stderr> <file>... -- commits, diffs with --created
+created() {
+  local name=$1 hosts=$2 status=$3 out=$4 stderr=$5
+  shift 5
+  commit "$name" "$@"
+  expect_split "$name" "$status" "$out" "$stderr" --created "$hosts" "$before" "$(git rev-parse HEAD)"
 }
 
 change "version bump runs only its service" "$LIFE" ansible/inventory/host_vars/life-manager01/vars.yml
@@ -152,7 +188,36 @@ expect "non-ancestor before runs everything" "$ALL" "$(git commit-tree 'HEAD^{tr
 expect "named playbook" "$STATIC" static-site
 expect "named playbook with extension" "$STATIC" static-site.yml
 expect "--all" "$ALL" --all
-expect "a path is never a name" "usage: scripts/deploy-targets.sh <before> <after> | --all | <playbook>" ../02_BASE_CONFIGURATION/deploy_runner
+USAGE='usage: scripts/deploy-targets.sh [--created "<host> ..."] <before> <after> | --all | <playbook>'
+expect "a path is never a name" "$USAGE" ../02_BASE_CONFIGURATION/deploy_runner
+
+created "Scenario: A created guest selects its service playbook" pihole01 0 "$PIHOLE" "" terraform/main.tf
+created "Scenario: Created guest and diff selections are merged" pihole01 0 "$LIFE
+$PIHOLE" "" ansible/inventory/host_vars/life-manager01/vars.yml
+created "Scenario: A playbook selected twice runs once" pihole01 0 "$PIHOLE" "" ansible/inventory/host_vars/pihole01/vars.yml
+created "Scenario: A created guest without a service playbook" bare01 0 "$LIFE" \
+  "deploy-targets: bare01 has no 03_SERVICES playbook" ansible/inventory/host_vars/life-manager01/vars.yml
+created "Scenario: A created runner is never deployed" runner01 0 "" \
+  "deploy-targets: runner01 has no 03_SERVICES playbook" terraform/main.tf
+created "Scenario: An unknown created host fails loudly" "pihole01 ghost01" 1 "" \
+  "deploy-targets: created host not in inventory: ghost01" terraform/main.tf
+created "unknown created host fails when the diff runs everything" ghost01 1 "" \
+  "deploy-targets: created host not in inventory: ghost01" ansible/ansible.cfg
+created "Scenario: An empty created list changes nothing" "" 0 "$LIFE" "" ansible/inventory/host_vars/life-manager01/vars.yml
+created "several created guests select each of their playbooks" "pihole01  life-manager01" 0 "$LIFE
+$PIHOLE" "" terraform/main.tf
+expect_split "unknown created host fails when before is zero" 1 "" "deploy-targets: created host not in inventory: ghost01" \
+  --created ghost01 0000000000000000000000000000000000000000 "$(git rev-parse HEAD)"
+expect_split "Scenario: Created guests are refused outside the diff form (--all)" 64 "" "$USAGE" --created pihole01 --all
+expect_split "Scenario: Created guests are refused outside the diff form (name)" 64 "" "$USAGE" --created pihole01 static-site
+expect_split "Scenario: Created guests are refused outside the diff form (--all before two positionals)" 64 "" "$USAGE" \
+  --created pihole01 --all static-site
+expect_split "Scenario: Created guests are refused outside the diff form (name before a commit)" 64 "" "$USAGE" \
+  --created pihole01 static-site "$(git rev-parse HEAD)"
+created "Scenario: A created guest without a service playbook (diff runs everything)" bare01 0 "$ALL" \
+  "deploy-targets: bare01 has no 03_SERVICES playbook" ansible/ansible.cfg
+expect_split "Scenario: A created guest without a service playbook (before is zero)" 0 "$ALL" \
+  "deploy-targets: bare01 has no 03_SERVICES playbook" --created bare01 0000000000000000000000000000000000000000 "$(git rev-parse HEAD)"
 
 before=$(git rev-parse HEAD)
 git rm -q "$STATIC"

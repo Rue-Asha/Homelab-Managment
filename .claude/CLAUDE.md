@@ -191,13 +191,16 @@ Terraform (anything under `terraform/`):
 ## Specs
 
 - Before changing pihole-dns, read openspec/specs/pihole-dns/spec.md.
+- Before changing continuous-deployment, read openspec/specs/continuous-deployment/spec.md.
 
 ---
 
 ## Learnings
 
 - **Fixture tests that run git** → unset `GIT_DIR`, `GIT_INDEX_FILE`, `GIT_WORK_TREE` first. (weil: the pre-commit hook leaks them, fixture commits landed on the real branch and core.bare flipped to true in the main repo) [2026-10-05 · add-pihole]
-- **`terraform validate` fails in a fresh worktree** → `command rm -rf` the ignored `.terraform` cache and re-run proof. (weil: cache disagrees with the committed lock file; proof's init also rewrites `.terraform.lock.hcl`, restore it with `git checkout`) [2026-10-05 · add-pihole]
+- **`terraform validate` fails in a fresh worktree** → `command rm -rf` the ignored `.terraform` cache before *each* proof run, not once. (weil: proof's init rewrites `.terraform.lock.hcl`; restoring it with `git checkout` leaves the cache out of step again) [2026-10-05 · deploy-new-guests]
+- **`ansible-inventory` called from a script in a bash pipe** → run it via python `subprocess` with captured stderr. (weil: Ansible aborts with "requires blocking IO" when the caller's stderr is non-blocking; fixtures that redirect stderr don't catch it) [2026-10-05 · deploy-new-guests]
+- **Inventory fixtures for `deploy-targets`** → mirror the group shape `terraform/environments/homelab/ansible.tf` renders, never a hand-simplified tree. (weil: the simplified fixture hid a real bug review found) [2026-10-05 · deploy-new-guests]
 - **Ansible assert with a user-facing `fail_msg`** → no `no_log` on it. (weil: no_log censors the failed result including fail_msg, so the operator sees "censored" instead of which variable is missing) [2026-10-05 · add-pihole]
 
 ---

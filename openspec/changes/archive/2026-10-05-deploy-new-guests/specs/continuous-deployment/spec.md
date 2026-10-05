@@ -1,27 +1,4 @@
-# continuous-deployment Specification
-
-## Purpose
-
-Merging to `main` deploys: `.github/workflows/deploy.yml` runs on the homelab's
-self-hosted runner, applies only the `03_SERVICES` playbooks the merge affects,
-never overlaps another deploy, rolls a service back when its smoke check fails,
-and keeps its public logs free of secrets. Archived from `cd-homelab`.
-## Requirements
-### Requirement: Merging to main deploys
-
-`.github/workflows/deploy.yml` SHALL run on `push` to `main` and on
-`workflow_dispatch`, and on no other event. Its deploy job SHALL run on the
-homelab's self-hosted runner, selected by the `homelab-deploy` label, and SHALL
-use the `production` environment, whose deployment branch policy allows only
-`main`.
-
-#### Scenario: A service change is merged
-- **WHEN** a PR changing `ansible/inventory/host_vars/life-manager01/vars.yml` is merged to `main`
-- **THEN** a `deploy` run starts on the self-hosted runner and appears as a deployment to `production`
-
-#### Scenario: Dispatch from a feature branch
-- **WHEN** `deploy` is dispatched with a ref other than `main`
-- **THEN** GitHub rejects the job before it reaches the runner, because the `production` environment only allows `main`
+## MODIFIED Requirements
 
 ### Requirement: Each service is deployed by its own 03_SERVICES playbook
 
@@ -63,79 +40,7 @@ be run locally with the same inputs.
 - **THEN** that playbook, or every `03_SERVICES` playbook, runs regardless of the diff and of any guest the run's `apply` created
 - **proof:** unit ("named playbook", "--all"); manual (dispatch wiring needs the live runner)
 
-### Requirement: Deploys never overlap
-
-All `deploy` runs SHALL share one concurrency group with
-`cancel-in-progress: false`, so a second merge waits for the running deploy to
-finish instead of interrupting it.
-
-#### Scenario: Two merges in quick succession
-- **WHEN** a second PR is merged while the first merge's deploy is running
-- **THEN** the second deploy starts only after the first has finished
-
-### Requirement: A failed smoke check rolls the service back
-
-A service role that deploys releases SHALL, after its handlers have run,
-request the service through its reverse proxy on the host and require an HTTP
-success status within a bounded number of retries. If the check fails, the
-role SHALL point `current` back at the release that was active before the run,
-restart the service, and fail the play. If no previous release exists, it SHALL
-fail without rolling back. The check SHALL also run on manual playbook runs.
-
-#### Scenario: The new release does not come up
-- **WHEN** the deployed release exits on start, so the proxy returns 502
-- **THEN** `current` points at the previous release again, the service is running it, and the deploy run is red
-
-#### Scenario: The new release is healthy
-- **WHEN** the proxy returns 200 within the retry window
-- **THEN** `current` points at the new release and the deploy run is green
-
-#### Scenario: Nothing was redeployed
-- **WHEN** the playbook runs with the release already active
-- **THEN** the smoke check still runs and no rollback is attempted on success
-
-### Requirement: Deploy logs are safe to publish
-
-The deploy SHALL NOT run Ansible with `--diff` or with verbosity above the
-default, and every task that renders, reads, or registers a secret value SHALL
-set `no_log: true`, because the repository is public and its Actions logs are
-world-readable.
-
-#### Scenario: Deploy workflow is inspected
-- **WHEN** `deploy.yml` is inspected
-- **THEN** no `ansible-playbook` invocation contains `--diff` or `-v`
-
-### Requirement: Ansible dependencies are pinned for deploys
-
-`ansible/collections/requirements.yml` SHALL pin every collection to an exact
-version, so a deploy installs the same collection code that CI linted.
-
-#### Scenario: A range is introduced
-- **WHEN** a collection is listed as `version: ">=8.0.0"`
-- **THEN** the proof fails the change
-
-### Requirement: Infrastructure applies before services deploy
-
-`.github/workflows/deploy.yml` SHALL order its jobs `plan`, `apply`, `deploy`
-within one workflow and one concurrency group, so an infrastructure change and a
-service change in the same push never run concurrently, and `deploy` starts only
-after `apply` succeeded or was skipped. A failed or rejected `apply` SHALL stop
-`deploy`.
-
-#### Scenario: A push changes only a service
-- **WHEN** a merge touches no file under `terraform/`
-- **THEN** `plan` and `apply` are skipped and `deploy` runs
-- **proof:** manual (needs a real run)
-
-#### Scenario: A push changes a host and its service
-- **WHEN** a merge adds a guest in `hosts.auto.tfvars` and its service playbook inputs
-- **THEN** `deploy` starts only after the `apply` job is approved and succeeds
-- **proof:** manual (needs a real run)
-
-#### Scenario: The apply is rejected
-- **WHEN** the `infrastructure` approval is rejected
-- **THEN** no `deploy` job runs for that push
-- **proof:** manual (needs a real run)
+## ADDED Requirements
 
 ### Requirement: The apply job hands the guests it created to the deploy
 
@@ -252,4 +157,3 @@ and that a recreated guest still needs the manual `deploy_runner.yml` re-pin.
 - **WHEN** Rue reads `docs/deploy-runner.md` before adding a guest in `hosts.auto.tfvars`
 - **THEN** it says the guest's service playbooks run in the same workflow run, that a bare guest gets none, and that a recreated guest still needs `deploy_runner.yml`
 - **proof:** manual (doc review at Gate 2)
-
