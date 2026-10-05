@@ -46,10 +46,10 @@ tailnet; remote Tailscale devices reach `192.168.0.x` directly.
 terraform -chdir=terraform/environments/homelab apply
 
 # 2. Baseline: ansible user, SSH hardening
-ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l tailscale01
+ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml -l tailscale01
 
 # 3. TUN passthrough on the node (+ reboot), then Tailscale and the subnet router
-ansible-playbook ansible/playbooks/03_SERVICES/tailscale.yml -l tailscale01
+ansible-playbook ansible/playbooks/02_SERVICES/tailscale.yml -l tailscale01
 ```
 
 ## Complete in the admin console (manual — Ansible cannot do these)
@@ -79,7 +79,7 @@ ansible-playbook ansible/playbooks/03_SERVICES/tailscale.yml -l tailscale01
   sysctl net.ipv4.ip_forward net.ipv6.conf.all.forwarding   # both = 1
   ```
 - **Rotate the key:** generate a new pre-auth key, `ansible-vault edit` the
-  vault, re-run `03_SERVICES/tailscale.yml`. The `tailscale up` step re-runs when
+  vault, re-run `02_SERVICES/tailscale.yml`. The `tailscale up` step re-runs when
   the node is not `Running`; to force re-auth, run `tailscale up` manually on the
   host or `tailscale logout` first.
 - **Rollback:** stop/destroy the `tailscale01` LXC and delete the node from the
@@ -93,4 +93,4 @@ ansible-playbook ansible/playbooks/03_SERVICES/tailscale.yml -l tailscale01
 | Routes + TUN flag | `ansible/inventory/host_vars/tailscale01/{vars,vault}.yml` |
 | `/dev/net/tun` passthrough (host-level) | `ansible/roles/proxmox_lxc_tun` (first play of the tailscale playbook) |
 | Install + forwarding + `tailscale up` | `ansible/roles/tailscale` (`install`/`configure`/`service`) |
-| Service playbook | `ansible/playbooks/03_SERVICES/tailscale.yml` |
+| Service playbook | `ansible/playbooks/02_SERVICES/tailscale.yml` |

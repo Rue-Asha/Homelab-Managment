@@ -1,5 +1,5 @@
 ---
-# --- life_manager service (03_SERVICES) ---
+# --- life_manager service (02_SERVICES) ---
 life_manager_version: v0.2.1
 life_manager_smoke_headers:
   Host: "{{ nginx_server_name }}"

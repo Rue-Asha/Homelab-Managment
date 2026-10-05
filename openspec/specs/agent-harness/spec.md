@@ -78,11 +78,11 @@ commands such as `terraform plan`, `terraform validate`,
 - **THEN** the user is asked to confirm before it runs
 
 #### Scenario: Agent runs a playbook for real
-- **WHEN** the agent runs `ansible-playbook ansible/playbooks/03_SERVICES/pihole.yml`
+- **WHEN** the agent runs `ansible-playbook ansible/playbooks/02_SERVICES/pihole.yml`
 - **THEN** the user is asked to confirm before it runs
 
 #### Scenario: Agent runs a check
-- **WHEN** the agent runs `ansible-playbook ansible/playbooks/03_SERVICES/pihole.yml --check --diff`
+- **WHEN** the agent runs `ansible-playbook ansible/playbooks/02_SERVICES/pihole.yml --check --diff`
 - **THEN** the command runs without a prompt
 
 #### Scenario: Agent plans

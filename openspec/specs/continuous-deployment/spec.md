@@ -3,7 +3,7 @@
 ## Purpose
 
 Merging to `main` deploys: `.github/workflows/deploy.yml` runs on the homelab's
-self-hosted runner, applies only the `03_SERVICES` playbooks the merge affects,
+self-hosted runner, applies only the `02_SERVICES` playbooks the merge affects,
 never overlaps another deploy, rolls a service back when its smoke check fails,
 and keeps its public logs free of secrets. Archived from `cd-homelab`.
 ## Requirements
@@ -23,10 +23,10 @@ use the `production` environment, whose deployment branch policy allows only
 - **WHEN** `deploy` is dispatched with a ref other than `main`
 - **THEN** GitHub rejects the job before it reaches the runner, because the `production` environment only allows `main`
 
-### Requirement: Each service is deployed by its own 03_SERVICES playbook
+### Requirement: Each service is deployed by its own 02_SERVICES playbook
 
 The deploy SHALL run exactly the playbooks under
-`ansible/playbooks/03_SERVICES/` that the pushed commits affect or that target
+`ansible/playbooks/02_SERVICES/` that the pushed commits affect or that target
 a guest the same run's `apply` job created, each in full (no `--tags`), against
 the hosts the playbook targets. A playbook is affected when the diff between the
 push's `before` and `after` commits touches:
@@ -34,18 +34,18 @@ the playbook file; any file under `ansible/roles/<role>/` for a role the
 playbook applies; `ansible/inventory/host_vars/<host>/` for a host it targets;
 `ansible/inventory/group_vars/<group>` for a group containing a host it
 targets; or `ansible/ansible.cfg` or `ansible/collections/requirements.yml`,
-which affect every playbook. Playbooks outside `03_SERVICES` SHALL NOT be run
+which affect every playbook. Playbooks outside `02_SERVICES` SHALL NOT be run
 by the deploy. The change-to-playbook mapping SHALL live in a script that can
 be run locally with the same inputs.
 
 #### Scenario: Version bump for one service
 - **WHEN** a merge changes only `life_manager_version` in `host_vars/life-manager01/vars.yml`
-- **THEN** only `03_SERVICES/life-manager.yml` runs
+- **THEN** only `02_SERVICES/life-manager.yml` runs
 - **proof:** unit ("version bump runs only its service")
 
 #### Scenario: Shared role changes
 - **WHEN** a merge changes a file under `ansible/roles/nginx/`
-- **THEN** every `03_SERVICES` playbook that applies the `nginx` role runs
+- **THEN** every `02_SERVICES` playbook that applies the `nginx` role runs
 - **proof:** unit ("shared role runs every playbook using it, incl. via meta deps")
 
 #### Scenario: Nothing deployable changed
@@ -55,12 +55,12 @@ be run locally with the same inputs.
 
 #### Scenario: Push history cannot be diffed
 - **WHEN** the push's `before` commit is all zeros or not an ancestor of `after`
-- **THEN** every `03_SERVICES` playbook runs
+- **THEN** every `02_SERVICES` playbook runs
 - **proof:** unit ("zero before runs everything", "non-ancestor before runs everything")
 
 #### Scenario: Manual redeploy
 - **WHEN** `deploy` is dispatched with a playbook name, or with `all`
-- **THEN** that playbook, or every `03_SERVICES` playbook, runs regardless of the diff and of any guest the run's `apply` created
+- **THEN** that playbook, or every `02_SERVICES` playbook, runs regardless of the diff and of any guest the run's `apply` created
 - **proof:** unit ("named playbook", "--all"); manual (dispatch wiring needs the live runner)
 
 ### Requirement: Deploys never overlap
@@ -148,7 +148,7 @@ SHALL still stop `deploy`.
 
 #### Scenario: A merge adds a guest
 - **WHEN** a merge adds `pihole01` to `hosts.auto.tfvars` and the approved `apply` creates it
-- **THEN** the `apply` job's `created` output is `pihole01`, and the `deploy` job of the same run passes it to `deploy-targets.sh` and runs `03_SERVICES/pihole.yml`, ending with its smoke check
+- **THEN** the `apply` job's `created` output is `pihole01`, and the `deploy` job of the same run passes it to `deploy-targets.sh` and runs `02_SERVICES/pihole.yml`, ending with its smoke check
 - **proof:** manual (first live run: rebuild-pihole01)
 
 #### Scenario: No terraform change
@@ -170,36 +170,36 @@ SHALL still stop `deploy`.
 
 `scripts/deploy-targets.sh` SHALL accept the created guests as
 `--created "<host> ..."` in front of `<before> <after>` and treat each like a
-changed host: every `03_SERVICES` playbook whose `--list-hosts` contains it is
+changed host: every `02_SERVICES` playbook whose `--list-hosts` contains it is
 selected, merged with the playbooks the diff selects, each printed once, in the
 existing sorted order. An empty list SHALL give the same output as no
-`--created`. A created host that no `03_SERVICES` playbook targets SHALL be
+`--created`. A created host that no `02_SERVICES` playbook targets SHALL be
 reported on stderr and select nothing. A created host that is not in the
 rendered inventory SHALL fail the script with a message naming it.
 
 #### Scenario: A created guest selects its service playbook
 - **WHEN** the diff touches only `terraform/` and `--created pihole01` is passed
-- **THEN** the output is exactly `03_SERVICES/pihole.yml`
+- **THEN** the output is exactly `02_SERVICES/pihole.yml`
 - **proof:** unit ("Scenario: A created guest selects its service playbook")
 
 #### Scenario: Created guest and diff selections are merged
 - **WHEN** the diff changes `host_vars/life-manager01/vars.yml` and `--created pihole01` is passed
-- **THEN** the output is `03_SERVICES/life-manager.yml` then `03_SERVICES/pihole.yml`
+- **THEN** the output is `02_SERVICES/life-manager.yml` then `02_SERVICES/pihole.yml`
 - **proof:** unit ("Scenario: Created guest and diff selections are merged")
 
 #### Scenario: A playbook selected twice runs once
 - **WHEN** the diff changes `host_vars/pihole01/vars.yml` and `--created pihole01` is passed
-- **THEN** `03_SERVICES/pihole.yml` appears exactly once
+- **THEN** `02_SERVICES/pihole.yml` appears exactly once
 - **proof:** unit ("Scenario: A playbook selected twice runs once")
 
 #### Scenario: A created guest without a service playbook
-- **WHEN** `--created` names a guest that no `03_SERVICES` playbook targets
-- **THEN** no extra playbook is selected, stderr says `deploy-targets: <host> has no 03_SERVICES playbook`, and the script exits 0
+- **WHEN** `--created` names a guest that no `02_SERVICES` playbook targets
+- **THEN** no extra playbook is selected, stderr says `deploy-targets: <host> has no 02_SERVICES playbook`, and the script exits 0
 - **proof:** unit ("Scenario: A created guest without a service playbook")
 
 #### Scenario: A created runner is never deployed
 - **WHEN** `--created runner01` is passed and `runner01` is in `github_runner`
-- **THEN** no playbook is selected for it, in particular not `02_BASE_CONFIGURATION/deploy_runner.yml`
+- **THEN** no playbook is selected for it, in particular not `01_BASE_CONFIGURATION/deploy_runner.yml`
 - **proof:** unit ("Scenario: A created runner is never deployed")
 
 #### Scenario: An unknown created host fails loudly
@@ -209,7 +209,7 @@ rendered inventory SHALL fail the script with a message naming it.
 
 #### Scenario: An empty created list changes nothing
 - **WHEN** `--created ""` is passed with a diff that changes `host_vars/life-manager01/vars.yml`
-- **THEN** the output is exactly `03_SERVICES/life-manager.yml`, as without `--created`
+- **THEN** the output is exactly `02_SERVICES/life-manager.yml`, as without `--created`
 - **proof:** unit ("Scenario: An empty created list changes nothing")
 
 #### Scenario: Created guests are refused outside the diff form
@@ -243,7 +243,7 @@ on `--all`.
 
 ### Requirement: What a merge deploys is documented
 
-`docs/deploy-runner.md` SHALL state that a merge deploys the `03_SERVICES`
+`docs/deploy-runner.md` SHALL state that a merge deploys the `02_SERVICES`
 playbooks its `ansible/` diff affects plus those of every guest the same run's
 `apply` created, that a created guest without a service playbook gets nothing,
 and that a recreated guest still needs the manual `deploy_runner.yml` re-pin.

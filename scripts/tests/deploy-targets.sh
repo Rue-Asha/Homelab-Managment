@@ -74,11 +74,11 @@ role proxy_site nginx
 role egress_firewall
 role github_runner
 role pihole
-play ansible/playbooks/03_SERVICES/life-manager.yml life_manager 'common, nodejs, life_manager, nginx'
-play ansible/playbooks/03_SERVICES/static-site.yml static_site 'common, proxy_site'
-play ansible/playbooks/03_SERVICES/batch-job.yml static_site 'nodejs'
-play ansible/playbooks/03_SERVICES/pihole.yml pihole 'common, pihole'
-play ansible/playbooks/02_BASE_CONFIGURATION/deploy_runner.yml github_runner 'common, egress_firewall, github_runner'
+play ansible/playbooks/02_SERVICES/life-manager.yml life_manager 'common, nodejs, life_manager, nginx'
+play ansible/playbooks/02_SERVICES/static-site.yml static_site 'common, proxy_site'
+play ansible/playbooks/02_SERVICES/batch-job.yml static_site 'nodejs'
+play ansible/playbooks/02_SERVICES/pihole.yml pihole 'common, pihole'
+play ansible/playbooks/01_BASE_CONFIGURATION/deploy_runner.yml github_runner 'common, egress_firewall, github_runner'
 put README.md fixture
 put terraform/main.tf '# fixture'
 
@@ -86,7 +86,7 @@ git init -q
 git add -A
 git commit -qm base
 
-SVC=ansible/playbooks/03_SERVICES
+SVC=ansible/playbooks/02_SERVICES
 LIFE=$SVC/life-manager.yml
 STATIC=$SVC/static-site.yml
 PIHOLE=$SVC/pihole.yml
@@ -181,7 +181,7 @@ change "Scenario: A terraform-only diff deploys nothing" "" terraform/main.tf
 change "Scenario: A diff touching two services runs both" "$LIFE
 $PIHOLE" ansible/inventory/host_vars/pihole01/vars.yml ansible/inventory/host_vars/life-manager01/vars.yml
 change "runner roles deploy nothing" "" ansible/roles/github_runner/tasks/main.yml ansible/roles/egress_firewall/tasks/main.yml
-change "runner playbook deploys nothing" "" ansible/playbooks/02_BASE_CONFIGURATION/deploy_runner.yml
+change "runner playbook deploys nothing" "" ansible/playbooks/01_BASE_CONFIGURATION/deploy_runner.yml
 
 expect "zero before runs everything" "$ALL" 0000000000000000000000000000000000000000 "$(git rev-parse HEAD)"
 expect "non-ancestor before runs everything" "$ALL" "$(git commit-tree 'HEAD^{tree}' -m unrelated)" "$(git rev-parse HEAD)"
@@ -189,16 +189,16 @@ expect "named playbook" "$STATIC" static-site
 expect "named playbook with extension" "$STATIC" static-site.yml
 expect "--all" "$ALL" --all
 USAGE='usage: scripts/deploy-targets.sh [--created "<host> ..."] <before> <after> | --all | <playbook>'
-expect "a path is never a name" "$USAGE" ../02_BASE_CONFIGURATION/deploy_runner
+expect "a path is never a name" "$USAGE" ../01_BASE_CONFIGURATION/deploy_runner
 
 created "Scenario: A created guest selects its service playbook" pihole01 0 "$PIHOLE" "" terraform/main.tf
 created "Scenario: Created guest and diff selections are merged" pihole01 0 "$LIFE
 $PIHOLE" "" ansible/inventory/host_vars/life-manager01/vars.yml
 created "Scenario: A playbook selected twice runs once" pihole01 0 "$PIHOLE" "" ansible/inventory/host_vars/pihole01/vars.yml
 created "Scenario: A created guest without a service playbook" bare01 0 "$LIFE" \
-  "deploy-targets: bare01 has no 03_SERVICES playbook" ansible/inventory/host_vars/life-manager01/vars.yml
+  "deploy-targets: bare01 has no 02_SERVICES playbook" ansible/inventory/host_vars/life-manager01/vars.yml
 created "Scenario: A created runner is never deployed" runner01 0 "" \
-  "deploy-targets: runner01 has no 03_SERVICES playbook" terraform/main.tf
+  "deploy-targets: runner01 has no 02_SERVICES playbook" terraform/main.tf
 created "Scenario: An unknown created host fails loudly" "pihole01 ghost01" 1 "" \
   "deploy-targets: created host not in inventory: ghost01" terraform/main.tf
 created "unknown created host fails when the diff runs everything" ghost01 1 "" \
@@ -215,9 +215,9 @@ expect_split "Scenario: Created guests are refused outside the diff form (--all 
 expect_split "Scenario: Created guests are refused outside the diff form (name before a commit)" 64 "" "$USAGE" \
   --created pihole01 static-site "$(git rev-parse HEAD)"
 created "Scenario: A created guest without a service playbook (diff runs everything)" bare01 0 "$ALL" \
-  "deploy-targets: bare01 has no 03_SERVICES playbook" ansible/ansible.cfg
+  "deploy-targets: bare01 has no 02_SERVICES playbook" ansible/ansible.cfg
 expect_split "Scenario: A created guest without a service playbook (before is zero)" 0 "$ALL" \
-  "deploy-targets: bare01 has no 03_SERVICES playbook" --created bare01 0000000000000000000000000000000000000000 "$(git rev-parse HEAD)"
+  "deploy-targets: bare01 has no 02_SERVICES playbook" --created bare01 0000000000000000000000000000000000000000 "$(git rev-parse HEAD)"
 
 before=$(git rev-parse HEAD)
 git rm -q "$STATIC"

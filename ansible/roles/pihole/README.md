@@ -2,7 +2,7 @@
 
 Installs Pi-hole v6 natively on a Debian 13 guest (app-per-LXC, no Docker) and
 converges its settings and admin password. FTL serves the web UI itself on :80;
-there is no nginx and no lighttpd. Deployed by `ansible/playbooks/03_SERVICES/pihole.yml`.
+there is no nginx and no lighttpd. Deployed by `ansible/playbooks/02_SERVICES/pihole.yml`.
 
 ## Variables
 

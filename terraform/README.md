@@ -109,8 +109,8 @@ and:
 terraform -chdir=terraform/environments/homelab apply
 terraform -chdir=terraform/environments/homelab plan    # must say "No changes"
 
-ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml
-ansible-playbook ansible/playbooks/03_SERVICES/<service>.yml -l <host>
+ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml
+ansible-playbook ansible/playbooks/02_SERVICES/<service>.yml -l <host>
 ```
 
 Before trusting it, run the API preflight: confirm the LXC template exists on

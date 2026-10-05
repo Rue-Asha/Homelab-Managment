@@ -23,7 +23,7 @@ on. It runs deploys and nothing else.
 
 ## Usage
 
-Via `playbooks/02_BASE_CONFIGURATION/deploy_runner.yml`, by hand only — see
+Via `playbooks/01_BASE_CONFIGURATION/deploy_runner.yml`, by hand only — see
 `docs/deploy-runner.md` for bootstrap, registration, key rotation and
 re-scanning host keys.
 
