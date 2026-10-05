@@ -35,21 +35,11 @@ lxc_hosts = {
     swap    = 512
     disk_gb = 12
   }
-
-  # Retired in efa9f49 and brought back with the same identity, so the router
-  # needs no new address. Configured by 03_SERVICES/pihole.yml.
-  "pihole01" = {
-    vmid    = 225
-    ipv4    = "192.168.0.225/24"
-    groups  = ["pihole"]
-    tags    = ["dns", "terraform"]
-    cores   = 1
-    memory  = 512
-    swap    = 512
-    disk_gb = 4
-  }
 }
 
+# pihole01 (vmid 225, 192.168.0.225/24, group pihole) is retired until it is
+# rebuilt from the golden template; see docs/pihole.md.
+#
 # retropie01 is deliberately absent: the box is not currently provisioned. Its
 # absence is now explicit state rather than a comment in inventory/hosts. When
 # it returns, add it here with vm_template_name resolved to a template vmid:

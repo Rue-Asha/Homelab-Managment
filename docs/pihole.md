@@ -6,6 +6,11 @@ role installs and configures it, and FTL serves both DNS (port 53 on `eth0`)
 and the admin UI (`http://192.168.0.225/admin`). There is no nginx in front of
 it. Upstreams are `8.8.8.8` and `1.1.1.1`; everything else is Pi-hole's default.
 
+**Status:** `pihole01` is not declared in Terraform right now. It was destroyed
+to exercise the destroy path and is rebuilt from the golden template later: add
+it back to `hosts.auto.tfvars` (vmid 225, `192.168.0.225/24`, group `pihole`)
+and follow *First-time apply*. Its host_vars stay in place for that.
+
 | Piece | Where |
 |---|---|
 | Guest | `pihole01` in `terraform/environments/homelab/hosts.auto.tfvars`, group `pihole` |
