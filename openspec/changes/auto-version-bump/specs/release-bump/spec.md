@@ -10,8 +10,8 @@
 - **proof:** unit ("Scenario: A new tag is bumped"); manual (branch push and PR creation need a real release)
 
 #### Scenario: The line has quotes, a comment or special characters
-- **WHEN** the line is `<variable>: "v0.2.0"` or `<variable>: v0.2.0  # note`, or the tag contains `&` or `|`
-- **THEN** only the value changes, quotes and comment are kept, the tag is written literally, and a line that already holds the tag in those forms prints `unchanged`
+- **WHEN** the line is `<variable>: "v0.2.0"` or `<variable>: v0.2.0  # note`
+- **THEN** only the value changes, quotes and comment are kept, and a line that already holds the tag in those forms prints `unchanged`
 - **proof:** unit ("Scenario: The line has quotes, a comment or special characters"; "Scenario: The value already equals the tag")
 
 #### Scenario: The value is not a plain or quoted token
@@ -49,6 +49,25 @@
 - **THEN** the script prints `skipped`, the file is untouched, no PR is opened, and the job succeeds
 - **proof:** unit ("Scenario: A pre-release tag is not bumped")
 
+#### Scenario: A tag older than the pinned version is not bumped
+- **WHEN** the tag is lower than the pinned value as `vMAJOR.MINOR.PATCH` (numeric per component, optional leading `v`), for example `v0.1.9` against `v0.2.0` or `v0.1.10` against `v0.2.0`
+- **THEN** the script prints `skipped: <tag> is older than the pinned <pin>`, exits 0, leaves the file untouched, and the job opens no PR, pushes nothing and succeeds; recovery by rollback is a manual revert PR
+- **proof:** unit ("Scenario: A tag older than the pinned version is not bumped"); manual (a re-run of an older tag's job after `main` moved on)
+
+#### Scenario: A version that cannot be compared fails
+- **WHEN** the tag or the pinned value is not `vMAJOR.MINOR.PATCH` (for example `vnext`, `v0.2`, `main`, an empty tag)
+- **THEN** the script exits non-zero with `bump-pin: <file>: <variable>: <value> is not a version (vMAJOR.MINOR.PATCH)` naming the offending value, prints nothing on stdout and leaves the file untouched, so the job fails instead of guessing
+- **proof:** unit ("Scenario: A version that cannot be compared fails")
+
+### Requirement: Bumps of one variable run one at a time
+
+The `bump` job SHALL declare job-level `concurrency` with group `bump-<variable>` and `cancel-in-progress: false`, so two releases tagged close together queue instead of racing on the same variable's PRs, and a running bump is never cancelled.
+
+#### Scenario: Two releases are tagged close together
+- **WHEN** a second `bump` job for the same `variable` starts while the first is running
+- **THEN** it waits until the first finishes and the first is not cancelled; jobs for different variables are not held back
+- **proof:** manual (needs two real releases); actionlint over `bump-pin.yml` (the `concurrency` block is declared as above)
+
 ### Requirement: The bump PR is opened with a GitHub App token
 
 The workflow SHALL create the branch and PR with an installation token of the GitHub App for Homelab-Managment, so that `ci.yml` runs on the PR. It SHALL NOT fall back to `GITHUB_TOKEN`.
@@ -65,12 +84,17 @@ The workflow SHALL create the branch and PR with an installation token of the Gi
 
 ### Requirement: A newer bump PR supersedes older open ones
 
-After opening the PR for a tag, the workflow SHALL close every other open PR whose head branch starts with `bump/<variable>-`, with a comment naming the new PR.
+After opening the PR for a tag, the workflow SHALL close every other open PR whose head branch is `bump/<variable>-<older tag>`, with a comment naming the new PR. "Older" is the `vMAJOR.MINOR.PATCH` order of the tag parsed from the branch name; open PRs for a newer tag, and branches whose tag cannot be parsed, SHALL be left open.
 
 #### Scenario: An older bump PR is still open
 - **WHEN** `bump/life_manager_version-v0.3.0` is open and the job opens `bump/life_manager_version-v0.3.1`
 - **THEN** the v0.3.0 PR is closed with a comment pointing at the v0.3.1 PR
 - **proof:** unit ("Scenario: An older bump PR is still open", stubbed `gh`); manual (two real PRs)
+
+#### Scenario: Only older bump PRs are superseded
+- **WHEN** the job opens `bump/<variable>-v0.3.0` while `-v0.2.9` (older), `-v0.3.1` and `-v0.10.0` (newer) and `-nightly` (unparseable) are open
+- **THEN** only the `v0.2.9` PR is closed, the others stay open
+- **proof:** unit ("Scenario: Only older bump PRs are superseded", stubbed `gh`); manual (an older tag's job re-run with a newer PR open)
 
 #### Scenario: The current PR is already merged but an older one is still open
 - **WHEN** a re-run finds the PR for the tag merged and an older `bump/<variable>-*` PR still open (closing it failed earlier)

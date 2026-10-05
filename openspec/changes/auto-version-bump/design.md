@@ -47,7 +47,7 @@ Shared between group 1 (ci), groups 2, 3 and 6:
 - Workflow: `Rue-Asha/ci/.github/workflows/bump-pin.yml` (`on: workflow_call`).
   - inputs (all strings): `app` (required), `host_vars_path` (required, relative to the target repo root, e.g. `ansible/inventory/host_vars/life-manager01/vars.yml`), `variable` (required, e.g. `life_manager_version`), `tag` (required), `target_repo` (optional, `owner/name`, default `Rue-Asha/Homelab-Managment`; the App token's owner and repository are split from it, so it has to stay an input).
   - secrets: `app_id`, `app_private_key` (both required).
-  - job name `bump`.
+  - job name `bump`; job-level `concurrency: {group: bump-<variable>, cancel-in-progress: false}`; only `changed` goes on to push and open a PR.
 - Caller job (app repo `release.yml`):
   ```yaml
   bump:
@@ -64,8 +64,8 @@ Shared between group 1 (ci), groups 2, 3 and 6:
       app_id: ${{ secrets.HOMELAB_BUMP_APP_ID }}
       app_private_key: ${{ secrets.HOMELAB_BUMP_APP_KEY }}
   ```
-- Script: `scripts/bump-pin.sh <file> <variable> <tag>`. Prints exactly one of `changed`, `unchanged`, `skipped` on stdout and exits 0; for a missing variable it exits 1 with `bump-pin: <file>: <variable> not found` on stderr, for a missing file `bump-pin: <file>: file not found`. Only the value on the line `^<variable>: ` is replaced, literally; quotes and a trailing comment stay, rest of the file byte-identical.
-- Script: `scripts/ensure-bump-pr.sh` (env `TARGET_REPO APP VARIABLE TAG`, run in the target checkout after `changed`). Does only the missing steps: push the branch if absent, open the PR if absent, enable auto-merge if off, close superseded PRs. A merged or closed PR for the tag is a no-op.
+- Script: `scripts/bump-pin.sh <file> <variable> <tag>`. Prints exactly one of `changed`, `unchanged`, `skipped` or `skipped: <tag> is older than the pinned <pin>` on stdout and exits 0 (the pin only moves upward, compared as `vMAJOR.MINOR.PATCH`, numeric per component, optional leading `v`; a tag or pin of another form exits 1 with `bump-pin: <file>: <variable>: <value> is not a version (vMAJOR.MINOR.PATCH)`); for a missing variable it exits 1 with `bump-pin: <file>: <variable> not found` on stderr, for a missing file `bump-pin: <file>: file not found`. Only the value on the line `^<variable>: ` is replaced, literally; quotes and a trailing comment stay, rest of the file byte-identical.
+- Script: `scripts/ensure-bump-pr.sh` (env `TARGET_REPO APP VARIABLE TAG`, run in the target checkout after `changed`). Does only the missing steps: push the branch if absent, open the PR if absent, enable auto-merge if off, close superseded PRs (open `bump/<variable>-<tag>` PRs whose parsed tag is older than ours; newer and unparseable ones stay). A merged or closed PR for the tag is a no-op.
 - Branch `bump/<variable>-<tag>`; PR title `chore(<app>): bump to <tag>`; commit message equal to the PR title.
 
 ## Risks / Trade-offs

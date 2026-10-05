@@ -19,8 +19,8 @@ setup, adding an app, and recovering a PR that does not merge.
    comment stay); the rest of the file is byte-identical.
 3. On `changed` (`scripts/ensure-bump-pr.sh`) it pushes branch `bump/<variable>-<tag>`, opens a PR titled
    `chore(<app>): bump to <tag>` (the commit message is the same line), runs
-   `gh pr merge --auto --squash`, and closes older open `bump/<variable>-*`
-   PRs with a comment naming the new one.
+   `gh pr merge --auto --squash`, and closes open `bump/<variable>-*` PRs for an
+   older tag with a comment naming the new one (newer ones are left alone).
 4. `ci.yml` runs on the PR. When the four required checks pass, GitHub
    squash-merges it.
 5. The merge to `main` starts `deploy.yml`, which maps the changed host_vars
@@ -32,8 +32,15 @@ The job ends green without a PR when:
 | Case | Script output |
 |---|---|
 | Tag has a pre-release suffix (`v1.2.3-rc1`) | `skipped` |
+| Tag is older than the pinned version (`v0.1.9` against `v0.2.0`) | `skipped: v0.1.9 is older than the pinned v0.2.0` |
 | The variable already equals the tag (re-run) | `unchanged` |
 | The PR for `bump/<variable>-<tag>` is merged, or open with auto-merge on | nothing created |
+
+The pin only moves upward: tag and pinned value are compared as
+`vMAJOR.MINOR.PATCH` (optional leading `v`, numeric per component). A re-run of
+an old tag's job or an out-of-order hotfix release therefore opens no PR. Bumps
+of the same variable run one at a time (`concurrency` group
+`bump-<variable>`, queued, never cancelled).
 
 A re-run finishes what a failed run left: a branch without a PR gets its PR, a
 PR without auto-merge gets auto-merge, a still-open older bump PR is closed. A PR closed without merging is left
@@ -44,6 +51,8 @@ when its value is empty, templated or not a bare or simply quoted token
 (`bump-pin: <file>: <variable> has no plain or quoted value`), when the tag is
 not a safe plain YAML scalar (whitespace, `#`, quotes, `{}[],`, backslash,
 trailing `:`; `bump-pin: <tag>: not a safe YAML scalar`),
+when the tag or the pinned value is not `vMAJOR.MINOR.PATCH`
+(`bump-pin: <file>: <variable>: <value> is not a version (vMAJOR.MINOR.PATCH)`),
 when the file is not on `main` yet (`bump-pin: <file>: file not found`), or when the
 App token cannot be created. There is no fallback to `GITHUB_TOKEN`: a bump PR
 opened by it would not trigger `ci.yml`.
@@ -139,7 +148,9 @@ the job for the same tag is safe: it only adds the PR or auto-merge that is miss
 
 **Deploy failed after the merge.** The role rolled back, but `main` now pins a
 version the host does not run. Fix forward with a new release, or revert the
-pin by hand in a PR.
+pin by hand in a PR. Going back to an older version is always a manual revert
+PR: the bump never moves the pin down, so tagging or re-running an older
+release does nothing.
 
 ## Accepted risks
 
