@@ -54,6 +54,7 @@ all:
         static_site: {hosts: {static01: {}}}
         github_runner: {hosts: {runner01: {}}}
         pihole: {hosts: {pihole01: {}}}
+      hosts: {bare01: {}}
     proxmox_node: {hosts: {proxmox1: {}}}'
 put ansible/inventory/group_vars/all.yml '--- {}'
 put ansible/inventory/group_vars/proxmox_guest/vars.yml '--- {}'
