@@ -3,10 +3,13 @@
 Merging to `main` deploys. `.github/workflows/deploy.yml` runs on `runner01`,
 a self-hosted GitHub Actions runner in its own LXC. When `terraform/` changed it
 first plans and, after approval in the `infrastructure` environment, applies
-(`scripts/tf-ci.sh`); then it maps the merged commits to the `03_SERVICES`
-playbooks they affect (`scripts/deploy-targets.sh`) and runs each one in full
-with `--limit proxmox_guest`. This page covers the runner
-itself: setting it up, rotating its credentials, and deploying without it.
+(`scripts/tf-ci.sh`); then it maps the merged commits' `ansible/` diff, plus
+every guest that apply created, to the `03_SERVICES` playbooks they affect
+(`scripts/deploy-targets.sh`) and runs each one in full with
+`--limit proxmox_guest`. So a merge that only adds a guest to
+`hosts.auto.tfvars` also runs that guest's service playbooks in the same run.
+This page covers the runner itself: setting it up, rotating its credentials,
+and deploying without it.
 
 ## What the runner holds
 
@@ -95,7 +98,11 @@ runner's key.
   host-key verification error. That is deliberate. Re-run `deploy_runner.yml`
   (no token needed) to re-scan, then re-run the failed deploy.
 - **A guest was added by the pipeline:** nothing to do. The `apply` job pins its
-  host key and the firewall allows the whole guest range.
+  host key and hands the guest to `deploy`, which runs every `03_SERVICES`
+  playbook targeting it in the same workflow run; the firewall allows the whole
+  guest range. A bare guest that no `03_SERVICES` playbook targets gets none,
+  and the log says so. This covers created guests only: a recreated one still
+  needs `deploy_runner.yml`, see above.
 - **A guest was added by hand** (outside the pipeline): run `deploy_runner.yml`
   so its host key is pinned.
 - **Rotate the deploy key:** delete `~github-runner/.ssh/deploy_ed25519*` on

@@ -5,10 +5,12 @@
 # workstation to read the details.
 #
 #   scripts/tf-ci.sh plan     init, plan, summarise, refuse to destroy runner01/state01
-#   scripts/tf-ci.sh apply    apply the plan made for this commit, pin new guests' host keys
+#   scripts/tf-ci.sh apply    apply the plan made for this commit, pin new guests' host keys,
+#                             report them as the step output `created` (space-separated names)
 #   scripts/tf-ci.sh render   init and render ansible/inventory/00-terraform.yml
 #
-# Needs HOMELAB_TERRAFORM_ENV (set by the runner's .env) and GITHUB_SHA.
+# Needs HOMELAB_TERRAFORM_ENV (set by the runner's .env), GITHUB_SHA and, for
+# apply, GITHUB_OUTPUT.
 
 set -euo pipefail
 
@@ -56,6 +58,7 @@ case "$cmd" in
 
   apply)
     : "${GITHUB_SHA:?}"
+    : "${GITHUB_OUTPUT:?}"
     plan=$plans/$GITHUB_SHA.tfplan
     [ -f "$plan" ] || { echo "::error::no saved plan for $GITHUB_SHA" >&2; exit 1; }
     quiet tf init -input=false -reconfigure -backend-config="path=$state"
@@ -80,6 +83,7 @@ case "$cmd" in
         echo "pinned host key for $name"
       done
     fi
+    echo "created=${created[*]}" >>"$GITHUB_OUTPUT"
     command rm -f "$plan" "$plan.json"
     ;;
 
