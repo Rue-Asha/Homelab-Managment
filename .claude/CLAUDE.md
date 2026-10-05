@@ -192,16 +192,20 @@ Terraform (anything under `terraform/`):
 
 - Before changing pihole-dns, read openspec/specs/pihole-dns/spec.md.
 - Before changing continuous-deployment, read openspec/specs/continuous-deployment/spec.md.
+- Before changing release-bump, read openspec/specs/release-bump/spec.md.
 
 ---
 
 ## Learnings
 
 - **Fixture tests that run git** → unset `GIT_DIR`, `GIT_INDEX_FILE`, `GIT_WORK_TREE` first. (weil: the pre-commit hook leaks them, fixture commits landed on the real branch and core.bare flipped to true in the main repo) [2026-10-05 · add-pihole]
-- **`terraform validate` fails in a fresh worktree** → `command rm -rf` the ignored `.terraform` cache before *each* proof run, not once. (weil: proof's init rewrites `.terraform.lock.hcl`; restoring it with `git checkout` leaves the cache out of step again) [2026-10-05 · deploy-new-guests]
+- **`terraform validate` / `tflint` fail in agent shells** → `command rm -rf` the ignored `.terraform` cache before *each* proof run and set `TMPDIR` to a short path (`/tmp/claude-1001/t`), never the long scratchpad path. (weil: proof's init rewrites `.terraform.lock.hcl` and `git checkout` leaves the cache out of step; a 98-char TMPDIR overflows terraform's go-plugin unix socket and fails with a handshake error) [2026-10-05 · deploy-new-guests, auto-version-bump]
 - **`ansible-inventory` called from a script in a bash pipe** → run it via python `subprocess` with captured stderr. (weil: Ansible aborts with "requires blocking IO" when the caller's stderr is non-blocking; fixtures that redirect stderr don't catch it) [2026-10-05 · deploy-new-guests]
 - **Inventory fixtures for `deploy-targets`** → mirror the group shape `terraform/environments/homelab/ansible.tf` renders, never a hand-simplified tree. (weil: the simplified fixture hid a real bug review found) [2026-10-05 · deploy-new-guests]
 - **Ansible assert with a user-facing `fail_msg`** → no `no_log` on it. (weil: no_log censors the failed result including fail_msg, so the operator sees "censored" instead of which variable is missing) [2026-10-05 · add-pihole]
+- **Checking branch protection** → query rulesets too, not only `branches/<b>/protection`. (weil: a 404 there does not mean unprotected; scope R4/S7 were wrong until the planner found the ruleset) [2026-10-05 · auto-version-bump]
+- **New workflow using `github.job_workflow_sha`** → scope an ignore in `.github/actionlint.yaml` to that workflow. (weil: actionlint, even the version CI pins, rejects the context) [2026-10-05 · auto-version-bump]
+- **Bug in workflow glue that fixture tests bypass by calling the script directly** → test through the entrypoint the workflow calls, or assert on the workflow text. (weil: a fixer's first test passed against the unfixed script) [2026-10-05 · auto-version-bump]
 
 ---
 
