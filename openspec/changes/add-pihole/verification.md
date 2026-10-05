@@ -1,4 +1,4 @@
-verified-at: c4c59f1
+verified-at: 5d6df8c
 
 ## Layer 1 — `scripts/proof.sh --all` (green)
 
@@ -13,6 +13,7 @@ proof: 12 sensor(s), 0 failed
 
 Also PASS: terraform fmt, terraform validate, tflint, checkov, ansible-lint, syntax-check bootstrap.yml and deploy_runner.yml.
 Fixtures (`bash scripts/tests/deploy-targets.sh`) print `ok: Scenario: <title>` for all five pihole scenarios.
+`openspec validate add-pihole --strict`: Change 'add-pihole' is valid.
 
 ## Layer 2 — spec coverage
 
@@ -56,18 +57,18 @@ Gaps: none.
 - Rue: review `hosts.auto.tfvars` diff, vmid and IP are independent literals.
 - Rue: review `terraform/` diff, host added to the keyed map, no `count`.
 - Rue: second real `pihole.yml` run shows `changed=0` and the installer task skipped.
-- Rue: first real run output shows no password; `no_log` present in diff.
+- Rue: first real run output shows no password; `no_log` present on the password-handling tasks in the diff (the variables assert intentionally has none).
 - Rue: confirm spike S9 install shape on the first apply.
-- Rue: fresh host gets the pinned `pihole_version` (real run); first real run, check `packages.yml` "Check that the pinned core tag exists upstream" runs after git is installed (moved from prepare.yml in c4c59f1) and is skipped once the pin is installed.
+- Rue: fresh host gets the pinned `pihole_version` (real run); first real run, check `packages.yml` "Check that the pinned core tag exists upstream" runs after git is installed and is skipped once the pin is installed.
 - Rue: deliberately bad pin fails the play at the `git ls-remote` tag check, before the installer runs, and leaves the installed version (real host).
 - Rue: DNS keeps answering during the re-run, no FTL restart in the second run.
 - Rue: `http://192.168.0.225/admin` accepts the vault password (needs vault file).
 - Rue: unchanged password not re-applied (second run `changed=0`).
-- Rue: `--check` against `pihole01` without the vault file fails the play.
-- Rue: stop FTL (or point `pihole_smoke_url` at a dead port) and confirm the play fails with the "Web: ... answered ..." message after retries; on a healthy host confirm `verify.yml` web check passes on 200/30x (it now retries on a status check, not task failure, since c4c59f1).
+- Rue: `--check` against `pihole01` without the vault file fails the play, and the failing message names `pihole_password` and `host_vars/pihole01/vault.yml` (not "censored").
+- Rue: stop FTL (or point `pihole_smoke_url` at a dead port) and confirm the play fails with the "Web: ... answered ..." message after retries; on a healthy host confirm `verify.yml` web check passes on 200/30x (it retries on a status check, not task failure).
 - Rue: review `tasks/verify.yml` diff, smoke check needs no vault.
 - Rue: review diff, no firewall/runtime install in the pihole role, no `github_runner` target.
-- Rue: read `docs/pihole.md` for first apply, bump, recovery; outage risk and router fallback; stale "removed" mentions corrected.
+- Rue: read `docs/pihole.md` for first apply, bump, recovery; outage risk and router fallback; read `terraform/README.md` to confirm pihole01 is no longer described as removed.
 - Rue, tasks 8.1-8.5 (intentionally unchecked rollout): 8.1 create vault.yml; 8.2 terraform plan/apply and commit regenerated `00-terraform.yml`; 8.3 bootstrap.yml, pihole.yml --check, real run, rerun expecting changed=0; 8.4 dig blocked/resolves plus admin login from LAN; 8.5 bump `pihole_version` via PR and merge.
 
 ## Diffstat (main...flow/add-pihole)
