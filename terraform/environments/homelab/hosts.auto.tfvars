@@ -48,6 +48,19 @@ lxc_hosts = {
     swap    = 512
     disk_gb = 4
   }
+
+  # Light SSR + node:sqlite, no game servers or long-lived connections; the
+  # games run client-side. Configured by 03_SERVICES/rues-arcade.yml.
+  "rues-arcade01" = {
+    vmid    = 226
+    ipv4    = "192.168.0.226/24"
+    groups  = ["rues_arcade"]
+    tags    = ["web", "terraform"]
+    cores   = 1
+    memory  = 768
+    swap    = 512
+    disk_gb = 6
+  }
 }
 
 # retropie01 is deliberately absent: the box is not currently provisioned. Its

@@ -1,0 +1,10 @@
+---
+- name: Deploy the Rues Arcade web service
+  hosts: rues_arcade
+  become: true
+  gather_facts: true
+  roles:
+    - common        # base host config (02 layer)
+    - nodejs        # Node.js runtime
+    - nginx         # reverse proxy (:80 -> 127.0.0.1:{{ rues_arcade_port }})
+    - rues_arcade   # service: fetch release, systemd unit, smoke check through nginx
