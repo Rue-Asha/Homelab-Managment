@@ -1,21 +1,21 @@
-verified-at: f665e3b
+verified-at: 69513c8
 
 Sibling worktrees (verified, read-only):
-- ci `flow/auto-version-bump` @ e1613f7 (includes e08a653)
+- ci `flow/auto-version-bump` @ ea0e616
 - Life-Manager `flow/auto-version-bump` @ 6ae8e8e
 
 ## Layer 1
 
-Run with a short `TMPDIR` (/tmp/claude-1001/t); a long one breaks terraform's plugin socket (that caused the red in round 2). Lock file and `.terraform` were clean before the run and restored/removed after it, never staged.
+Short `TMPDIR` (/tmp/claude-1001/t). Lock file and `.terraform` were clean before the run and restored/removed after it, never staged.
 
 - `scripts/proof.sh --all` (this repo): exit 0
+- `openspec validate auto-version-bump --strict` (this repo): valid
 - `bash tests/bump-pin.sh` (ci worktree): exit 0
 - `bash tests/ensure-bump-pr.sh` (ci worktree): exit 0
 - `actionlint` (ci worktree): exit 0
 - `actionlint .github/workflows/release.yml` (Life-Manager worktree): exit 0
 
 ```
-PASS: syntax-check ansible/playbooks/03_SERVICES/pihole.yml
 PASS: collection pins
 PASS: workflow triggers
 PASS: deploy-targets fixtures
@@ -28,10 +28,12 @@ proof: 15 sensor(s), 0 failed
 
 Fixtures print `ok   Scenario: <title> (<assertion>)`; counts are ok lines across `tests/bump-pin.sh` and `tests/ensure-bump-pr.sh`; no non-ok lines.
 
+Changed scenario: "The line has quotes, a comment or special characters" no longer covers a tag containing `&` or `|` (removed on purpose; an unparseable version now fails, see "A version that cannot be compared fails"). Its fixture dropped from 4 to 3 ok lines.
+
 | Scenario | proof | Evidence |
 |---|---|---|
 | A new tag is bumped | unit + manual | "Scenario: A new tag is bumped" 10 ok ✓; branch push and PR manual |
-| The line has quotes, a comment or special characters | unit | "Scenario: The line has quotes, a comment or special characters" 4 ok ✓ |
+| The line has quotes, a comment or special characters (changed) | unit | "Scenario: The line has quotes, a comment or special characters" 3 ok ✓ |
 | The value is not a plain or quoted token | unit | "Scenario: The value is not a plain or quoted token" 20 ok ✓ |
 | The tag is not a safe YAML scalar | unit | "Scenario: The tag is not a safe YAML scalar" 36 ok ✓ |
 | The variable line is missing | unit | "Scenario: The variable line is missing" 3 ok ✓ |
@@ -39,10 +41,14 @@ Fixtures print `ok   Scenario: <title> (<assertion>)`; counts are ok lines acros
 | Branch or PR for the tag already exists | unit + manual | "Scenario: Branch or PR for the tag already exists" 4 ok ✓ (stubbed gh); real re-run manual |
 | A previous run stopped before the PR or auto-merge | unit + manual | "Scenario: A previous run stopped before the PR or auto-merge" 9 ok ✓ (stubbed gh); real failure manual |
 | A pre-release tag is not bumped | unit | "Scenario: A pre-release tag is not bumped" 3 ok ✓ |
+| A tag older than the pinned version is not bumped (new) | unit + manual | "Scenario: A tag older than the pinned version is not bumped" 7 ok ✓; real older-tag re-run manual |
+| A version that cannot be compared fails (new) | unit | "Scenario: A version that cannot be compared fails" 28 ok ✓ |
+| Two releases are tagged close together (new) | manual + actionlint | `concurrency: group: bump-${{ inputs.variable }}, cancel-in-progress: false` at ci `.github/workflows/bump-pin.yml:62-64`; actionlint clean; needs two real releases |
 | CI runs on the bump PR | manual | checklist |
 | The App lacks access | manual | checklist; actionlint clean |
 | An older bump PR is still open | unit + manual | "Scenario: An older bump PR is still open" 5 ok ✓ (stubbed gh); two real PRs manual |
-| The current PR is already merged but an older one is still open | unit | "Scenario: An older bump PR is still open (merged current PR: exit / older closed / only the older)" ✓ |
+| Only older bump PRs are superseded (new) | unit + manual | "Scenario: Only older bump PRs are superseded" 5 ok ✓ (stubbed gh); real re-run manual |
+| The current PR is already merged but an older one is still open | unit | "Scenario: An older bump PR is still open (merged current PR: ...)" 3 ok ✓ |
 | The older PR was already merged | manual | checklist |
 | CI is green | manual | checklist |
 | CI is red | manual | checklist |
@@ -64,6 +70,8 @@ Gaps: none.
 - Re-run `bump` for the same tag (merged, or open with auto-merge): succeeds, no new PR
 - Break a run after the push (or disable auto-merge on the PR) and re-run: the missing PR / auto-merge is added
 - Two consecutive releases: older open bump PR is closed with a comment; an already merged one is left alone
+- Re-run an older tag's job after `main` moved on: no downgrade PR, newer open PRs are not closed
+- Tag two releases within seconds: the second `bump` waits for the first, nothing is cancelled
 - Wrong App id or missing install: job fails with the token error, no PR under another identity
 - Red bump PR stays open with no deploy; failed smoke check rolls back
 - After #23: Rues-Arcade hookup and real release; a missing `rues-arcade01/vars.yml` fails naming the file
@@ -71,9 +79,9 @@ Gaps: none.
 
 ## Diffstat
 
-This repo, `main...flow/auto-version-bump`: 9 files, 620 insertions (docs/release-bump.md, openspec/changes/auto-version-bump/*).
+This repo, `main...flow/auto-version-bump`: 9 files, 685 insertions (docs/release-bump.md, openspec/changes/auto-version-bump/*).
 
-ci vs origin/main: 7 files, 517 insertions (.github/actionlint.yaml, .github/workflows/bump-pin.yml, README.md, scripts/bump-pin.sh, scripts/ensure-bump-pr.sh, tests/bump-pin.sh, tests/ensure-bump-pr.sh).
+ci vs origin/main: 7 files, 597 insertions (.github/actionlint.yaml, .github/workflows/bump-pin.yml, README.md, scripts/bump-pin.sh, scripts/ensure-bump-pr.sh, tests/bump-pin.sh, tests/ensure-bump-pr.sh).
 
 Life-Manager vs origin/main: 1 file, 15 insertions (.github/workflows/release.yml).
 
