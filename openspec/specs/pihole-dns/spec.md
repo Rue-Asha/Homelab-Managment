@@ -97,7 +97,7 @@ FTL SHALL serve the web UI directly on :80, with no nginx role in the playbook. 
 
 ### Requirement: pihole.yml deploys the role and ends with a smoke check
 
-`ansible/playbooks/03_SERVICES/pihole.yml` SHALL run `hosts: pihole` with roles `common` then `pihole`. The play SHALL end with a smoke check: `dig @127.0.0.1 example.org` answers, and `GET http://127.0.0.1/admin/` returns 200 or the v6 login redirect. A failed check SHALL fail the play. Nothing in `03_SERVICES` SHALL target `github_runner`, the app role SHALL contain no firewall or runtime install, and the check SHALL NOT need the vault password.
+`ansible/playbooks/02_SERVICES/pihole.yml` SHALL run `hosts: pihole` with roles `common` then `pihole`. The play SHALL end with a smoke check: `dig @127.0.0.1 example.org` answers, and `GET http://127.0.0.1/admin/` returns 200 or the v6 login redirect. A failed check SHALL fail the play. Nothing in `02_SERVICES` SHALL target `github_runner`, the app role SHALL contain no firewall or runtime install, and the check SHALL NOT need the vault password.
 
 #### Scenario: The playbook has the agreed shape
 - **WHEN** `scripts/proof.sh --all` runs
@@ -117,25 +117,25 @@ FTL SHALL serve the web UI directly on :80, with no nginx role in the playbook. 
 #### Scenario: No host-level concern lives in the app role
 - **WHEN** the role and playbook are read
 - **THEN** no firewall or runtime install is in the `pihole` role, and no task targets `github_runner`
-- **proof:** manual (diff review; the existing CD spec forbids `github_runner` targets in `03_SERVICES`)
+- **proof:** manual (diff review; the existing CD spec forbids `github_runner` targets in `02_SERVICES`)
 
 ### Requirement: The deploy path maps pihole changes to pihole.yml
 
-`scripts/deploy-targets.sh` SHALL map a diff in `roles/pihole/**`, `playbooks/03_SERVICES/pihole.yml`, `inventory/group_vars/pihole*` or `host_vars/pihole01/**` to `pihole.yml`, covered by fixtures in `scripts/tests/deploy-targets.sh`. A diff only under `terraform/` SHALL trigger no playbook, and a diff touching two services SHALL run both.
+`scripts/deploy-targets.sh` SHALL map a diff in `roles/pihole/**`, `playbooks/02_SERVICES/pihole.yml`, `inventory/group_vars/pihole*` or `host_vars/pihole01/**` to `pihole.yml`, covered by fixtures in `scripts/tests/deploy-targets.sh`. A diff only under `terraform/` SHALL trigger no playbook, and a diff touching two services SHALL run both.
 
 #### Scenario: Role change runs only the pihole playbook
 - **WHEN** a diff changes a file under `ansible/roles/pihole/`
-- **THEN** only `03_SERVICES/pihole.yml` is printed
+- **THEN** only `02_SERVICES/pihole.yml` is printed
 - **proof:** fixture ("Scenario: Role change runs only the pihole playbook")
 
 #### Scenario: Version bump runs only the pihole playbook
 - **WHEN** a diff changes `ansible/inventory/host_vars/pihole01/vars.yml`
-- **THEN** only `03_SERVICES/pihole.yml` is printed
+- **THEN** only `02_SERVICES/pihole.yml` is printed
 - **proof:** fixture ("Scenario: Version bump runs only the pihole playbook")
 
 #### Scenario: Group vars of the pihole group run the pihole playbook
 - **WHEN** a diff changes `ansible/inventory/group_vars/pihole.yml`
-- **THEN** only `03_SERVICES/pihole.yml` is printed
+- **THEN** only `02_SERVICES/pihole.yml` is printed
 - **proof:** fixture ("Scenario: Group vars of the pihole group run the pihole playbook")
 
 #### Scenario: A terraform-only diff deploys nothing

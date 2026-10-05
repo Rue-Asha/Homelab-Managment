@@ -23,7 +23,7 @@ lxc_hosts = {
   }
 
   # Self-hosted GitHub Actions runner for the deploy workflow. Configured by
-  # 02_BASE_CONFIGURATION/deploy_runner.yml, never by a deploy. Debian 13
+  # 01_BASE_CONFIGURATION/deploy_runner.yml, never by a deploy. Debian 13
   # because the ansible-core pinned in ci/requirements.txt needs Python 3.12+.
   "runner01" = {
     vmid    = 224
@@ -37,7 +37,7 @@ lxc_hosts = {
   }
 
   # Retired in efa9f49 and brought back with the same identity, so the router
-  # needs no new address. Configured by 03_SERVICES/pihole.yml.
+  # needs no new address. Configured by 02_SERVICES/pihole.yml.
   "pihole01" = {
     vmid    = 225
     ipv4    = "192.168.0.225/24"

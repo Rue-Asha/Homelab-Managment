@@ -13,8 +13,8 @@ it can reach guests and the internet but not the Proxmox node. Archived from
 The runner SHALL run in an LXC named `runner01`, declared in
 `terraform/environments/homelab/hosts.auto.tfvars` with the inventory group
 `github_runner`, and configured by an `ansible/roles/github_runner` role
-applied from a playbook under `ansible/playbooks/02_BASE_CONFIGURATION/`. The
-runner playbook SHALL NOT live under `03_SERVICES`, so a deploy never
+applied from a playbook under `ansible/playbooks/01_BASE_CONFIGURATION/`. The
+runner playbook SHALL NOT live under `02_SERVICES`, so a deploy never
 reconfigures the runner executing it.
 
 #### Scenario: Runner role changes are merged

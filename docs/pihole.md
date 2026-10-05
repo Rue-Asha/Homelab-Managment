@@ -13,7 +13,7 @@ one workflow run; see *Create or rebuild*.
 | Piece | Where |
 |---|---|
 | Guest | `pihole01` in `terraform/environments/homelab/hosts.auto.tfvars`, group `pihole` |
-| Playbook | `ansible/playbooks/03_SERVICES/pihole.yml` (`common`, then `pihole`) |
+| Playbook | `ansible/playbooks/02_SERVICES/pihole.yml` (`common`, then `pihole`) |
 | Role | `ansible/roles/pihole` (`prepare`, `packages`, `install`, `configure`, `service`, `verify`) |
 | Pinned version | `pihole_version` in `ansible/inventory/host_vars/pihole01/vars.yml` |
 | Admin password | `pihole_password` in `ansible/inventory/host_vars/pihole01/vault.yml` (ansible-vault, created by hand) |
@@ -38,7 +38,7 @@ Creation runs on `runner01` from `deploy.yml`, not from the workstation:
 merge → `plan` → `infrastructure` approval → `apply` → `deploy`. The `apply`
 job pins the new guest's SSH host key into the runner's `known_hosts`, and the
 `deploy` job of the same run passes the created guests to `deploy-targets.sh`,
-so `03_SERVICES/pihole.yml` runs and ends with its smoke check.
+so `02_SERVICES/pihole.yml` runs and ends with its smoke check.
 
 1. **Router fallback.** In the router, make sure a second resolver is
    configured and the router does not yet depend on `.225` alone. Manual.
@@ -65,7 +65,7 @@ so `03_SERVICES/pihole.yml` runs and ends with its smoke check.
    and `http://127.0.0.1/admin/` returns 200 or the login redirect. A failed
    check fails the run.
 5. **Run it a second time** (re-run the workflow, or `ansible-playbook
-   ansible/playbooks/03_SERVICES/pihole.yml` from the workstation). The recap
+   ansible/playbooks/02_SERVICES/pihole.yml` from the workstation). The recap
    must show `changed=0`, and `pihole-FTL` must not have restarted
    (`systemctl status pihole-FTL` on the guest, uptime unchanged).
 6. **Check from the LAN:**
@@ -122,7 +122,7 @@ tag. Merging it deploys: `deploy.yml` maps the change to `pihole.yml` and runs
 it. The installer runs once, then the smoke check. Because web and FTL float,
 read the play output for their versions after the run.
 
-Before merging, `ansible-playbook ansible/playbooks/03_SERVICES/pihole.yml --check`
+Before merging, `ansible-playbook ansible/playbooks/02_SERVICES/pihole.yml --check`
 from the workstation is fine. A bump takes DNS down briefly while FTL
 restarts; do it when the LAN can live without it, or while the router fallback
 is in effect.

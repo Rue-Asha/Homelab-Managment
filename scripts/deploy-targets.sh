@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prints the 03_SERVICES playbooks a change affects, one per line, for the
+# Prints the 02_SERVICES playbooks a change affects, one per line, for the
 # deploy workflow. Reads only git, YAML and the inventory -- never contacts the
 # Proxmox node or a guest -- so it runs anywhere proof.sh does. The working
 # tree must be at <after>: roles and playbooks are read from it.
@@ -17,7 +17,7 @@ cd "$(git rev-parse --show-toplevel)"
 
 export ANSIBLE_CONFIG="${ANSIBLE_CONFIG:-$PWD/ansible/ansible.cfg}"
 
-SERVICES=ansible/playbooks/03_SERVICES
+SERVICES=ansible/playbooks/02_SERVICES
 playbooks=("$SERVICES"/*.yml)
 
 usage() {
@@ -42,7 +42,7 @@ case $# in
       printf '%s\n' "${playbooks[@]}"
       exit 0
     fi
-    # A name, never a path: nothing outside 03_SERVICES may be selected.
+    # A name, never a path: nothing outside 02_SERVICES may be selected.
     case "$1" in */*|'') usage ;; esac
     pb="$SERVICES/${1%.yml}.yml"
     [ -f "$pb" ] || { echo "deploy-targets: no such playbook: $pb" >&2; exit 64; }
@@ -190,5 +190,5 @@ for playbook in sorted(playbooks):
         print(playbook)
 
 for host in sorted(created - set().union(*hosts.values())):
-    print(f"deploy-targets: {host} has no 03_SERVICES playbook", file=sys.stderr)
+    print(f"deploy-targets: {host} has no 02_SERVICES playbook", file=sys.stderr)
 PY

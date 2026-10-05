@@ -60,7 +60,7 @@ own 15 MB cap.
 
 ## Roles applied
 
-`playbooks/03_SERVICES/life-dashboard.yml` (`hosts: life_dashboard`) applies:
+`playbooks/02_SERVICES/life-dashboard.yml` (`hosts: life_dashboard`) applies:
 `common` → `nodejs` → `life-dashboard` → `nginx`. The `life-dashboard01`
 host_vars enable the proxy (`nginx_reverse_proxy_enabled: true`,
 `nginx_backend_port: "{{ life_dashboard_port }}"`, `nginx_service_description`).
@@ -81,7 +81,7 @@ host_vars enable the proxy (`nginx_reverse_proxy_enabled: true`,
 
 ```bash
 # Deploy the pinned version (or override with -e life_dashboard_version=<tag>)
-ansible-playbook playbooks/03_SERVICES/life-dashboard.yml
+ansible-playbook playbooks/02_SERVICES/life-dashboard.yml
 ```
 
 The role checks out the pinned ref into a fresh `releases/<ts>`, runs
