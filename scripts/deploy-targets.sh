@@ -5,6 +5,8 @@
 # tree must be at <after>: roles and playbooks are read from it.
 #
 #   scripts/deploy-targets.sh <before> <after>   playbooks the diff affects
+#   scripts/deploy-targets.sh --created "<host> ..." <before> <after>
+#                                                plus those targeting guests the apply created
 #   scripts/deploy-targets.sh --all              every playbook
 #   scripts/deploy-targets.sh <playbook>         one playbook, by name (life-manager)
 
@@ -19,9 +21,16 @@ SERVICES=ansible/playbooks/03_SERVICES
 playbooks=("$SERVICES"/*.yml)
 
 usage() {
-  echo "usage: scripts/deploy-targets.sh <before> <after> | --all | <playbook>" >&2
+  echo 'usage: scripts/deploy-targets.sh [--created "<host> ..."] <before> <after> | --all | <playbook>' >&2
   exit 64
 }
+
+created=()
+if [ "${1:-}" = --created ]; then
+  [ $# -eq 4 ] || usage
+  read -ra created <<<"$2"
+  shift 2
+fi
 
 case $# in
   1)
@@ -40,6 +49,21 @@ case $# in
   *) usage ;;
 esac
 
+if [ "${#created[@]}" -gt 0 ]; then
+  python3 -c '
+import json
+import subprocess
+import sys
+
+listing = subprocess.run(["ansible-inventory", "--list"], stdin=subprocess.DEVNULL, capture_output=True, text=True, check=True)
+known = {host for data in json.loads(listing.stdout).values() for host in data.get("hosts", [])}
+unknown = [host for host in sys.argv[1:] if host not in known]
+for host in unknown:
+    print(f"deploy-targets: created host not in inventory: {host}", file=sys.stderr)
+sys.exit(1 if unknown else 0)
+' "${created[@]}"
+fi
+
 if [[ $before =~ ^0+$ ]] || ! git merge-base --is-ancestor "$before" "$after" 2>/dev/null; then
   printf '%s\n' "${playbooks[@]}"
   exit 0
@@ -56,9 +80,9 @@ for f in "${changed[@]}"; do
   esac
 done
 
-[ "${#changed[@]}" -gt 0 ] && [ "${#playbooks[@]}" -gt 0 ] || exit 0
+[ $((${#changed[@]} + ${#created[@]})) -gt 0 ] && [ "${#playbooks[@]}" -gt 0 ] || exit 0
 
-python3 - "${#playbooks[@]}" "${playbooks[@]}" "${changed[@]}" <<'PY'
+python3 - "${#playbooks[@]}" "${playbooks[@]}" "${#created[@]}" "${created[@]}" "${changed[@]}" <<'PY'
 import json
 import subprocess
 import sys
@@ -66,9 +90,12 @@ from pathlib import Path
 
 import yaml
 
-count = int(sys.argv[1])
-playbooks = sys.argv[2 : 2 + count]
-changed = [Path(f) for f in sys.argv[2 + count :]]
+args = sys.argv[1:]
+count = int(args.pop(0))
+playbooks, args = args[:count], args[count:]
+count = int(args.pop(0))
+created, args = set(args[:count]), args[count:]
+changed = [Path(f) for f in args]
 
 
 def under(prefix):
@@ -149,8 +176,11 @@ for playbook in sorted(playbooks):
     if (
         Path(playbook) in changed
         or roles_of(playbook) & changed_roles
-        or targets & changed_hosts
+        or targets & (changed_hosts | created)
         or set().union(*map(groups_of, targets)) & changed_groups
     ):
         print(playbook)
+
+for host in sorted(created - set().union(*hosts.values())):
+    print(f"deploy-targets: {host} has no 03_SERVICES playbook", file=sys.stderr)
 PY
