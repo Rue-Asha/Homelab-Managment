@@ -30,6 +30,12 @@ variable "guest_ansible_user" {
   default     = "ansible"
 }
 
+variable "pve_ssh_enabled" {
+  description = "Configure the provider's SSH fallback. False where only the API token is available (the runner)."
+  type        = bool
+  default     = true
+}
+
 variable "pve_ssh_username" {
   description = "SSH user on the Proxmox node, for provider operations the API does not cover."
   type        = string
@@ -37,9 +43,9 @@ variable "pve_ssh_username" {
 }
 
 variable "pve_ssh_private_key_path" {
-  description = "Private key for the node SSH fallback. Same key Ansible uses."
+  description = "Node key: private key for root@proxmox1, used by the provider SSH fallback and by Ansible for proxmox_node. Opens no guest."
   type        = string
-  default     = "~/.ssh/Proxmox"
+  default     = "~/.ssh/homelab_node_ed25519"
 }
 
 # Shared network defaults -------------------------------------------------
@@ -75,7 +81,7 @@ variable "lxc_datastore_id" {
 variable "lxc_template_file_id" {
   description = "Default LXC template volume reference."
   type        = string
-  default     = "local:vztmpl/debian-12-standard_12.12-1_amd64.tar.zst"
+  default     = "local:vztmpl/homelab-debian-13-1.tar.zst"
 }
 
 variable "vm_datastore_id" {
@@ -85,16 +91,6 @@ variable "vm_datastore_id" {
 }
 
 # Access ------------------------------------------------------------------
-
-variable "ssh_public_key_path" {
-  description = <<-EOT
-    Public key seeded into every guest, replacing the pct-exec key injection in
-    ansible/roles/proxmox_lxc_bootstrap. Matches default_ssh_public_key in the old
-    group_vars/proxmox_guest/vars.yml.
-  EOT
-  type        = string
-  default     = "~/.ssh/Proxmox.pub"
-}
 
 # Host catalogue ----------------------------------------------------------
 # Values live in hosts.auto.tfvars. Keyed by hostname and iterated with

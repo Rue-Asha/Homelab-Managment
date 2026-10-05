@@ -2,7 +2,8 @@
 
 Terraform owns everything the Proxmox API owns: guest existence, vmid,
 hostname, CPU/memory/swap/disk, network interface and IP, boot behaviour, the
-template reference, and the SSH key seeded at creation.
+template reference (the homelab LXC template carries the `ansible` user and
+its public keys; Terraform seeds no key).
 
 Ansible owns everything *inside* the guest: users, sudo, SSH hardening,
 packages, runtimes, services, application releases.
@@ -63,8 +64,18 @@ being a secret to store and rotate. Access is SSH-key-only.
 
 ## State
 
-Local, git-ignored, and part of whatever backs up this control host. It holds no
-credential, but it does record the complete address and container-ID plan.
+Local backend, git-ignored, held **only on `runner01`** at
+`~github-runner/.local/state/homelab/terraform.tfstate` — outside the job
+workspace, which every job wipes. `scripts/tf-ci.sh` passes the path at init.
+The workstation does not run Terraform; read the inventory with
+`scripts/fetch-inventory.sh`, or run `terraform plan` on the runner as
+`github-runner`. State holds no credential, but it does record the complete
+address and container-ID plan.
+
+Backup: `scripts/fetch-state.sh` copies the state to
+`~/.local/state/homelab/backups/` on the workstation (timestamped, mode 0600).
+Run it after an apply you care about. The node has no vzdump job as of
+2026-10-05, so `runner01` is not otherwise backed up.
 
 Losing it is recoverable — `imports.tf` stays in the repo precisely so
 re-adoption is one `terraform apply` rather than archaeology.
@@ -109,15 +120,16 @@ you actually want. That check already caught `pihole01` being declared at
 
 ## Day-2
 
-```sh
-terraform plan                  # drift detection; read it before every apply
-terraform apply                 # converge
-terraform apply -target=...     # single host, when you must
-terraform output lxc_hosts      # hostname -> vmid + address
-```
+Apply happens in `.github/workflows/deploy.yml` on `runner01`: a merge to `main`
+that touches `terraform/**` runs `plan`, waits for approval in the
+`infrastructure` GitHub environment, applies exactly the saved plan, then
+deploys. A plan that would delete or replace `runner01` is refused
+(`scripts/checks/plan-protected.sh`). For drift detection, `terraform plan` on the
+runner as `github-runner`.
 
-Adding a host: add an entry to `hosts.auto.tfvars`, `apply`, then run the
-Ansible baseline and the service playbook.
+Adding a host: add an entry to `hosts.auto.tfvars` and merge. The new guest
+comes from the template, so it is reachable as `ansible` without a manual step;
+the baseline and service playbooks follow in the same deploy.
 
 Removing a host: delete its entry and `apply`. There is deliberately no
 `prevent_destroy` — it cannot be driven by a variable, so it would apply to
@@ -148,3 +160,45 @@ terraform validate
 tflint
 checkov -d .                    # or: trivy config .
 ```
+
+### Runner credentials
+
+`runner01` applies with its own token, never the workstation's. Create the
+`terraform-deploy-node@pve` user, role and token on the node, then write the file
+on the workstation (it is not in the repo) and let `deploy_runner.yml` push it
+to `~github-runner/.config/homelab/terraform.env`:
+
+```sh
+( umask 077; cat > ~/.config/homelab/runner_terraform.env <<'EOF'
+PROXMOX_VE_ENDPOINT=https://192.168.0.22:8006/
+PROXMOX_VE_API_TOKEN=terraform-deploy-node@pve!<token-id>=<uuid>
+TF_VAR_pve_ssh_enabled=false
+EOF
+)
+```
+
+The user lives in the `pve` realm and the token has privilege separation on, so
+the role `TerraformProvioning` must be granted on `/` to the **token** itself
+(Datacenter → Permissions → API Token Permission); a grant on the user alone
+yields `403 … VM.Audit`.
+
+Privileges of `TerraformProvioning`:
+
+```
+VM.Allocate  VM.Clone  VM.PowerMgmt  VM.Audit  VM.Console
+VM.Config.CPU  VM.Config.Memory  VM.Config.Disk  VM.Config.Network
+VM.Config.Options  VM.Config.HWType  VM.Config.CDROM  VM.Config.Cloudinit
+VM.Snapshot  VM.Snapshot.Rollback  VM.Migrate  VM.Replicate  VM.Backup
+VM.GuestAgent.Audit  VM.GuestAgent.FileRead  VM.GuestAgent.FileWrite
+VM.GuestAgent.FileSystemMgmt  VM.GuestAgent.Unrestricted
+Datastore.Allocate  Datastore.AllocateSpace  Datastore.AllocateTemplate
+Datastore.Audit  SDN.Use
+```
+
+Read and `plan` are proven with this set and no SSH. Create and destroy are
+proven by the throwaway guest of task 6.3, after which the list is trimmed to
+what that run used (candidates: `VM.Console`, `VM.Migrate`, `VM.Replicate`,
+`VM.Backup`, `VM.Snapshot*`, `VM.GuestAgent.*`).
+
+The play fails when the file is missing. Rotating the token means editing this
+file and rerunning the play.

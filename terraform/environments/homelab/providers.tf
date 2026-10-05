@@ -11,10 +11,14 @@ provider "proxmox" {
   insecure = var.pve_insecure
 
   # The bpg provider falls back to SSH for the handful of operations the API
-  # does not cover. Reuses the same key Ansible already uses for the node.
-  ssh {
-    agent       = false
-    username    = var.pve_ssh_username
-    private_key = file(pathexpand(var.pve_ssh_private_key_path))
+  # does not cover. Uses the node key, which opens no guest. Absent on the
+  # runner (pve_ssh_enabled = false): it applies with the API token alone.
+  dynamic "ssh" {
+    for_each = var.pve_ssh_enabled ? [1] : []
+    content {
+      agent       = false
+      username    = var.pve_ssh_username
+      private_key = file(pathexpand(var.pve_ssh_private_key_path))
+    }
   }
 }

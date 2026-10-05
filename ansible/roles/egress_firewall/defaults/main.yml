@@ -3,10 +3,15 @@
 # Output is dropped unless a rule below allows it. Loopback, replies to
 # established connections and DNS are always allowed.
 
-# Addresses this host may open SSH (TCP 22) to.
+# Addresses or CIDR ranges this host may open SSH (TCP 22) to.
 egress_firewall_ssh_targets: []
 
-# Addresses dropped before anything else is evaluated, whatever the port.
+# Addresses this host may open TCP 8006 (the Proxmox API) to. Evaluated before
+# egress_firewall_blocked_targets, so a blocked node still answers on the API.
+egress_firewall_api_targets: []
+
+# Addresses dropped before anything else is evaluated, whatever the port
+# (except TCP 8006 to egress_firewall_api_targets).
 egress_firewall_blocked_targets: []
 
 # TCP ports allowed to any address outside egress_firewall_private_networks.

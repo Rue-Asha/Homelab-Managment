@@ -34,15 +34,28 @@ github_runner_packages:
   - python3-venv
   # The pip module imports packaging on the system Python before it creates the venv.
   - python3-packaging
+  # Unpacks the terraform release.
+  - unzip
 
 # --- Deploy credentials, handed to jobs through the runner's .env ---
 github_runner_deploy_key: "{{ github_runner_home }}/.ssh/deploy_ed25519"
 github_runner_known_hosts: "{{ github_runner_home }}/.ssh/known_hosts"
 github_runner_vault_password_file: "{{ github_runner_home }}/.config/homelab/vault_pass"
 # Controller side: where the vault password is read from, and where the deploy
-# key's public half is fetched to for guest_bootstrap.
+# key's public half is fetched to. That is the repo copy guest_bootstrap and the
+# template build read, so a rotated key shows up as a diff to commit.
 github_runner_vault_password_src: ~/.config/homelab/vault_pass
-github_runner_public_key_dest: ~/.config/homelab/deploy_ed25519.pub
+github_runner_public_key_dest: "{{ playbook_dir }}/../../keys/deploy_ed25519.pub"
 # Guests whose host keys are pinned. Scanned while this role runs, which only
 # a human does, so trust-on-first-use never happens inside a deploy.
 github_runner_ssh_targets: []
+
+# --- Terraform for infrastructure jobs ---
+# Keep the version in step with terraform_version in .github/workflows/ci.yml.
+github_runner_terraform_version: 1.15.9
+github_runner_terraform_sha256: 76edd0b22d2f27d3d2e097cd793209646f719cf60f02ff3af626b07361137da1
+github_runner_terraform_url: "https://releases.hashicorp.com/terraform/{{ github_runner_terraform_version }}/terraform_{{ github_runner_terraform_version }}_linux_amd64.zip"
+# The runner's own PVE token, state backend keys and TF_VAR_pve_ssh_enabled=false.
+# Never the workstation's terraform.env: that token is revoked separately.
+github_runner_terraform_env_file: "{{ github_runner_home }}/.config/homelab/terraform.env"
+github_runner_terraform_env_src: ~/.config/homelab/runner_terraform.env

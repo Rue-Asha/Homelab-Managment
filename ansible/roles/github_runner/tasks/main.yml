@@ -7,6 +7,9 @@
 - name: Install the runner and its Ansible
   ansible.builtin.import_tasks: install.yml
 
+- name: Install terraform for infrastructure jobs
+  ansible.builtin.import_tasks: terraform.yml
+
 - name: Provision the deploy credentials
   ansible.builtin.import_tasks: credentials.yml
 

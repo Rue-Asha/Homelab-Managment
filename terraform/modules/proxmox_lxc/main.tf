@@ -24,11 +24,6 @@ resource "proxmox_virtual_environment_container" "this" {
     dns {
       servers = var.nameservers
     }
-
-    # Key-only access. Deliberately no `password` -- see variables.tf.
-    user_account {
-      keys = var.ssh_public_keys
-    }
   }
 
   cpu {
@@ -78,7 +73,14 @@ resource "proxmox_virtual_environment_container" "this" {
   # markers are comment lines in <ctid>.conf, which PVE reports as part of the
   # description. Without this, plan wants to strip them on every run and the
   # next tailscale playbook run re-inserts them.
+  #
+  # operating_system is ignored so that bumping the template never plans to
+  # replace existing containers; re-image a host with `apply -replace=<addr>`.
+  #
+  # initialization[0].user_account is ignored because the keys moved into the
+  # template; existing containers still carry them in state, and the provider
+  # replaces a container when that block disappears from the config.
   lifecycle {
-    ignore_changes = [description]
+    ignore_changes = [description, operating_system, initialization[0].user_account]
   }
 }
