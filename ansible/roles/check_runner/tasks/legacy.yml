@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MIT-0
+---
+# The single instance (user and unit `check-runner`) predates the per-repo
+# layout. A no-op once the user is gone.
+- name: Look for the legacy unit
+  ansible.builtin.stat:
+    path: /etc/systemd/system/check-runner.service
+  register: check_runner_legacy_unit
+
+- name: Stop and disable the legacy runner
+  ansible.builtin.systemd:
+    name: check-runner
+    enabled: false
+    state: stopped
+  when: check_runner_legacy_unit['stat']['exists']
+
+- name: Remove the legacy unit, hook and sudoers entry
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/systemd/system/check-runner.service
+    - "{{ check_runner_hook_dir }}/job-started.sh"
+    - /etc/sudoers.d/check-runner
+
+- name: Remove the legacy runner user and its home
+  ansible.builtin.user:
+    name: check-runner
+    state: absent
+    remove: true

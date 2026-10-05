@@ -36,18 +36,18 @@ lxc_hosts = {
     disk_gb = 12
   }
 
-  # Self-hosted runner for the CI checks (proof.sh --all). Holds no credentials
-  # and reaches nothing but the internet. Configured by
+  # Shared check host, one runner per repo in `check_runner_repos`. Holds no
+  # credentials and reaches nothing but the internet. Configured by
   # 01_BASE_CONFIGURATION/check_runner.yml, never by a deploy.
   "check01" = {
     vmid    = 226
     ipv4    = "192.168.0.226/24"
     groups  = ["check_runner"]
     tags    = ["ci", "terraform"]
-    cores   = 2
-    memory  = 2048
+    cores   = 4
+    memory  = 16384
     swap    = 512
-    disk_gb = 12
+    disk_gb = 32
   }
 
   # Retired in efa9f49 and brought back with the same identity, so the router
