@@ -1,19 +1,19 @@
 ## 1. Spike S9: pin and pre-seed Pi-hole v6
 > unit: depends=none · scope=S9 · files=openspec/changes/add-pihole/design.md
-- [ ] 1.1 Read upstream `pi-hole/pi-hole` at its latest v6 tag (`automated install/basic-install.sh`, unattended-install docs, `pihole.toml` / `setupVars.conf` handling) in the scratchpad; nothing runs on a real host
-- [ ] 1.2 Answer the four questions under "Spike result" in design.md (seeded-config format, version pin without `master`, git-tag fallback needed or not, FTL :53/:80 in the unprivileged LXC)
-- [ ] 1.3 Name a concrete `pihole_version` value and the exact install command shape; amend `## Contracts` if the variable set changes
+- [x] 1.1 Read upstream `pi-hole/pi-hole` at its latest v6 tag (`automated install/basic-install.sh`, unattended-install docs, `pihole.toml` / `setupVars.conf` handling) in the scratchpad; nothing runs on a real host
+- [x] 1.2 Answer the four questions under "Spike result" in design.md (seeded-config format, version pin without `master`, git-tag fallback needed or not, FTL :53/:80 in the unprivileged LXC)
+- [x] 1.3 Name a concrete `pihole_version` value and the exact install command shape; amend `## Contracts` if the variable set changes
 
 ## 2. Declare pihole01 in Terraform
 > unit: depends=none · scope=S1 · files=terraform/environments/homelab/hosts.auto.tfvars
-- [ ] 2.1 Add the `pihole01` entry (vmid 225, 192.168.0.225/24, group `pihole`, `runner01`'s `template_file_id`, 1 core / 512 MiB / 512 MiB swap / 4 GiB, tags `dns`, `terraform`) with a short comment on the retired predecessor
-- [ ] 2.2 Run `terraform fmt -check -recursive` and `terraform validate`, then `scripts/proof.sh --all`; do not run plan/apply
+- [x] 2.1 Add the `pihole01` entry (vmid 225, 192.168.0.225/24, group `pihole`, `runner01`'s `template_file_id`, 1 core / 512 MiB / 512 MiB swap / 4 GiB, tags `dns`, `terraform`) with a short comment on the retired predecessor
+- [x] 2.2 Run `terraform fmt -check -recursive` and `terraform validate`, then `scripts/proof.sh --all`; do not run plan/apply
 
 ## 3. Deploy mapping fixtures for pihole
 > unit: depends=none · scope=S6 · files=scripts/tests/deploy-targets.sh
-- [ ] 3.1 Extend the synthetic tree in `scripts/tests/deploy-targets.sh` with group `pihole` / host `pihole01`, role `pihole`, playbook `pihole.yml` and `host_vars/pihole01/vars.yml`; update the `ALL` expectation
-- [ ] 3.2 Write the five scenarios (role change, version bump, group_vars, terraform-only, two services) named after their scenario titles; run them, expect green because the script is generic
-- [ ] 3.3 Only if a fixture fails, fix `scripts/deploy-targets.sh` minimally and report it under deviations; run `scripts/proof.sh --all`
+- [x] 3.1 Extend the synthetic tree in `scripts/tests/deploy-targets.sh` with group `pihole` / host `pihole01`, role `pihole`, playbook `pihole.yml` and `host_vars/pihole01/vars.yml`; update the `ALL` expectation
+- [x] 3.2 Write the five scenarios (role change, version bump, group_vars, terraform-only, two services) named after their scenario titles; run them, expect green because the script is generic
+- [x] 3.3 Only if a fixture fails, fix `scripts/deploy-targets.sh` minimally and report it under deviations; run `scripts/proof.sh --all`
 
 ## 4. The pihole role
 > unit: depends=1 · scope=S2,S3,S4 · files=ansible/roles/pihole/**

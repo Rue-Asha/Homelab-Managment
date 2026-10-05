@@ -2,3 +2,6 @@ triage: "feature — new guest, new role and playbook, LAN-wide DNS. Appetite: t
 base: main
 gate0: 2026-10-05
 gate1: 2026-10-05
+learnings:
+  - "Fixture tests that run git → unset GIT_DIR, GIT_INDEX_FILE, GIT_WORK_TREE first (weil: the pre-commit hook leaks them, fixture commits landed on the real branch and core.bare flipped to true in the main repo)"
+  - "terraform validate fails in a fresh worktree → rm the ignored .terraform cache and re-run proof (weil: cache disagrees with the committed lock file; proof's init also rewrites .terraform.lock.hcl, restore it with git checkout)"
