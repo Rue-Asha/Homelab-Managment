@@ -6,10 +6,9 @@ role installs and configures it, and FTL serves both DNS (port 53 on `eth0`)
 and the admin UI (`http://192.168.0.225/admin`). There is no nginx in front of
 it. Upstreams are `8.8.8.8` and `1.1.1.1`; everything else is Pi-hole's default.
 
-**Status:** `pihole01` is not declared in Terraform right now. It was destroyed
-to exercise the destroy path and is rebuilt from the golden template later: add
-it back to `hosts.auto.tfvars` (vmid 225, `192.168.0.225/24`, group `pihole`)
-and follow *First-time apply*. Its host_vars stay in place for that.
+**Status:** `pihole01` is declared in Terraform again, rebuilt from the golden
+template. Merging its declaration creates the guest and configures Pi-hole in
+one workflow run; see *Create or rebuild*.
 
 | Piece | Where |
 |---|---|
@@ -33,58 +32,53 @@ fallback resolver (for example `1.1.1.1`) set at the same time. Terraform's
 `network_nameservers` deliberately does not use Pi-hole, so `runner01` and the
 other guests keep resolving when it is down.
 
-## First-time apply
+## Create or rebuild
 
-Everything here is run by hand from the repo root. Order matters.
+Creation runs on `runner01` from `deploy.yml`, not from the workstation:
+merge → `plan` → `infrastructure` approval → `apply` → `deploy`. The `apply`
+job pins the new guest's SSH host key into the runner's `known_hosts`, and the
+`deploy` job of the same run passes the created guests to `deploy-targets.sh`,
+so `03_SERVICES/pihole.yml` runs and ends with its smoke check.
 
 1. **Router fallback.** In the router, make sure a second resolver is
    configured and the router does not yet depend on `.225` alone. Manual.
-2. **Vault file.** Create `ansible/inventory/host_vars/pihole01/vault.yml`
-   with `pihole_password` as an inline vaulted string, encrypted with the
-   password in `~/.config/homelab/vault_pass`:
+2. **Vault file.** `ansible/inventory/host_vars/pihole01/vault.yml` holds
+   `pihole_password` as an inline vaulted string, encrypted with the vault
+   password the runner holds (`~/.config/homelab/vault_pass` on the
+   workstation). To create or replace it:
 
        ansible-vault encrypt_string --stdin-name pihole_password
 
    Type the value, end with Ctrl-D, paste the `pihole_password: !vault |`
    block into the file. The password is also what you log in with later.
-3. **Terraform.** The plan must show exactly one new LXC, `pihole01`, and no
-   change to any other host:
+3. **Pre-merge `known_hosts` check.** The `apply` job never overwrites an
+   existing key, so a stale entry for the address fails the deploy with "host
+   key changed". On runner01, as `github-runner`:
 
-       terraform -chdir=terraform/environments/homelab plan
-       terraform -chdir=terraform/environments/homelab apply
+       ssh-keygen -F 192.168.0.225 -f ~/.ssh/known_hosts
 
-4. **Refresh the inventory** with `scripts/fetch-inventory.sh` (the file is
-   gitignored and rendered on the runner). `pihole01` appears in group
-   `pihole`. Until then `hosts: pihole` matches nothing.
-5. **Bootstrap** the new guest:
-
-       ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l pihole01
-
-6. **Dry run:**
-
-       ansible-playbook ansible/playbooks/03_SERVICES/pihole.yml --check
-
-7. **Real run:**
-
-       ansible-playbook ansible/playbooks/03_SERVICES/pihole.yml
-
-   It ends with the smoke check: `dig @127.0.0.1 example.org` answers on the
-   guest and `http://127.0.0.1/admin/` returns 200 or the login redirect. A
-   failed check fails the play.
-8. **Run it a second time.** The recap must show `changed=0`, and
-   `pihole-FTL` must not have restarted (`systemctl status pihole-FTL` on the
-   guest, uptime unchanged).
-9. **Check from the LAN:**
+   It must find nothing. If it does, remove the entry with `ssh-keygen -R
+   192.168.0.225 -f ~/.ssh/known_hosts` before merging.
+4. **Merge.** The plan must show exactly one new LXC, `pihole01`, and no
+   change to any other host. Approve `infrastructure`. The run ends with the
+   `pihole.yml` smoke check: `dig @127.0.0.1 example.org` answers on the guest
+   and `http://127.0.0.1/admin/` returns 200 or the login redirect. A failed
+   check fails the run.
+5. **Run it a second time** (re-run the workflow, or `ansible-playbook
+   ansible/playbooks/03_SERVICES/pihole.yml` from the workstation). The recap
+   must show `changed=0`, and `pihole-FTL` must not have restarted
+   (`systemctl status pihole-FTL` on the guest, uptime unchanged).
+6. **Check from the LAN:**
 
        dig @192.168.0.225 example.org
 
    then open `http://192.168.0.225/admin` and log in with the vault password.
-10. **Optional:** point the router's DHCP resolver at `.225`, keeping the
-    fallback from step 1.
+7. **Optional:** point the router's DHCP resolver at `.225`, keeping the
+   fallback from step 1.
 
-**A merge before the apply is a no-op.** `deploy.yml` maps the diff to
-`pihole.yml`, but with no `pihole01` in the committed inventory the play is
-skipped, not failed. Apply first, then merge.
+If the deploy fails after a successful `apply`, the guest exists: fix the
+cause and re-run `pihole.yml`; do not destroy and recreate unless the guest
+itself is wrong.
 
 ## What the pin covers
 
@@ -144,8 +138,10 @@ is in effect.
   the cause and re-run `pihole.yml`.
 - **A bad bump.** Revert the PR; the merge re-runs the installer from the
   previous core tag. Settings and the gravity database stay in place.
-- **Rebuild from scratch.** Terraform owns the guest, so recreate it
-  (`terraform destroy -target` for that one guest, then steps 3 to 9 above).
-  The router fallback keeps the LAN resolving meanwhile. Pi-hole's config and
+- **Rebuild from scratch.** Terraform owns the guest, so remove `pihole01`
+  from `hosts.auto.tfvars` in one PR (the destroy goes through the approved
+  `apply`), delete its `known_hosts` line on runner01, then add it back in a
+  second PR and follow *Create or rebuild*. The router fallback keeps the LAN
+  resolving meanwhile. Pi-hole's config and
   gravity database are not backed up; a rebuild starts from the defaults the
   role sets.
