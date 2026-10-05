@@ -1,0 +1,4 @@
+triage: "feature — changes what the deploy pipeline runs; followed by a live create. Appetite: one session."
+base: main
+gate0: 2026-10-05
+gate1: 2026-10-05
