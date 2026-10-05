@@ -1,3 +1,6 @@
 triage: "feature — cross-repo CI/deploy change, GitHub App, repo settings. Appetite: one evening (+ Rues-Arcade hookup after #23)."
 base: main
 gate0: 2026-10-05
+gate1: 2026-10-05
+learnings:
+  - "Checking branch protection → query rulesets too, not only branches/<b>/protection (404 there does not mean unprotected; scope.md R4/S7 were wrong until the planner found the ruleset)"
