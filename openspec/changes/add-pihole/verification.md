@@ -78,3 +78,23 @@ Gaps: none.
 ## Screenshots
 
 none
+
+## Review
+
+Three rounds (fresh-context reviewer each time, static read only). Nothing in the role could be run against a real host, so role behaviour is evidenced by ansible-lint, syntax-check and review, not by execution.
+
+### Round 1 — fixed in c4c59f1
+- [spec] `tasks/verify.yml`: the web half of the smoke check could never fail the play (`failed_when: false` plus `is succeeded`). Fixed: `pihole_smoke_web_ok` tests the status (200 or 30x), retries on it, and the failure message names the check. A throwaway localhost check of the status logic passed for 200/302 and failed for 404, -1, 503 and a missing status; the retry loop itself was read, not run.
+- [spec] `git ls-remote` ran in `prepare.yml` before `git` was installed. `common` does install `git` by default, but the role then depended on it. Fixed: the tag check moved to the end of `packages.yml`; the input asserts stay first in `prepare.yml`.
+
+### Round 2 — fixed in 5c9ac59, a66b47c
+- [bug] `tasks/prepare.yml`: `no_log: true` on the variables assert censored its `fail_msg`, so a missing `pihole_password` showed "censored" instead of naming the variable and `host_vars/pihole01/vault.yml`. Fixed: `no_log` removed (conditions only test `is defined` and `length`); the tasks in `configure.yml` that handle the password keep `no_log`.
+- [mismatch] The spec listed `docs/tailscale-subnet-router.md` as carrying a stale "removed" mention. It only shows pihole01 as a host behind the router and was already accurate. Fixed in the artifacts: proposal, delta spec and tasks.md now name `terraform/README.md`.
+- Accepted, not changed: the web check accepts 200 and 301/302/303/307/308 (broader than the spec); `verify.yml` asserts the installed core version equals the pin and logs component versions (no scenario, covered by design.md).
+
+### Round 3 — open at the cap
+- [correctness] `tasks/configure.yml` (login probe) runs before `tasks/service.yml`: `POST /api/auth` is retried 10 times at 3 s whenever the `pihole-FTL` binary exists, before `service.yml` has started FTL. Failing input: Pi-hole installed but `pihole-FTL` stopped or crashed (for example after a reboot with the unit disabled). The play fails after about 30 s and never starts FTL, so the role cannot recover a stopped service. Fix: run `service.yml` before `configure.yml`, or guard the probe on the service state. Not fixed: round cap reached; Gate 2 decides.
+- [mismatch] "listening on eth0 for the LAN only": only `dns.interface` is set; `dns.listeningMode` is left at the Pi-hole default, so "LAN only" rests on that default. Both related scenarios are manual. Not fixed.
+- [minor] Under `--check` on an installed host the settings and `setpassword` commands are skipped, so `--check` does not show drift in those two. Matches the spec wording. Not fixed.
+- [minor] `pihole setpassword <pw>` passes the password in argv, visible in `ps` on the host while it runs; `no_log` only hides it from Ansible output. Accepted for now, Rue decides at Gate 2.
+- Note: the "A terraform-only diff deploys nothing" fixture changes `terraform/main.tf` rather than `hosts.auto.tfvars`; the behaviour it pins is the same. The `unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE` line in `scripts/tests/deploy-targets.sh` is a harness fix with no scenario. The two widened fixture expectations ("deleted playbook is skipped", "common runs its services…") are justified by the new pihole play that uses `common`.
