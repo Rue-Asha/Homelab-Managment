@@ -35,12 +35,12 @@
 
 > unit: depends=1,2,3 · files=none (live system)
 
-- [ ] 4.1 Merge groups 1-3; approve the `infrastructure` apply that resizes `check01` ⚠ irreversible
-- [ ] 4.2 Set fork-PR approval to "all external contributors" on `Life-Manager`, `Rues-Arcade`, and confirm on `Homelab-Managment` (GitHub settings, by hand)
-- [ ] 4.3 `ansible-playbook … check_runner.yml --check --diff`, then the real run; legacy instance removed, three instances online ⚠ irreversible (removes the old runner user)
-- [ ] 4.4 Delete the offline legacy `check01` runner from `Homelab-Managment` (`gh api -X DELETE`) ⚠ irreversible
-- [ ] 4.5 Re-run the playbook: no token minted, no changes
-- [ ] 4.6 Verify the manual spec scenarios: deploy label never lands, `sudo -n true` fails, cross-instance `ls` fails, no token on disk, egress unchanged
+- [x] 4.1 Merge groups 1-3; approve the `infrastructure` apply that resizes `check01` ⚠ irreversible
+- [x] 4.2 Set fork-PR approval to "all external contributors" on `Life-Manager`, `Rues-Arcade`, and confirm on `Homelab-Managment` (GitHub settings, by hand)
+- [x] 4.3 `ansible-playbook … check_runner.yml --check --diff`, then the real run; legacy instance removed, three instances online ⚠ irreversible (removes the old runner user)
+- [x] 4.4 Delete the offline legacy `check01` runner from `Homelab-Managment` (`gh api -X DELETE`) ⚠ irreversible
+- [x] 4.5 Re-run the playbook: no token minted, no changes
+- [x] 4.6 Verify the manual spec scenarios: deploy label never lands, `sudo -n true` fails, cross-instance `ls` fails, no token on disk, egress unchanged
 - [ ] 4.7 Open a no-op PR on `Homelab-Managment`; `proof` goes green on `check01-homelab-managment`
 
 ## 5. App repos (separate PRs in Life-Manager and Rues-Arcade)

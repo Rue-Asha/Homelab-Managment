@@ -25,6 +25,7 @@
   ansible.builtin.unarchive:
     src: "{{ check_runner_archive_dir }}/{{ check_runner_archive }}"
     dest: "{{ item['dir'] }}"
+    mode: "0750"
     remote_src: true
   become: true
   become_user: "{{ item['user'] }}"
