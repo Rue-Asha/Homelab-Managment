@@ -30,6 +30,8 @@ github_runner_ansible_core: >-
      | select('match', 'ansible-core==') | first }}
 github_runner_packages:
   - git
+  # tf-ci.sh reads the saved plan with it.
+  - jq
   - openssh-client
   - python3-venv
   # The pip module imports packaging on the system Python before it creates the venv.
