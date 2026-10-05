@@ -161,7 +161,7 @@ Each pihole-related skip comment in `.ansible-lint` (`no-changed-when`, `var-nam
 
 ### Requirement: Pi-hole is documented, including the DNS-outage risk
 
-`docs/pihole.md` SHALL describe what it is, how to apply it the first time, how to bump the version and how to recover. It SHALL state the DNS-outage risk and the router-fallback step even though that step is a Non-Goal of the automation. `terraform/README.md` and `docs/tailscale-subnet-router.md` SHALL no longer describe pihole01 as removed or gone.
+`docs/pihole.md` SHALL describe what it is, how to apply it the first time, how to bump the version and how to recover. It SHALL state the DNS-outage risk and the router-fallback step even though that step is a Non-Goal of the automation. `terraform/README.md` SHALL no longer describe pihole01 as removed or gone; `docs/tailscale-subnet-router.md` only shows pihole01 as a host behind the router and needs no change.
 
 #### Scenario: The doc covers first apply, bump and recovery
 - **WHEN** `docs/pihole.md` is read
@@ -174,6 +174,6 @@ Each pihole-related skip comment in `.ansible-lint` (`no-changed-when`, `var-nam
 - **proof:** manual (prose; no sensor)
 
 #### Scenario: Stale "removed" mentions are corrected
-- **WHEN** `terraform/README.md` and `docs/tailscale-subnet-router.md` are read
+- **WHEN** `terraform/README.md` is read (`docs/tailscale-subnet-router.md` only shows pihole01 as a host behind the router and needed no change)
 - **THEN** pihole01 is described as present again (one paragraph of correction, not a rewrite)
 - **proof:** manual (prose; no sensor)
