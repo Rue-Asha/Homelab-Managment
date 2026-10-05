@@ -10,4 +10,5 @@
     name: pihole-FTL
     enabled: true
     state: started
+  register: pihole_ftl_service
   when: pihole_ftl_binary['stat']['exists'] | bool
