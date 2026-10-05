@@ -17,15 +17,6 @@ exclude_paths:
   - .claude/
 
 skip_list:
-  # The pihole role shells out to the Pi-hole CLI (password set, password
-  # read-back) without changed_when guards. Idempotency cleanup on those two
-  # tasks is a tracked follow-up.
-  - no-changed-when
-
-  # The pihole role registers `download_result` and `apt_update` without the
-  # pihole_ prefix. Renaming is part of the same pihole cleanup.
-  - var-naming[no-role-prefix]
-
   # A handful of inline expressions blow past yamllint's default 160-char
   # ceiling and are hard to fold without making the YAML worse.
   - yaml[line-length]

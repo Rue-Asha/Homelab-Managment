@@ -38,8 +38,8 @@
 
 ## 7. Lint housekeeping
 > unit: depends=4,5 · scope=S7 · files=.ansible-lint
-- [ ] 7.1 Remove the pihole-related skips (`no-changed-when`, `var-naming[no-role-prefix]`) and run `ansible-lint`; keep, with a reason that is true of the new role, only those that still fail
-- [ ] 7.2 `scripts/proof.sh --all` green
+- [x] 7.1 Remove the pihole-related skips (`no-changed-when`, `var-naming[no-role-prefix]`) and run `ansible-lint`; keep, with a reason that is true of the new role, only those that still fail
+- [x] 7.2 `scripts/proof.sh --all` green
 
 ## 8. Rollout (Rue's hands)
 > unit: depends=3,4,5,6,7 · scope=none · files=ansible/inventory/host_vars/pihole01/vault.yml, ansible/inventory/00-terraform.yml
