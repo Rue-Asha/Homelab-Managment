@@ -13,7 +13,6 @@
     fail_msg: >-
       pihole_version (host_vars/pihole01/vars.yml) and pihole_password
       (host_vars/pihole01/vault.yml) must both be set; Pi-hole was left untouched.
-  no_log: true
 
 - name: Read the installed Pi-hole versions
   ansible.builtin.slurp:
