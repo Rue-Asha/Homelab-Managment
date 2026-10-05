@@ -4,3 +4,4 @@ gate0: 2026-10-05
 gate1: 2026-10-05
 learnings:
   - "Checking branch protection → query rulesets too, not only branches/<b>/protection (404 there does not mean unprotected; scope.md R4/S7 were wrong until the planner found the ruleset)"
+  - "New workflow using github.job_workflow_sha → actionlint (even the version CI pins) rejects it; scope an ignore in .github/actionlint.yaml to that workflow"

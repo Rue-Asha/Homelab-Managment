@@ -1,15 +1,15 @@
 ## 1. Reusable bump workflow in Rue-Asha/ci
 > unit: depends=none · scope=S1,S2,S3,S4 · files=../ci/scripts/bump-pin.sh, ../ci/tests/bump-pin.sh, ../ci/.github/workflows/bump-pin.yml, ../ci/README.md
-- [ ] 1.1 In a worktree of `../ci` (`git -C ../ci worktree add ../ci-auto-version-bump -b flow/auto-version-bump origin/main`) write `tests/bump-pin.sh` with fixtures "Scenario: A new tag is bumped", "…The variable line is missing", "…The value already equals the tag", "…A pre-release tag is not bumped" (fails first)
-- [ ] 1.2 Write `scripts/bump-pin.sh` per the Contracts in design.md until `bash tests/bump-pin.sh` is green
-- [ ] 1.3 Write `.github/workflows/bump-pin.yml` (`workflow_call`, inputs/secrets per Contracts): checkout of the target repo with the App token (`actions/create-github-app-token`, SHA-pinned, no `GITHUB_TOKEN` fallback), checkout of `Rue-Asha/ci` at `github.job_workflow_sha`, idempotence checks for branch/PR, push `bump/<variable>-<tag>`, `gh pr create` with title `chore(<app>): bump to <tag>`, `gh pr merge --auto --squash`, close older open `bump/<variable>-*` PRs
-- [ ] 1.4 `actionlint` over the new workflow is clean and every `uses:` is a full SHA with a version comment (SHAs looked up read-only with `gh api`)
-- [ ] 1.5 Add a `bump-pin` section to `../ci/README.md` (inputs, secrets, call example, job name `bump` is interface); commit locally on the sibling branch, record the commit hash here. Do not push
+- [x] 1.1 In a worktree of `../ci` (`git -C ../ci worktree add ../ci-auto-version-bump -b flow/auto-version-bump origin/main`) write `tests/bump-pin.sh` with fixtures "Scenario: A new tag is bumped", "…The variable line is missing", "…The value already equals the tag", "…A pre-release tag is not bumped" (fails first)
+- [x] 1.2 Write `scripts/bump-pin.sh` per the Contracts in design.md until `bash tests/bump-pin.sh` is green
+- [x] 1.3 Write `.github/workflows/bump-pin.yml` (`workflow_call`, inputs/secrets per Contracts): checkout of the target repo with the App token (`actions/create-github-app-token`, SHA-pinned, no `GITHUB_TOKEN` fallback), checkout of `Rue-Asha/ci` at `github.job_workflow_sha`, idempotence checks for branch/PR, push `bump/<variable>-<tag>`, `gh pr create` with title `chore(<app>): bump to <tag>`, `gh pr merge --auto --squash`, close older open `bump/<variable>-*` PRs
+- [x] 1.4 `actionlint` over the new workflow is clean and every `uses:` is a full SHA with a version comment (SHAs looked up read-only with `gh api`)
+- [x] 1.5 Add a `bump-pin` section to `../ci/README.md` (inputs, secrets, call example, job name `bump` is interface); commit locally on the sibling branch, record the commit hash here. Do not push — ci branch flow/auto-version-bump @ 340bc99
 
 ## 2. docs/release-bump.md
 > unit: depends=none · scope=S7,S8 · files=docs/release-bump.md
-- [ ] 2.1 Write `docs/release-bump.md`: the flow, GitHub App setup (name, installed on Homelab-Managment only, permissions Contents RW / Pull requests RW / Metadata R, no others), secrets `HOMELAB_BUMP_APP_ID` and `HOMELAB_BUMP_APP_KEY` per app repo, the repo setting `allow_auto_merge` on and the existing `main` ruleset left as is (list its four required checks), how to add a third app (caller job from design.md Contracts), red bump PR and behind-`main` bump PR recovery, R2 and R3 in one line each
-- [ ] 2.2 `scripts/proof.sh --all` green
+- [x] 2.1 Write `docs/release-bump.md`: the flow, GitHub App setup (name, installed on Homelab-Managment only, permissions Contents RW / Pull requests RW / Metadata R, no others), secrets `HOMELAB_BUMP_APP_ID` and `HOMELAB_BUMP_APP_KEY` per app repo, the repo setting `allow_auto_merge` on and the existing `main` ruleset left as is (list its four required checks), how to add a third app (caller job from design.md Contracts), red bump PR and behind-`main` bump PR recovery, R2 and R3 in one line each
+- [x] 2.2 `scripts/proof.sh --all` green
 
 ## 3. Life-Manager release.yml hookup
 > unit: depends=1 · scope=S5 · files=../Life-Manager/.github/workflows/release.yml
