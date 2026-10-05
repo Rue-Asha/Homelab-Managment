@@ -84,3 +84,14 @@ Gaps: none.
 ## Screenshots
 
 none
+
+## Review
+
+Fresh-context reviewer, two rounds.
+
+Round 1 (at 5490e5b):
+- [correctness] A guest declared with `groups = []` never appears in the rendered inventory, so `--created` would fail the deploy with "not in inventory"; the fixture placed `bare01` in a shape Terraform never renders → fixed in a70a869: `lxc_hosts` validation requires at least one group (new scenario "A guest declared without a group is refused at plan", manual), fixture inventory now mirrors `ansible.tf` (`proxmox_guest > lxc_container_proxmox > <group>`).
+- [spec mismatch] Run-everything shortcuts exited before reporting created guests without a service playbook → fixed in a70a869, two fixtures added (red first).
+- [spec mismatch] `--created` accepted `--all` / a playbook name in the `<before> <after>` positions → fixed in a70a869, exit 64, two fixtures added (red first).
+
+Round 2 (at a70a869): no findings.
