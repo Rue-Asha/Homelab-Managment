@@ -1,0 +1,3 @@
+triage: "feature — cross-repo CI/deploy change, GitHub App, repo settings. Appetite: one evening (+ Rues-Arcade hookup after #23)."
+base: main
+gate0: 2026-10-05
