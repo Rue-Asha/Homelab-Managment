@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Rues Arcade web service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ rues_arcade_user }}
+Group={{ rues_arcade_group }}
+WorkingDirectory={{ rues_arcade_current_link }}
+EnvironmentFile={{ rues_arcade_env_file }}
+ExecStart={{ rues_arcade_node_bin }} {{ rues_arcade_current_link }}/build
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths={{ rues_arcade_data_dir }}
+
+[Install]
+WantedBy=multi-user.target

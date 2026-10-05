@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Atomic go-live: repoint `current` at the freshly built release in a single
+# symlink swap. Rollback = repoint `current` at a previous release.
+- name: Read the release that is active before this run
+  ansible.builtin.stat:
+    path: "{{ rues_arcade_current_link }}"
+  register: rues_arcade_previous_link
+
+# verify.yml rolls back to this if the new release fails its smoke check.
+- name: Remember the release that is active before this run
+  ansible.builtin.set_fact:
+    rues_arcade_previous_release: "{{ rues_arcade_previous_link['stat']['lnk_target'] | default('', true) }}"
+
+- name: Activate the new release
+  ansible.builtin.file:
+    src: "{{ rues_arcade_release_dir }}"
+    dest: "{{ rues_arcade_current_link }}"
+    state: link
+    owner: "{{ rues_arcade_user }}"
+    group: "{{ rues_arcade_group }}"
+    force: true
+  when: rues_arcade_redeploy | bool
+  notify: Restart rues-arcade

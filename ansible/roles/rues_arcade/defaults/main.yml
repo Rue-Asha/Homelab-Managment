@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: MIT-0
+---
+# --- Service identity ---
+rues_arcade_user: rues-arcade
+rues_arcade_group: rues-arcade
+rues_arcade_service_name: rues-arcade
+
+# --- Source: the app repo's CI-built release tarball; the tag is the "image tag" ---
+# The repo is public, so there is no deploy key. Assets are
+# named without the tag's leading `v`.
+rues_arcade_releases_url: https://github.com/Rue-Asha/Rues-Arcade/releases/download
+rues_arcade_version: v0.2.0              # release tag to deploy
+rues_arcade_artifact: "rues-arcade-{{ rues_arcade_version | regex_replace('^v', '') }}.tgz"
+rues_arcade_artifact_url: "{{ rues_arcade_releases_url }}/{{ rues_arcade_version }}/{{ rues_arcade_artifact }}"
+
+# --- On-host layout (see docs/party-games-webservice-architecture.md) ---
+rues_arcade_base_dir: /opt/rues-arcade
+rues_arcade_releases_dir: "{{ rues_arcade_base_dir }}/releases"
+rues_arcade_current_link: "{{ rues_arcade_base_dir }}/current"
+rues_arcade_data_dir: /var/lib/rues-arcade
+rues_arcade_config_dir: /etc/rues-arcade
+rues_arcade_db_path: "{{ rues_arcade_data_dir }}/rues-arcade.db"
+rues_arcade_env_file: "{{ rues_arcade_config_dir }}/env"
+
+# --- Runtime ---
+rues_arcade_node_bin: /usr/bin/node
+# Bind address for the adapter-node server. Keep on loopback so the backend is
+# reachable only through the nginx reverse proxy, never directly on the LAN.
+rues_arcade_host: 127.0.0.1
+rues_arcade_port: 3000
+rues_arcade_node_env: production
+# adapter-node assumes https unless told where the original protocol is; over
+# plain http every form post then fails SvelteKit's origin check with a 403.
+# The nginx role sends X-Forwarded-Proto.
+rues_arcade_protocol_header: x-forwarded-proto
+
+# --- Deploy ---
+# No migrate step: the app applies its migrations on start and exits non-zero
+# if one fails, so a bad migration surfaces as a failed restart.
+rues_arcade_keep_releases: 5
+
+# --- Smoke check (tasks/verify.yml) ---
+# Requested through nginx on the host, so proxy and app are checked together.
+# /healthz answers 200 once the app has opened its database.
+rues_arcade_smoke_url: http://127.0.0.1/healthz
+# The vhost matches on server_name; without a matching Host the request lands
+# on nginx's default site instead of the app.
+rues_arcade_smoke_headers: {}
+# Start-up migrations must finish inside retries x delay seconds.
+rues_arcade_smoke_retries: 10
+rues_arcade_smoke_delay: 3

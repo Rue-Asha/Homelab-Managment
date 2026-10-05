@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Smoke check on every run, deploy or not. The restart notified earlier has to
+# have happened before the request proves anything about the new release.
+- name: Restart the service now if this run changed it
+  ansible.builtin.meta: flush_handlers
+
+- name: Check the service through the reverse proxy, rolling back on failure
+  block:
+    - name: Request the service through the reverse proxy
+      ansible.builtin.uri:
+        url: "{{ rues_arcade_smoke_url }}"
+        headers: "{{ rues_arcade_smoke_headers }}"
+        status_code: "{{ range(200, 300) | list }}"
+      register: rues_arcade_smoke
+      until: rues_arcade_smoke is succeeded
+      retries: "{{ rues_arcade_smoke_retries }}"
+      delay: "{{ rues_arcade_smoke_delay }}"
+
+  rescue:
+    # Only a run that swapped `current` has something to undo.
+    - name: Decide whether there is a release to roll back to
+      ansible.builtin.set_fact:
+        rues_arcade_rolling_back: >-
+          {{ (rues_arcade_redeploy | bool) and (rues_arcade_previous_release | default('') | length > 0) }}
+
+    - name: Roll back to the release that was active before this run
+      when: rues_arcade_rolling_back | bool
+      block:
+        - name: Point current back at the previous release
+          ansible.builtin.file:
+            src: "{{ rues_arcade_previous_release }}"
+            dest: "{{ rues_arcade_current_link }}"
+            state: link
+            owner: "{{ rues_arcade_user }}"
+            group: "{{ rues_arcade_group }}"
+            force: true
+
+        - name: Restart the service on the previous release
+          ansible.builtin.systemd:
+            name: "{{ rues_arcade_service_name }}"
+            state: restarted
+
+    - name: Fail the run
+      ansible.builtin.fail:
+        msg: >-
+          {{ rues_arcade_smoke_url }} did not answer 2xx within
+          {{ rues_arcade_smoke_retries }} x {{ rues_arcade_smoke_delay }}s for
+          {{ rues_arcade_version }} ({{ rues_arcade_release_dir | default(rues_arcade_previous_release | default('no release')) }}).
+          {{ ('Rolled back to ' ~ rues_arcade_previous_release ~ '.') if rues_arcade_rolling_back | bool
+             else 'Nothing was rolled back: no previous release, or this run did not deploy one.' }}

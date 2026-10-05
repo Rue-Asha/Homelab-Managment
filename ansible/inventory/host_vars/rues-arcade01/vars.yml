@@ -1,0 +1,13 @@
+---
+# --- rues_arcade service (02_SERVICES) ---
+rues_arcade_version: v0.2.0
+rues_arcade_smoke_headers:
+  Host: "{{ nginx_server_name }}"
+
+common_timezone: Europe/Berlin
+
+# --- nginx reverse proxy in front of the service ---
+nginx_reverse_proxy_enabled: true
+nginx_backend_host: 127.0.0.1
+nginx_backend_port: "{{ rues_arcade_port }}"
+nginx_service_description: "the Rues Arcade web service"

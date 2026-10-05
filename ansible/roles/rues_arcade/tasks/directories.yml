@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the release and data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ rues_arcade_user }}"
+    group: "{{ rues_arcade_group }}"
+    mode: "0755"
+  loop:
+    - "{{ rues_arcade_base_dir }}"
+    - "{{ rues_arcade_releases_dir }}"
+    - "{{ rues_arcade_data_dir }}"
+
+- name: Ensure the config directory exists
+  ansible.builtin.file:
+    path: "{{ rues_arcade_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ rues_arcade_group }}"
+    mode: "0750"

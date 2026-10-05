@@ -1,0 +1,81 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Idempotency: a release is only fetched and activated when the requested
+# version differs from the one currently live. The live version is recorded in
+# a marker file inside the active release.
+- name: Read the currently deployed version marker
+  ansible.builtin.slurp:
+    src: "{{ rues_arcade_current_link }}/.deployed_version"
+  register: rues_arcade_deployed_marker
+  changed_when: false
+  failed_when: false
+
+- name: Determine the currently deployed version
+  ansible.builtin.set_fact:
+    rues_arcade_deployed_version: >-
+      {{ (rues_arcade_deployed_marker['content'] | b64decode | trim)
+         if (rues_arcade_deployed_marker['content'] is defined)
+         else '' }}
+
+- name: Decide whether a new release must be deployed
+  ansible.builtin.set_fact:
+    rues_arcade_redeploy: >-
+      {{ rues_arcade_deployed_version is not
+         match((rues_arcade_version | regex_escape) ~ '$') }}
+
+- name: Compute the timestamped release directory
+  ansible.builtin.set_fact:
+    rues_arcade_release_dir: >-
+      {{ rues_arcade_releases_dir }}/{{ now(utc=true, fmt='%Y%m%d%H%M%S') }}
+  when: rues_arcade_redeploy | bool
+
+# CI built and e2e-tested exactly this tarball; the checksum published next to
+# it proves the host runs that artifact and not a corrupted or swapped one.
+- name: Download the release tarball and verify its checksum
+  ansible.builtin.get_url:
+    url: "{{ rues_arcade_artifact_url }}"
+    dest: "{{ rues_arcade_base_dir }}/{{ rues_arcade_artifact }}"
+    checksum: "sha256:{{ rues_arcade_artifact_url }}.sha256"
+    mode: "0644"
+  become: true
+  become_user: "{{ rues_arcade_user }}"
+  when: rues_arcade_redeploy | bool
+
+- name: Create the release directory
+  ansible.builtin.file:
+    path: "{{ rues_arcade_release_dir }}"
+    state: directory
+    owner: "{{ rues_arcade_user }}"
+    group: "{{ rues_arcade_group }}"
+    mode: "0755"
+  when: rues_arcade_redeploy | bool
+
+# The tarball wraps everything in rues-arcade-<X.Y.Z>/; strip it so the
+# release dir holds build/ and node_modules/ directly. Skipped in check mode:
+# neither the tarball nor the release dir exists then, so unarchive would fail.
+- name: Unpack the release tarball
+  ansible.builtin.unarchive:
+    src: "{{ rues_arcade_base_dir }}/{{ rues_arcade_artifact }}"
+    dest: "{{ rues_arcade_release_dir }}"
+    remote_src: true
+    extra_opts: [--strip-components=1]
+  become: true
+  become_user: "{{ rues_arcade_user }}"
+  when:
+    - rues_arcade_redeploy | bool
+    - not ansible_check_mode
+
+- name: Remove the downloaded tarball
+  ansible.builtin.file:
+    path: "{{ rues_arcade_base_dir }}/{{ rues_arcade_artifact }}"
+    state: absent
+  when: rues_arcade_redeploy | bool
+
+- name: Record the deployed version inside the release
+  ansible.builtin.copy:
+    content: "{{ rues_arcade_version }}\n"
+    dest: "{{ rues_arcade_release_dir }}/.deployed_version"
+    owner: "{{ rues_arcade_user }}"
+    group: "{{ rues_arcade_group }}"
+    mode: "0644"
+  when: rues_arcade_redeploy | bool

@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the service user and group exist
+  ansible.builtin.import_tasks: user.yml
+
+- name: Ensure the on-host directory layout exists
+  ansible.builtin.import_tasks: directories.yml
+
+- name: Fetch the pinned release artifact
+  ansible.builtin.import_tasks: fetch.yml
+  tags: [deploy]
+
+- name: Render the service configuration
+  ansible.builtin.import_tasks: config.yml
+
+- name: Activate the new release
+  ansible.builtin.import_tasks: release.yml
+  tags: [deploy]
+
+- name: Manage the systemd service
+  ansible.builtin.import_tasks: service.yml
+
+# Before pruning, so a small rues_arcade_keep_releases can never remove the
+# release a failed check rolls back to.
+- name: Smoke-check the service and roll back a failed release
+  ansible.builtin.import_tasks: verify.yml
+  tags: [deploy]
+
+- name: Prune old releases
+  ansible.builtin.import_tasks: prune.yml
+  tags: [deploy]

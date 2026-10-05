@@ -31,6 +31,7 @@ on:
         options:
           - all
           - life-manager
+          - rues-arcade
       terraform:
         description: Plan and apply Terraform even if the diff does not touch terraform/
         type: boolean
