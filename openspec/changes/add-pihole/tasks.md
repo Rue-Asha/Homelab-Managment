@@ -17,24 +17,24 @@
 
 ## 4. The pihole role
 > unit: depends=1 · scope=S2,S3,S4 · files=ansible/roles/pihole/**
-- [ ] 4.1 Restore the role from `efa9f49^` (`git show efa9f49^:<path>`), drop `info.yml` and `SETUP_INFO.txt.j2`, replace the placeholder README with a real one, set `meta/main.yml` to current platforms
-- [ ] 4.2 `defaults/main.yml` and `tasks/main.yml` per `## Contracts` (import-only hub: `prepare`, `packages`, `install`, `configure`, `service`, `verify`); `packages.yml` as one apt list, without `upgrade: dist`
-- [ ] 4.3 `prepare.yml` and `install.yml` per the spike result: pinned version, seeded config from a template, skipped when `pihole_version` is already installed, fails before touching a running install when the pin is unavailable, no lighttpd, no unpinned `curl | bash`
-- [ ] 4.4 `configure.yml`: assert `pihole_password` is defined with a clear message; apply it only when it changed, `no_log`, with `changed_when`; `service.yml` and the `pihole_restart_ftl` handler so FTL restarts only on change
-- [ ] 4.5 `verify.yml`: flush handlers, `dig @127.0.0.1` and `GET` of the admin URL with retries, fail the play on failure, no vaulted value used
-- [ ] 4.6 `ansible-lint` on the role and `scripts/proof.sh --all`
+- [x] 4.1 Restore the role from `efa9f49^` (`git show efa9f49^:<path>`), drop `info.yml` and `SETUP_INFO.txt.j2`, replace the placeholder README with a real one, set `meta/main.yml` to current platforms
+- [x] 4.2 `defaults/main.yml` and `tasks/main.yml` per `## Contracts` (import-only hub: `prepare`, `packages`, `install`, `configure`, `service`, `verify`); `packages.yml` as one apt list, without `upgrade: dist`
+- [x] 4.3 `prepare.yml` and `install.yml` per the spike result: pinned version, seeded config from a template, skipped when `pihole_version` is already installed, fails before touching a running install when the pin is unavailable, no lighttpd, no unpinned `curl | bash`
+- [x] 4.4 `configure.yml`: assert `pihole_password` is defined with a clear message; apply it only when it changed, `no_log`, with `changed_when`; `service.yml` and the `pihole_restart_ftl` handler so FTL restarts only on change
+- [x] 4.5 `verify.yml`: flush handlers, `dig @127.0.0.1` and `GET` of the admin URL with retries, fail the play on failure, no vaulted value used
+- [x] 4.6 `ansible-lint` on the role and `scripts/proof.sh --all`
 
 ## 5. Playbook and host vars
 > unit: depends=1 · scope=S5 · files=ansible/playbooks/03_SERVICES/pihole.yml, ansible/inventory/host_vars/pihole01/vars.yml
-- [ ] 5.1 Write `03_SERVICES/pihole.yml` per `## Contracts` (`hosts: pihole`, `become: true`, `common` then `pihole`, comments like `life-manager.yml`)
-- [ ] 5.2 Write `host_vars/pihole01/vars.yml` with `pihole_version` from the spike (read the spike result from the merged `design.md`; the variable name is fixed in Contracts); do not create `vault.yml`
-- [ ] 5.3 `ansible-playbook --syntax-check`, `ansible-lint`, `scripts/proof.sh --all`
+- [x] 5.1 Write `03_SERVICES/pihole.yml` per `## Contracts` (`hosts: pihole`, `become: true`, `common` then `pihole`, comments like `life-manager.yml`)
+- [x] 5.2 Write `host_vars/pihole01/vars.yml` with `pihole_version` from the spike (read the spike result from the merged `design.md`; the variable name is fixed in Contracts); do not create `vault.yml`
+- [x] 5.3 `ansible-playbook --syntax-check`, `ansible-lint`, `scripts/proof.sh --all`
 
 ## 6. Docs
 > unit: depends=1 · scope=S8 · files=docs/pihole.md, terraform/README.md, docs/tailscale-subnet-router.md
-- [ ] 6.1 Write `docs/pihole.md`: what it is, first-time apply order (router fallback, vault file, plan/apply, commit regenerated `00-terraform.yml`, bootstrap, `--check`, real run, `dig` check), version bump via PR, recovery; state the DNS-outage risk and the router-fallback step as manual
-- [ ] 6.2 One-paragraph correction in `terraform/README.md` and `docs/tailscale-subnet-router.md` where pihole01 is described as removed
-- [ ] 6.3 `scripts/proof.sh --all`
+- [x] 6.1 Write `docs/pihole.md`: what it is, first-time apply order (router fallback, vault file, plan/apply, commit regenerated `00-terraform.yml`, bootstrap, `--check`, real run, `dig` check), version bump via PR, recovery; state the DNS-outage risk and the router-fallback step as manual
+- [x] 6.2 One-paragraph correction in `terraform/README.md` and `docs/tailscale-subnet-router.md` where pihole01 is described as removed
+- [x] 6.3 `scripts/proof.sh --all`
 
 ## 7. Lint housekeeping
 > unit: depends=4,5 · scope=S7 · files=.ansible-lint
