@@ -41,7 +41,7 @@
 - [x] 4.4 Delete the offline legacy `check01` runner from `Homelab-Managment` (`gh api -X DELETE`) ⚠ irreversible
 - [x] 4.5 Re-run the playbook: no token minted, no changes
 - [x] 4.6 Verify the manual spec scenarios: deploy label never lands, `sudo -n true` fails, cross-instance `ls` fails, no token on disk, egress unchanged
-- [ ] 4.7 Open a no-op PR on `Homelab-Managment`; `proof` goes green on `check01-homelab-managment`
+- [x] 4.7 Open a no-op PR on `Homelab-Managment`; `proof` goes green on `check01-homelab-managment`
 
 ## 5. App repos (separate PRs in Life-Manager and Rues-Arcade)
 
