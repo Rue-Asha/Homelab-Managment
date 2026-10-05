@@ -112,3 +112,13 @@ Three rounds (verifier + fresh-context reviewer, fixer after rounds 1 and 2). Ro
 - **Hyphenated stable tags** (`v1.2.3-hotfix`) count as pre-releases and are skipped silently.
 - Low: quoted value with spaces or `#` passes the value check but is not rewritten (prints `unchanged`); tags `&x`, `*x` and an empty tag are written as YAML anchor, alias and null; test gaps (open PR with auto-merge does not assert "no push"; `&`/`|`/single-quote "unchanged" cases).
 - Manual only, by design: everything that needs real GitHub (PR creation, CI on the bot PR, auto-merge, deploy after merge, R1).
+
+### Round 4 (after fixer round 3, approved by the human beyond the 3-round limit)
+Resolved: version ordering (only upward; older tag -> `skipped`, no PR; unparseable version fails loudly; supersede closes only older PRs) and a per-variable `concurrency` group. Changed scenario: "The line has quotes, a comment or special characters" no longer covers a tag containing `&` or `|`; such a tag is now an unparseable version and fails (justified by the new "A version that cannot be compared fails" scenario; the literal-substitution path is no longer exercised with hostile characters).
+
+Open after round 4:
+- **[bug] Supersede unreachable from the workflow after a merge**: the workflow calls `ensure-bump-pr.sh` only when `bump-pin.sh` prints `changed`. Once the bump PR has merged, `main` pins the tag, the script prints `unchanged`, and the supersede step never runs. If closing the older PR failed in the first run, a re-run of the newer tag never retries it. Unit tests call the script directly and do not show this. Recommended: the workflow also runs the supersede step on `unchanged` (supersede only, no PR creation).
+- Low: version compare uses bash `10#` arithmetic and overflows on very long numbers (`v0.0.18446744073709551617` is judged older than `v0.0.5`); duplicated in `older_than_current`. A file with two `<variable>:` lines gets both rewritten.
+- PR closed without merge is a silent no-op (known, documented); `.[0]` of `gh pr list --head ... --state all` may pick the wrong PR when an old closed and a new open PR share a head.
+- Test gaps: open PR with auto-merge does not assert "no push"; no tests for very long numbers, `v0.03.0` or a pre-release pin; `--body`/`--repo` of `gh pr create` not asserted.
+- Known, human-only: the Life-Manager caller is pinned to the early local ci commit `340bc99` with a `# v1.1.0` comment; no `v1.1.0` tag exists yet (only `v1.0.0`). Task 4.5 re-pins it to the final merged ci SHA after 4.4. Until then the caller would run the old workflow.
