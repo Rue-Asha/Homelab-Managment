@@ -11,6 +11,6 @@
 ## 3. Proof
 
 - [x] 3.1 `scripts/proof.sh --all` green
-- [ ] 3.2 Before merging: `ssh-keygen -F 192.168.0.225` on runner01's `known_hosts` finds nothing (Rue; last checked and cleaned 2026-10-05)
-- [ ] 3.3 Merge run: plan shows exactly one create, `apply` outputs `created=pihole01`, `pihole.yml` and its smoke check pass in the same run (manual)
-- [ ] 3.4 Second `pihole.yml` run shows `changed=0` and no FTL restart; `dig @192.168.0.225 example.org` answers (manual)
+- [x] 3.2 Before merging: `ssh-keygen -F 192.168.0.225` on runner01's `known_hosts` finds nothing (Rue; last checked and cleaned 2026-10-05)
+- [x] 3.3 Merge run: plan shows exactly one create, `apply` outputs `created=pihole01`, `pihole.yml` and its smoke check pass in the same run (manual)
+- [x] 3.4 Second `pihole.yml` run shows `changed=0` and no FTL restart; `dig @192.168.0.225 example.org` answers (manual)
