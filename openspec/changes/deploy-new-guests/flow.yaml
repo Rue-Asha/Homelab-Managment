@@ -6,3 +6,4 @@ learnings:
   - "proof --all in a fresh worktree fails terraform validate on every run, not once: restoring .terraform.lock.hcl via git checkout leaves the .terraform cache out of step → rm -rf the cache before each proof run, or fix proof's init to not rewrite the lock (U2)"
   - "ansible-inventory inside a bash pipe in a script → run it via python subprocess with captured stderr: Ansible aborts with 'requires blocking IO' when the caller's stderr is non-blocking, and fixtures that redirect stderr don't catch it (U1)"
   - "Inventory fixtures for deploy-targets → mirror the group shape terraform/environments/homelab/ansible.tf renders, never a hand-simplified tree (review found a real bug the simplified fixture hid)"
+gate2: 2026-10-05
