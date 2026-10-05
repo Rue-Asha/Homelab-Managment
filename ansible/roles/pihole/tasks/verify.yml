@@ -7,6 +7,8 @@
 
 - name: Check the installed Pi-hole and answer DNS and the web UI
   when: not ansible_check_mode
+  vars:
+    pihole_smoke_web_ok: "{{ pihole_smoke_web['status'] | default(0) in [200, 301, 302, 303, 307, 308] }}"
   block:
     - name: Read the installed Pi-hole versions
       ansible.builtin.slurp:
@@ -50,9 +52,8 @@
       ansible.builtin.uri:
         url: "{{ pihole_smoke_url }}"
         follow_redirects: none
-        status_code: [200, 301, 302, 303, 307, 308]
       register: pihole_smoke_web
-      until: pihole_smoke_web is succeeded
+      until: pihole_smoke_web_ok | bool
       retries: "{{ pihole_smoke_retries }}"
       delay: "{{ pihole_smoke_delay }}"
       failed_when: false
@@ -64,5 +65,5 @@
           {{ ('DNS: dig @127.0.0.1 ' ~ pihole_smoke_domain ~ ' gave no answer. ')
              if (pihole_smoke_dns['stdout'] | trim | length == 0) else '' }}
           {{ ('Web: ' ~ pihole_smoke_url ~ ' answered ' ~ pihole_smoke_web['status'] | default('nothing') ~ '.')
-             if pihole_smoke_web is failed else '' }}
-      when: (pihole_smoke_dns['stdout'] | trim | length == 0) or (pihole_smoke_web is failed)
+             if not (pihole_smoke_web_ok | bool) else '' }}
+      when: (pihole_smoke_dns['stdout'] | trim | length == 0) or (not (pihole_smoke_web_ok | bool))

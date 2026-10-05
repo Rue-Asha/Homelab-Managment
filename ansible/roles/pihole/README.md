@@ -15,7 +15,8 @@ there is no nginx and no lighttpd. Deployed by `ansible/playbooks/03_SERVICES/pi
 | `pihole_smoke_domain`, `pihole_smoke_url`, `pihole_smoke_retries`, `pihole_smoke_delay` | `example.org`, `http://127.0.0.1/admin/`, `10`, `3` | Smoke check. |
 
 The play fails in `prepare.yml`, before anything on the host changes, when
-`pihole_version` or `pihole_password` is missing or the tag does not exist upstream.
+`pihole_version` or `pihole_password` is missing. A tag that does not exist upstream
+fails it in `packages.yml`, right after `git` is installed and before Pi-hole is touched.
 
 ## How the pin works
 

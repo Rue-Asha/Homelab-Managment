@@ -31,19 +31,6 @@
           | regex_findall('(?m)^CORE_VERSION=(\S+)') | first | default('')
           | regex_replace('^v', '')) is not match('^' ~ (pihole_version | regex_replace('^v', '') | regex_escape) ~ '$') }}
 
-- name: Check that the pinned core tag exists upstream
-  ansible.builtin.command:
-    argv:
-      - git
-      - ls-remote
-      - --exit-code
-      - --tags
-      - "{{ pihole_core_repo }}"
-      - "refs/tags/{{ pihole_version }}"
-  when: pihole_install_needed | bool
-  changed_when: false
-  check_mode: false
-
 - name: Ensure the Pi-hole config directory exists
   ansible.builtin.file:
     path: "{{ pihole_config_dir }}"
