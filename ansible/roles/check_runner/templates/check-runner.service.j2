@@ -1,17 +1,17 @@
 # {{ ansible_managed }}
 [Unit]
-Description=GitHub Actions runner ({{ check_runner_name }})
+Description=GitHub Actions runner ({{ item['name'] }})
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User={{ check_runner_user }}
-Group={{ check_runner_user }}
-WorkingDirectory={{ check_runner_dir }}
+User={{ item['user'] }}
+Group={{ item['user'] }}
+WorkingDirectory={{ item['dir'] }}
 # runsvc.sh, not run.sh: only runsvc.sh reads .path, which puts the venv's
 # tools on the job PATH.
-ExecStart={{ check_runner_dir }}/bin/runsvc.sh
+ExecStart={{ item['dir'] }}/bin/runsvc.sh
 # The listener forwards SIGTERM to a running job and waits for it.
 KillMode=process
 KillSignal=SIGTERM

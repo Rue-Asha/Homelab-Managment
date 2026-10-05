@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Derive one instance per listed repository
+  ansible.builtin.set_fact:
+    check_runner_instances: >-
+      {%- set out = [] -%}
+      {%- for entry in check_runner_repos -%}
+      {%- set repo_name = entry['repo'] | basename -%}
+      {%- set slug = repo_name | lower -%}
+      {%- set user = 'check-runner-' ~ slug -%}
+      {%- set _ = out.append({
+            'repo': entry['repo'],
+            'slug': slug,
+            'user': user,
+            'home': '/home/' ~ user,
+            'dir': '/home/' ~ user ~ '/actions-runner',
+            'unit': user,
+            'name': inventory_hostname ~ '-' ~ slug,
+            'hook': check_runner_hook_dir ~ '/' ~ slug ~ '-job-started.sh',
+            'workspace': '/home/' ~ user ~ '/actions-runner/_work/' ~ repo_name ~ '/' ~ repo_name
+          }) -%}
+      {%- endfor -%}
+      {{ out }}
+
+- name: Assert the instance list is usable
+  ansible.builtin.assert:
+    that:
+      - check_runner_instances | length > 0
+      - check_runner_repos | map(attribute='repo') | select('match', '^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$') | list | length == check_runner_repos | length
+      - check_runner_instances | map(attribute='slug') | unique | list | length == check_runner_instances | length
+    fail_msg: >-
+      check_runner_repos must be a non-empty list of {repo: owner/name} entries
+      whose names are unique case-insensitively.
+
+# Read-only, so it also runs in check mode. No no_log: the fail_msg has to
+# name the repo.
+- name: Read each repository's fork-PR approval policy
+  ansible.builtin.command:
+    argv:
+      - gh
+      - api
+      - "repos/{{ item['repo'] }}/actions/permissions/fork-pr-contributor-approval"
+      - --jq
+      - .approval_policy
+  loop: "{{ check_runner_instances }}"
+  loop_control:
+    label: "{{ item['repo'] }}"
+  delegate_to: localhost
+  become: false
+  check_mode: false
+  changed_when: false
+  register: check_runner_fork_policy
+
+- name: Assert outside contributors need approval to run workflows
+  ansible.builtin.assert:
+    that: item['stdout'] == 'all_external_contributors'
+    fail_msg: >-
+      {{ item['item']['repo'] }} has fork-PR approval policy
+      '{{ item['stdout'] }}'; set it to 'all external contributors' under
+      Settings -> Actions -> General before registering a runner.
+  loop: "{{ check_runner_fork_policy['results'] }}"
+  loop_control:
+    label: "{{ item['item']['repo'] }}"

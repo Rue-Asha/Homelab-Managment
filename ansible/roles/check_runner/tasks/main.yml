@@ -1,20 +1,26 @@
 # SPDX-License-Identifier: MIT-0
 ---
 # Entry point: imports each logical task file in execution order.
-- name: Ensure the runner user exists
-  ansible.builtin.import_tasks: user.yml
+- name: Check the instance list and each repository's fork-PR policy
+  ansible.builtin.import_tasks: preflight.yml
 
-- name: Install the runner
-  ansible.builtin.import_tasks: install.yml
+- name: Remove the single-instance runner this layout replaces
+  ansible.builtin.import_tasks: legacy.yml
+
+- name: Ensure the instance users exist
+  ansible.builtin.import_tasks: user.yml
 
 - name: Install the pinned toolchain
   ansible.builtin.import_tasks: toolchain.yml
 
-- name: Register the runner with the repository
+- name: Install the runners
+  ansible.builtin.import_tasks: install.yml
+
+- name: Register the runners with their repositories
   ansible.builtin.import_tasks: register.yml
 
-- name: Configure the job environment
+- name: Configure the job environments
   ansible.builtin.import_tasks: environment.yml
 
-- name: Manage the runner service
+- name: Manage the runner services
   ansible.builtin.import_tasks: service.yml

@@ -1,20 +1,14 @@
 # SPDX-License-Identifier: MIT-0
 ---
-# --- Identity ---
-# No sudo, ever: PR code runs as this user, and the egress firewall only holds
-# while nothing in a job can become root.
-check_runner_user: check-runner
-check_runner_home: "/home/{{ check_runner_user }}"
-check_runner_dir: "{{ check_runner_home }}/actions-runner"
-check_runner_service_name: check-runner
+# --- Instances ---
+# One runner per repository, each under its own user (check-runner-<slug>) with
+# no sudo: PR code runs as that user, and the egress firewall only holds while
+# nothing in a job can become root. Entries carry only `repo`; everything else
+# is derived in preflight.yml. Set in group_vars/check_runner.
+check_runner_repos: []
 
-# --- Registration ---
-# Repository runner on this repo only. The token comes from Settings ->
-# Actions -> Runners -> New, is passed once with -e, expires in an hour and is
-# never stored. Without it the role configures everything but registration.
-check_runner_repo_url: https://github.com/Rue-Asha/Homelab-Managment
-check_runner_registration_token: ""
-check_runner_name: "{{ inventory_hostname }}"
+# Repository runners on this account only; the registration token is minted on
+# the controller per run and never stored. Every instance wears the same label.
 check_runner_labels: [homelab-check]
 
 # --- Runner release (self-update is disabled, so this pin holds) ---
@@ -48,7 +42,44 @@ check_runner_packages:
   # Unpacks the terraform and tflint releases.
   - unzip
 
-# Runs before every job as root-owned code, so a job cannot rewrite it.
-check_runner_hook_path: /usr/local/lib/check-runner/job-started.sh
-check_runner_workspace: >-
-  {{ check_runner_dir }}/_work/{{ check_runner_repo_url | basename }}/{{ check_runner_repo_url | basename }}
+# System libraries and fonts headless Chromium needs, so a job never needs
+# `playwright install --with-deps` (no sudo). From playwright-core's
+# debian13-x64 table (`install-deps chromium`); re-capture on a Playwright upgrade.
+check_runner_browser_packages:
+  - libasound2t64
+  - libatk-bridge2.0-0t64
+  - libatk1.0-0t64
+  - libatspi2.0-0t64
+  - libcairo2
+  - libcups2t64
+  - libdbus-1-3
+  - libdrm2
+  - libgbm1
+  - libglib2.0-0t64
+  - libnspr4
+  - libnss3
+  - libpango-1.0-0
+  - libx11-6
+  - libxcb1
+  - libxcomposite1
+  - libxdamage1
+  - libxext6
+  - libxfixes3
+  - libxkbcommon0
+  - libxrandr2
+  - xvfb
+  - fonts-noto-color-emoji
+  - fonts-unifont
+  - libfontconfig1
+  - libfreetype6
+  - xfonts-scalable
+  - fonts-liberation
+  - fonts-ipafont-gothic
+  - fonts-wqy-zenhei
+  - fonts-tlwg-loma-otf
+  - fonts-freefont-ttf
+
+# Each instance's job-started hook lives here, root-owned, so a job cannot rewrite it.
+check_runner_hook_dir: /usr/local/lib/check-runner
+# The runner release is downloaded once, root-owned, and unpacked per instance.
+check_runner_archive_dir: /usr/local/src

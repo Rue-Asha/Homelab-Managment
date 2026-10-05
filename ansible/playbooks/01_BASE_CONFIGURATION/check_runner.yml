@@ -4,11 +4,10 @@
 # Human-run only. It lives outside 02_SERVICES so scripts/deploy-targets.sh
 # never selects it. Holds no credentials and cannot reach guests or the node.
 #
-#   ansible-playbook playbooks/01_BASE_CONFIGURATION/check_runner.yml \
-#     -e check_runner_registration_token=<token from Settings -> Actions -> Runners>
+#   ansible-playbook playbooks/01_BASE_CONFIGURATION/check_runner.yml
 #
-# The token is only needed the first time; without it the runner stays
-# unregistered and its service is not started.
+# Prerequisite: `gh auth status` on the workstation, with admin on every repo in
+# check_runner_repos. Registration tokens are minted there and never stored.
 
 - name: Configure the check runner
   hosts: check_runner
