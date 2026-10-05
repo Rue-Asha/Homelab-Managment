@@ -2,12 +2,17 @@
 
 ### Requirement: A reusable workflow bumps a pinned version to a release tag
 
-`Rue-Asha/ci` SHALL provide `.github/workflows/bump-pin.yml`, callable with `app`, `host_vars_path`, `variable`, `tag` and the secrets `app_id` and `app_private_key`. It SHALL set `<variable>` to `<tag>` in `<host_vars_path>` of a checkout of Homelab-Managment, change nothing else in the file, push branch `bump/<variable>-<tag>` and open a PR titled `chore(<app>): bump to <tag>`, whose commit message is the same conventional-commit line. The edit SHALL be made by `scripts/bump-pin.sh`.
+`Rue-Asha/ci` SHALL provide `.github/workflows/bump-pin.yml`, callable with `app`, `host_vars_path`, `variable`, `tag`, optionally `target_repo` (`owner/name`, default `Rue-Asha/Homelab-Managment`; the App token's owner and repository are derived from it) and the secrets `app_id` and `app_private_key`. It SHALL set `<variable>` to `<tag>` in `<host_vars_path>` of a checkout of Homelab-Managment, change nothing else in the file (the value alone is replaced: quoting and a trailing comment on the line stay), push branch `bump/<variable>-<tag>` and open a PR titled `chore(<app>): bump to <tag>`, whose commit message is the same conventional-commit line. The edit SHALL be made by `scripts/bump-pin.sh`.
 
 #### Scenario: A new tag is bumped
 - **WHEN** `life_manager_version: v0.2.0` is bumped to `v0.3.0`
 - **THEN** the script prints `changed`, only that line differs, and the job pushes `bump/life_manager_version-v0.3.0` and opens a PR titled `chore(life-manager): bump to v0.3.0`
 - **proof:** unit ("Scenario: A new tag is bumped"); manual (branch push and PR creation need a real release)
+
+#### Scenario: The line has quotes, a comment or special characters
+- **WHEN** the line is `<variable>: "v0.2.0"` or `<variable>: v0.2.0  # note`, or the tag contains `&` or `|`
+- **THEN** only the value changes, quotes and comment are kept, the tag is written literally, and a line that already holds the tag in those forms prints `unchanged`
+- **proof:** unit ("Scenario: The line has quotes, a comment or special characters"; "Scenario: The value already equals the tag")
 
 #### Scenario: The variable line is missing
 - **WHEN** the file has no `<variable>:` line
@@ -20,9 +25,14 @@
 - **proof:** unit ("Scenario: The value already equals the tag")
 
 #### Scenario: Branch or PR for the tag already exists
-- **WHEN** `bump/<variable>-<tag>` exists, or a PR for it is open or merged
-- **THEN** the job creates nothing and succeeds
-- **proof:** manual (needs GitHub state; re-run of a real bump job)
+- **WHEN** a PR for `bump/<variable>-<tag>` is merged, or open with auto-merge enabled
+- **THEN** the job creates and enables nothing and succeeds
+- **proof:** unit ("Scenario: Branch or PR for the tag already exists", stubbed `gh`); manual (a re-run of a real bump job)
+
+#### Scenario: A previous run stopped before the PR or auto-merge
+- **WHEN** `bump/<variable>-<tag>` exists without a PR (for example `gh pr create` failed after the push), or its open PR lacks auto-merge
+- **THEN** a re-run opens the missing PR without pushing again and enables auto-merge, and succeeds
+- **proof:** unit ("Scenario: A previous run stopped before the PR or auto-merge", stubbed `gh`); manual (needs a real failure)
 
 #### Scenario: A pre-release tag is not bumped
 - **WHEN** the tag is `v1.2.3-rc1`
@@ -50,7 +60,7 @@ After opening the PR for a tag, the workflow SHALL close every other open PR who
 #### Scenario: An older bump PR is still open
 - **WHEN** `bump/life_manager_version-v0.3.0` is open and the job opens `bump/life_manager_version-v0.3.1`
 - **THEN** the v0.3.0 PR is closed with a comment pointing at the v0.3.1 PR
-- **proof:** manual (needs two real PRs)
+- **proof:** unit ("Scenario: An older bump PR is still open", stubbed `gh`); manual (two real PRs)
 
 #### Scenario: The older PR was already merged
 - **WHEN** the previous bump PR for the variable is merged
@@ -101,8 +111,8 @@ Rues-Arcade's `release.yml` SHALL call the reusable workflow for `rues_arcade_ve
 
 #### Scenario: The file is not on main yet
 - **WHEN** the bump runs while `rues-arcade01/vars.yml` is missing on `main`
-- **THEN** the job fails on the missing file naming it
-- **proof:** unit ("Scenario: The variable line is missing"); the merge-order rule is manual
+- **THEN** the script exits non-zero with `bump-pin: <file>: file not found` naming it, and the job fails
+- **proof:** unit ("Scenario: The file is not on main yet"); the merge-order rule is manual
 
 ### Requirement: Auto-merge is enabled on Homelab-Managment
 

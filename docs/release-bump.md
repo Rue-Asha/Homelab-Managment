@@ -15,8 +15,9 @@ setup, adding an app, and recovering a PR that does not merge.
 2. The `bump` job (`needs: publish`) calls `bump-pin.yml`. It mints an
    installation token for the App, checks out this repo, and runs
    `scripts/bump-pin.sh <host_vars_path> <variable> <tag>` from `Rue-Asha/ci`.
-   Only the line `^<variable>: ` changes; the rest of the file is byte-identical.
-3. On `changed` it pushes branch `bump/<variable>-<tag>`, opens a PR titled
+   Only the value on the line `^<variable>: ` changes (quotes and a trailing
+   comment stay); the rest of the file is byte-identical.
+3. On `changed` (`scripts/ensure-bump-pr.sh`) it pushes branch `bump/<variable>-<tag>`, opens a PR titled
    `chore(<app>): bump to <tag>` (the commit message is the same line), runs
    `gh pr merge --auto --squash`, and closes older open `bump/<variable>-*`
    PRs with a comment naming the new one.
@@ -32,10 +33,14 @@ The job ends green without a PR when:
 |---|---|
 | Tag has a pre-release suffix (`v1.2.3-rc1`) | `skipped` |
 | The variable already equals the tag (re-run) | `unchanged` |
-| Branch or PR `bump/<variable>-<tag>` already exists (open or merged) | nothing created |
+| The PR for `bump/<variable>-<tag>` is merged, or open with auto-merge on | nothing created |
 
-It fails when the variable line is missing (`bump-pin: <file>: <variable> not found`,
-which is also what a host_vars file not yet on `main` looks like) or when the
+A re-run finishes what a failed run left: a branch without a PR gets its PR, a
+PR without auto-merge gets auto-merge. A PR closed without merging is left
+alone (tag again to bump).
+
+It fails when the variable line is missing (`bump-pin: <file>: <variable> not found`),
+when the file is not on `main` yet (`bump-pin: <file>: file not found`), or when the
 App token cannot be created. There is no fallback to `GITHUB_TOKEN`: a bump PR
 opened by it would not trigger `ci.yml`.
 
@@ -107,8 +112,8 @@ open for a manual merge.
            app_private_key: ${{ secrets.HOMELAB_BUMP_APP_KEY }}
 
    `app` names the PR title, `host_vars_path` is relative to this repo's root,
-   `variable` is the pin's name. `target_repo` defaults to
-   `Rue-Asha/Homelab-Managment` and needs no input.
+   `variable` is the pin's name. `target_repo` (`owner/name`) defaults to
+   `Rue-Asha/Homelab-Managment` and needs no input; the App token is scoped to it.
 4. If the app's host_vars file is not on `main` yet, merge it here first;
    otherwise the first bump fails on the missing file.
 
@@ -126,7 +131,7 @@ stale for good, tag a new release and let the cleanup supersede it.
 
 **No PR appeared.** Check the `bump` job in the app repo's release run. A token
 error means the App is not installed on this repo or the secrets are wrong. Re-running
-the job for the same tag is safe.
+the job for the same tag is safe: it only adds the PR or auto-merge that is missing.
 
 **Deploy failed after the merge.** The role rolled back, but `main` now pins a
 version the host does not run. Fix forward with a new release, or revert the
