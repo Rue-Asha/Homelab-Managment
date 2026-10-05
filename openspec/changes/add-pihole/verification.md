@@ -1,4 +1,4 @@
-verified-at: 5d6df8c
+verified-at: a495f13
 
 ## Layer 1 — `scripts/proof.sh --all` (green)
 
@@ -62,6 +62,7 @@ Gaps: none.
 - Rue: fresh host gets the pinned `pihole_version` (real run); first real run, check `packages.yml` "Check that the pinned core tag exists upstream" runs after git is installed and is skipped once the pin is installed.
 - Rue: deliberately bad pin fails the play at the `git ls-remote` tag check, before the installer runs, and leaves the installed version (real host).
 - Rue: DNS keeps answering during the re-run, no FTL restart in the second run.
+- Rue: on a host with pihole-FTL stopped, a real run starts FTL (service.yml now runs before configure.yml) and the login probe then passes.
 - Rue: `http://192.168.0.225/admin` accepts the vault password (needs vault file).
 - Rue: unchanged password not re-applied (second run `changed=0`).
 - Rue: `--check` against `pihole01` without the vault file fails the play, and the failing message names `pihole_password` and `host_vars/pihole01/vault.yml` (not "censored").
@@ -73,7 +74,7 @@ Gaps: none.
 
 ## Diffstat (main...flow/add-pihole)
 
-28 files changed, 1157 insertions(+), 12 deletions(-) (excluding this file)
+27 files changed, 1078 insertions(+), 12 deletions(-) (excluding this file)
 
 ## Screenshots
 
