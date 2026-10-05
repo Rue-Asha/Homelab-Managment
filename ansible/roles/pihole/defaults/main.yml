@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: MIT-0
+---
+# pihole_version (pi-hole/pi-hole core tag, with the leading v) and
+# pihole_password (vault) have no default on purpose: prepare.yml fails when
+# either is missing instead of floating or leaving the web UI open.
+
+pihole_interface: eth0
+pihole_upstream_dns:
+  - 8.8.8.8
+  - 1.1.1.1
+
+# --- Settings converged with pihole-FTL --config (tasks/configure.yml) ---
+# compare is the value as `--config -q` prints it once brackets, quotes and
+# whitespace are stripped.
+pihole_settings:
+  - key: dns.upstreams
+    value: "{{ pihole_upstream_dns | to_json }}"
+    compare: "{{ pihole_upstream_dns | join(',') }}"
+  - key: dns.interface
+    value: "{{ pihole_interface }}"
+    compare: "{{ pihole_interface }}"
+
+# --- Install ---
+pihole_core_repo: https://github.com/pi-hole/pi-hole.git
+pihole_core_dir: /etc/.pihole
+pihole_pinned_branch: pihole-pinned
+pihole_config_dir: /etc/pihole
+pihole_install_timeout: 900
+
+# --- Smoke check (tasks/verify.yml) ---
+pihole_smoke_domain: example.org
+pihole_smoke_url: http://127.0.0.1/admin/
+pihole_smoke_retries: 10
+pihole_smoke_delay: 3
