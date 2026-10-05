@@ -7,6 +7,11 @@
 # is derived in preflight.yml. Set in group_vars/check_runner.
 check_runner_repos: []
 
+# Instances share one network namespace, and the app repos' e2e suites all
+# default to the same preview port, so concurrent jobs collide. Each instance
+# gets its own PORT from this base, in list order.
+check_runner_port_base: 4173
+
 # Repository runners on this account only; the registration token is minted on
 # the controller per run and never stored. Every instance wears the same label.
 check_runner_labels: [homelab-check]

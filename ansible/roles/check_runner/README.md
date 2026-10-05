@@ -40,3 +40,4 @@ Via `playbooks/01_BASE_CONFIGURATION/check_runner.yml`, by hand only. See
 | `check_runner_tflint_version` / `_sha256` | `0.64.0` / pinned | tflint release |
 | `check_runner_python_requirements` | from `ci/requirements.txt` | pip requirements for the venv |
 | `check_runner_browser_packages` | Debian 13 Chromium libraries | apt packages so jobs never need `--with-deps` |
+| `check_runner_port_base` | `4173` | First `PORT` handed to jobs; instance N gets base+N so concurrent e2e runs don't collide |

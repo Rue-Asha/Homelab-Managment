@@ -5,6 +5,7 @@
     check_runner_instances: >-
       {%- set out = [] -%}
       {%- for entry in check_runner_repos -%}
+      {%- set index = loop.index0 -%}
       {%- set repo_name = entry['repo'] | basename -%}
       {%- set slug = repo_name | lower -%}
       {%- set user = 'check-runner-' ~ slug -%}
@@ -16,6 +17,7 @@
             'dir': '/home/' ~ user ~ '/actions-runner',
             'unit': user,
             'name': inventory_hostname ~ '-' ~ slug,
+            'port': check_runner_port_base | int + index,
             'hook': check_runner_hook_dir ~ '/' ~ slug ~ '-job-started.sh',
             'workspace': '/home/' ~ user ~ '/actions-runner/_work/' ~ repo_name ~ '/' ~ repo_name
           }) -%}
