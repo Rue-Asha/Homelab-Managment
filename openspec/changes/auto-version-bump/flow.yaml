@@ -5,3 +5,5 @@ gate1: 2026-10-05
 learnings:
   - "Checking branch protection → query rulesets too, not only branches/<b>/protection (404 there does not mean unprotected; scope.md R4/S7 were wrong until the planner found the ruleset)"
   - "New workflow using github.job_workflow_sha → actionlint (even the version CI pins) rejects it; scope an ignore in .github/actionlint.yaml to that workflow"
+  - "Agents in the main checkout while Rue switches branches → run flow work in its own worktree from the start, never in the primary checkout (a fixer's commit landed on Rue's new branch and proof went red on Rue's uncommitted files)"
+  - "Agent shells have no TMPDIR → export it to the scratchpad in every proof brief (verifier's first proof wrote to /p.txt)"
