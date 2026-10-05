@@ -27,7 +27,7 @@ Shared by the role unit, the playbook/inventory unit and the docs unit (these na
 
 - Inventory: group `pihole`, host `pihole01` (192.168.0.225, vmid 225), generated into `00-terraform.yml` by Terraform.
 - Playbook: `ansible/playbooks/03_SERVICES/pihole.yml`, `hosts: pihole`, `become: true`, roles `common` then `pihole`. Nothing targets `github_runner`.
-- Role `ansible/roles/pihole`: `tasks/main.yml` imports `prepare`, `packages`, `install`, `configure`, `service`, `verify` in that order.
+- Role `ansible/roles/pihole`: `tasks/main.yml` imports `prepare`, `packages`, `install`, `service`, `configure`, `verify` in that order.
 - Role variables (defaults in `defaults/main.yml`, all prefixed `pihole_`):
   - `pihole_version` — pinned `pi-hole/pi-hole` core tag incl. the `v` (see Spike result: web and FTL follow latest at install time); set in `host_vars/pihole01/vars.yml`, no default that silently floats.
   - `pihole_interface` (`eth0`), `pihole_upstream_dns` (list: `8.8.8.8`, `1.1.1.1`).

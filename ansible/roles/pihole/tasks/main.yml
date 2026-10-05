@@ -9,11 +9,11 @@
 - name: Install the pinned Pi-hole core and run the installer
   ansible.builtin.import_tasks: install.yml
 
-- name: Converge Pi-hole settings and the admin password
-  ansible.builtin.import_tasks: configure.yml
-
 - name: Manage the pihole-FTL service
   ansible.builtin.import_tasks: service.yml
+
+- name: Converge Pi-hole settings and the admin password
+  ansible.builtin.import_tasks: configure.yml
 
 - name: Smoke-check DNS and the web UI
   ansible.builtin.import_tasks: verify.yml

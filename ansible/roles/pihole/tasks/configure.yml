@@ -2,11 +2,6 @@
 ---
 # Not a managed template: FTL rewrites pihole.toml, so settings are converged
 # through pihole-FTL --config and compared with --config -q.
-- name: Check that pihole-FTL is installed
-  ansible.builtin.stat:
-    path: /usr/bin/pihole-FTL
-  register: pihole_ftl_binary
-
 - name: Converge Pi-hole settings
   when: pihole_ftl_binary['stat']['exists'] | bool
   block:
