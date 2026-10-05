@@ -1,4 +1,4 @@
-verified-at: a495f13
+verified-at: 1953e70
 
 ## Layer 1 — `scripts/proof.sh --all` (green)
 
@@ -12,6 +12,7 @@ proof: 12 sensor(s), 0 failed
 ```
 
 Also PASS: terraform fmt, terraform validate, tflint, checkov, ansible-lint, syntax-check bootstrap.yml and deploy_runner.yml.
+Re-verified after 1953e70 (login probe skipped in --check when FTL would be started; `pihole_ftl_service` registered in service.yml). Layer 2 rows unchanged: 29 scenarios, same evidence.
 Fixtures (`bash scripts/tests/deploy-targets.sh`) print `ok: Scenario: <title>` for all five pihole scenarios.
 `openspec validate add-pihole --strict`: Change 'add-pihole' is valid.
 
@@ -63,6 +64,7 @@ Gaps: none.
 - Rue: deliberately bad pin fails the play at the `git ls-remote` tag check, before the installer runs, and leaves the installed version (real host).
 - Rue: DNS keeps answering during the re-run, no FTL restart in the second run.
 - Rue: on a host with pihole-FTL stopped, a real run starts FTL (service.yml now runs before configure.yml) and the login probe then passes.
+- Rue: on the installed `pihole01` with pihole-FTL stopped, `pihole.yml --check` reports "would start" for the service and does not fail (no 30 s login-probe retry).
 - Rue: `http://192.168.0.225/admin` accepts the vault password (needs vault file).
 - Rue: unchanged password not re-applied (second run `changed=0`).
 - Rue: `--check` against `pihole01` without the vault file fails the play, and the failing message names `pihole_password` and `host_vars/pihole01/vault.yml` (not "censored").
@@ -74,7 +76,7 @@ Gaps: none.
 
 ## Diffstat (main...flow/add-pihole)
 
-27 files changed, 1078 insertions(+), 12 deletions(-) (excluding this file)
+27 files changed, 1084 insertions(+), 12 deletions(-) (excluding this file)
 
 ## Screenshots
 
