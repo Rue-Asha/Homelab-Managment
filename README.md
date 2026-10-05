@@ -48,12 +48,12 @@ ansible/                      # configuration layer — everything inside a gues
   inventory/                  #   group_vars/host_vars (no vars in `hosts` itself)
   playbooks/
     00_OPERATIONAL/           #   ad-hoc / day-2 ops
-    02_BASE_CONFIGURATION/    #   users, SSH, hardening
-    03_SERVICES/              #   application install & config
+    01_BASE_CONFIGURATION/    #   users, SSH, hardening
+    02_SERVICES/              #   application install & config
   roles/                      #   standard Galaxy role structure
 .ansible-lint                 # at the root so lint and the pre-commit hook find it
 scripts/proof.sh              # every check; run by the git pre-commit hook and CI
-scripts/deploy-targets.sh     # which 03_SERVICES playbooks a change deploys
+scripts/deploy-targets.sh     # which 02_SERVICES playbooks a change deploys
 .githooks/pre-commit          # commit gate, enabled by .envrc
 ci/requirements.txt           # pinned ansible-core, ansible-lint, checkov for CI
 docs/                         # architecture notes and implementation plans
@@ -61,7 +61,7 @@ openspec/                     # OpenSpec change proposals for larger pieces of w
 ```
 
 The `NN_` prefix on playbook categories encodes the order a fresh host moves
-through them. `01_PROVISIONING` is gone — that step is now `terraform apply`.
+through them. Provisioning is not a category: that step is `terraform apply`.
 
 Run everything **from the repo root**: `.envrc` exports `ANSIBLE_CONFIG`, so
 Ansible finds its config in `ansible/` without changing directory.
@@ -69,13 +69,13 @@ Ansible finds its config in `ansible/` without changing directory.
 ```sh
 direnv allow                                          # once
 terraform -chdir=terraform/environments/homelab apply
-ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l life-manager01  # fresh guests only
-ansible-playbook ansible/playbooks/03_SERVICES/life-manager.yml -l life-manager01
-ansible-playbook ansible/playbooks/03_SERVICES/rues-arcade.yml -l rues-arcade01
+ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml -l life-manager01  # fresh guests only
+ansible-playbook ansible/playbooks/02_SERVICES/life-manager.yml -l life-manager01
+ansible-playbook ansible/playbooks/02_SERVICES/rues-arcade.yml -l rues-arcade01
 ```
 
 Normally you don't run that last line yourself: **merging to `main` deploys.**
-`.github/workflows/deploy.yml` runs the affected `03_SERVICES` playbooks on the
+`.github/workflows/deploy.yml` runs the affected `02_SERVICES` playbooks on the
 self-hosted runner `runner01`, and a service that fails its smoke check rolls
 back to its previous release. Setup, key rotation and the manual fallback:
 `docs/deploy-runner.md`.

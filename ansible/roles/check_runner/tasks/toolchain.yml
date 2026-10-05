@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install runner packages
+  ansible.builtin.apt:
+    name: "{{ check_runner_packages + check_runner_browser_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Read the installed terraform version
+  ansible.builtin.command: /usr/local/bin/terraform version
+  register: check_runner_terraform_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Download terraform and verify its checksum
+  ansible.builtin.get_url:
+    url: "{{ check_runner_terraform_url }}"
+    dest: "/usr/local/src/terraform_{{ check_runner_terraform_version }}_linux_amd64.zip"
+    checksum: "sha256:{{ check_runner_terraform_sha256 }}"
+    mode: "0644"
+  register: check_runner_terraform_download
+
+# unarchive has no way to compare against the installed binary, so the version
+# check above decides. In check mode a fresh download never lands, so there is
+# nothing to unpack.
+- name: Unpack terraform
+  ansible.builtin.unarchive:
+    src: "/usr/local/src/terraform_{{ check_runner_terraform_version }}_linux_amd64.zip"
+    dest: /usr/local/bin
+    include: [terraform]
+    remote_src: true
+    mode: "0755"
+  when:
+    - "('Terraform v' ~ check_runner_terraform_version) not in check_runner_terraform_installed['stdout']"
+    - not (ansible_check_mode and check_runner_terraform_download['changed'])
+
+- name: Read the installed tflint version
+  ansible.builtin.command: /usr/local/bin/tflint --version
+  register: check_runner_tflint_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Download tflint and verify its checksum
+  ansible.builtin.get_url:
+    url: "{{ check_runner_tflint_url }}"
+    dest: "/usr/local/src/tflint_{{ check_runner_tflint_version }}_linux_amd64.zip"
+    checksum: "sha256:{{ check_runner_tflint_sha256 }}"
+    mode: "0644"
+  register: check_runner_tflint_download
+
+- name: Unpack tflint
+  ansible.builtin.unarchive:
+    src: "/usr/local/src/tflint_{{ check_runner_tflint_version }}_linux_amd64.zip"
+    dest: /usr/local/bin
+    include: [tflint]
+    remote_src: true
+    mode: "0755"
+  when:
+    - "('TFLint version ' ~ check_runner_tflint_version) not in check_runner_tflint_installed['stdout']"
+    - not (ansible_check_mode and check_runner_tflint_download['changed'])
+
+# Installed by root into a root-owned venv: a job can run these tools but not
+# replace them.
+- name: Install the pinned Python tools
+  ansible.builtin.pip:
+    name: "{{ check_runner_python_requirements }}"
+    virtualenv: "{{ check_runner_venv }}"
+    virtualenv_command: python3 -m venv

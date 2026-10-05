@@ -41,9 +41,9 @@ desired-state model. Three consequences, all visible in the code it removed:
 | `group_vars/{lxc_container_proxmox,vm_proxmox}.yml` | root-module variables |
 | `proxmox_lxc_bootstrap` — SSH key via `pct exec` | homelab LXC template (`scripts/build-lxc-template.sh`), converged by `guest_bootstrap` |
 | `proxmox_lxc_bootstrap` — root password | **deleted**, see Secrets |
-| `proxmox_lxc_bootstrap` — `ansible` user + sudo | homelab LXC template; `ansible/roles/guest_bootstrap` converges the keys via `02_BASE_CONFIGURATION/bootstrap.yml` |
+| `proxmox_lxc_bootstrap` — `ansible` user + sudo | homelab LXC template; `ansible/roles/guest_bootstrap` converges the keys via `01_BASE_CONFIGURATION/bootstrap.yml` |
 | `ansible/roles/proxmox_lxc_tun` | **unchanged**, still Ansible — see below |
-| `ansible/roles/common`, all of `03_SERVICES` | **unchanged** |
+| `ansible/roles/common`, all of `02_SERVICES` | **unchanged** |
 
 The app-per-LXC, two-repo, build-on-host service model is untouched. Nothing
 about how services are deployed changed.
@@ -57,15 +57,15 @@ A merge to `main` runs this in `deploy.yml` on `runner01`:
 2. `apply` — waits for approval in the `infrastructure` environment, applies the
    saved plan.
 3. `deploy` — renders the inventory from state, then runs the affected
-   `03_SERVICES` playbooks.
+   `02_SERVICES` playbooks.
 
 By hand, from the workstation (Terraform only runs on the runner):
 
 ```sh
 scripts/fetch-inventory.sh                                # inventory from runner state
-ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l <host>
+ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml -l <host>
                                                           # converge guest keys + baseline
-ansible-playbook ansible/playbooks/03_SERVICES/<service>.yml -l <host>
+ansible-playbook ansible/playbooks/02_SERVICES/<service>.yml -l <host>
                                                           # the service
 ```
 
@@ -97,8 +97,8 @@ until the role runs again. Order after any recreate:
 
 ```sh
 terraform apply
-ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l tailscale01
-ansible-playbook ansible/playbooks/03_SERVICES/tailscale.yml -l tailscale01   # includes proxmox_lxc_tun
+ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml -l tailscale01
+ansible-playbook ansible/playbooks/02_SERVICES/tailscale.yml -l tailscale01   # includes proxmox_lxc_tun
 ```
 
 ## How Ansible learns about hosts

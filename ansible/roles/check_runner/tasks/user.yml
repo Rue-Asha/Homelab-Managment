@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the instance users exist
+  ansible.builtin.user:
+    name: "{{ item['user'] }}"
+    home: "{{ item['home'] }}"
+    shell: /bin/bash
+    create_home: true
+    state: present
+  loop: "{{ check_runner_instances }}"
+  loop_control:
+    label: "{{ item['user'] }}"
+
+# Another instance's user must not be able to read this one's runner or cache.
+- name: Keep each instance home private
+  ansible.builtin.file:
+    path: "{{ item['home'] }}"
+    state: directory
+    owner: "{{ item['user'] }}"
+    group: "{{ item['user'] }}"
+    mode: "0700"
+  loop: "{{ check_runner_instances }}"
+  loop_control:
+    label: "{{ item['user'] }}"
+
+- name: Ensure the instance users have no sudoers entry
+  ansible.builtin.file:
+    path: "/etc/sudoers.d/{{ item['user'] }}"
+    state: absent
+  loop: "{{ check_runner_instances }}"
+  loop_control:
+    label: "{{ item['user'] }}"

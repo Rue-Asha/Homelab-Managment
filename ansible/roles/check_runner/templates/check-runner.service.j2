@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+[Unit]
+Description=GitHub Actions runner ({{ item['name'] }})
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ item['user'] }}
+Group={{ item['user'] }}
+WorkingDirectory={{ item['dir'] }}
+# runsvc.sh, not run.sh: only runsvc.sh reads .path, which puts the venv's
+# tools on the job PATH.
+ExecStart={{ item['dir'] }}/bin/runsvc.sh
+# The listener forwards SIGTERM to a running job and waits for it.
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=5min
+Restart=always
+RestartSec=10
+
+# Jobs run as this user and must never gain privileges, even via setuid.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

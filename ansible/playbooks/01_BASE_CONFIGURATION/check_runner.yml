@@ -1,0 +1,18 @@
+---
+# The self-hosted GitHub Actions runner the CI checks run on.
+#
+# Human-run only. It lives outside 02_SERVICES so scripts/deploy-targets.sh
+# never selects it. Holds no credentials and cannot reach guests or the node.
+#
+#   ansible-playbook playbooks/01_BASE_CONFIGURATION/check_runner.yml
+#
+# Prerequisite: `gh auth status` on the workstation, with admin on every repo in
+# check_runner_repos. Registration tokens are minted there and never stored.
+
+- name: Configure the check runner
+  hosts: check_runner
+  become: true
+  roles:
+    - common
+    - egress_firewall
+    - check_runner

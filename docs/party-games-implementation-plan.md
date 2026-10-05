@@ -15,7 +15,7 @@ Each implementable feature has its own `feat/*` branch, cut from `main`.
   task-split commits); merge deliberately.
 - [ ] **`partygames01` provisioned + base-configured** — LXC exists
   (`proxmox_lxc` / `01_PROVISIONING/lxc_proxmox.yml`) and `common` has run on it.
-  Note: there is no `02_BASE_CONFIGURATION` playbook yet (only a `.gitkeep`).
+  Note: there is no `01_BASE_CONFIGURATION` playbook yet (only a `.gitkeep`).
 
 ## 1. `nodejs` role — branch `feat/nodejs-role`
 
@@ -48,9 +48,9 @@ Each implementable feature has its own `feat/*` branch, cut from `main`.
   `nginx_service_description`) + partygames vars (`partygames_repo_url`,
   `partygames_version`, paths)
 - [ ] Remove the orphaned `inventory/host_vars/nginx01/`
-- [ ] `playbooks/03_SERVICES/partygames.yml` — `hosts: partygames`,
+- [ ] `playbooks/02_SERVICES/partygames.yml` — `hosts: partygames`,
   `roles: [nodejs, partygames, nginx]`
-- [ ] Retire/repurpose the orphaned `playbooks/03_SERVICES/nginx.yml`
+- [ ] Retire/repurpose the orphaned `playbooks/02_SERVICES/nginx.yml`
 - [ ] Vault — deploy key + any env secrets (append as the last vault entry)
 
 ## 4. Validation

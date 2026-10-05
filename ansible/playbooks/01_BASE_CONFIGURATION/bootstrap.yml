@@ -7,7 +7,7 @@
 # also how a rotated key reaches existing guests and how the deploy key leaves
 # runner01) and applies `common`. Safe to re-run.
 #
-#   ansible-playbook ansible/playbooks/02_BASE_CONFIGURATION/bootstrap.yml -l <host>
+#   ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml -l <host>
 #
 # Re-keying guests without locking yourself out: authorise the old key for one
 # run, then switch ansible.cfg to the new key and run again without it.

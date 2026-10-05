@@ -1,0 +1,21 @@
+---
+# The check runner (check01). Applied by 01_BASE_CONFIGURATION/check_runner.yml
+# only; no 02_SERVICES playbook targets this group, so a deploy never touches it.
+
+# Explicit empties: this host runs PR code, so it opens no connection to a
+# guest or the Proxmox node. Only DNS and TCP 80/443 to non-private addresses
+# are left (egress_firewall_public_tcp_ports).
+egress_firewall_ssh_targets: []
+egress_firewall_api_targets: []
+egress_firewall_blocked_targets: []
+
+# The deploy key must not open ansible@check01: its sudo would let a job drop
+# the egress firewall.
+guest_bootstrap_authorize_deploy_key: false
+
+# One runner instance per repository (see roles/check_runner). To add a repo,
+# append it and re-run 01_BASE_CONFIGURATION/check_runner.yml.
+check_runner_repos:
+  - repo: Rue-Asha/Homelab-Managment
+  - repo: Rue-Asha/Life-Manager
+  - repo: Rue-Asha/Rues-Arcade

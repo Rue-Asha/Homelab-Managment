@@ -17,7 +17,7 @@ cannot share a host with another role that writes nftables rules. Rules only
 hold while nothing unprivileged can change them: give it to hosts whose
 workloads run without root.
 
-Used by `playbooks/02_BASE_CONFIGURATION/deploy_runner.yml` to keep the deploy
+Used by `playbooks/01_BASE_CONFIGURATION/deploy_runner.yml` to keep the deploy
 runner off the Proxmox node and the rest of the LAN.
 
 ## Variables

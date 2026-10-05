@@ -1,7 +1,7 @@
 common
 ======
 
-Base configuration applied to **every** managed host as the `02_BASE_CONFIGURATION`
+Base configuration applied to **every** managed host as the `01_BASE_CONFIGURATION`
 layer. Two concerns:
 
 1. **Base packages** — host-level tooling every box needs, including the

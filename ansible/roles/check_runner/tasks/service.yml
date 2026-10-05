@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install the systemd unit for each runner
+  ansible.builtin.template:
+    src: check-runner.service.j2
+    dest: "/etc/systemd/system/{{ item['unit'] }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ check_runner_instances }}"
+  loop_control:
+    label: "{{ item['unit'] }}"
+  register: check_runner_unit_result
+
+# A handler cannot name the instance that changed, and restarting all of them
+# would kill running jobs in repos nothing happened to.
+- name: Work out which instances changed
+  ansible.builtin.set_fact:
+    check_runner_changed_slugs: >-
+      {{ (check_runner_unpacked['results'] | default([]) + check_runner_env_result['results']
+          + check_runner_path_result['results'] + check_runner_unit_result['results'])
+         | selectattr('changed') | map(attribute='item.slug') | unique | list }}
+
+- name: Ensure each registered runner is enabled and running
+  ansible.builtin.systemd:
+    name: "{{ item['unit'] }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop: "{{ check_runner_instances | selectattr('slug', 'in', check_runner_registered_slugs) | list }}"
+  loop_control:
+    label: "{{ item['unit'] }}"
+
+- name: Restart the runners whose configuration changed
+  ansible.builtin.systemd:
+    name: "{{ item['unit'] }}"
+    state: restarted
+  loop: >-
+    {{ check_runner_instances | selectattr('slug', 'in', check_runner_registered_slugs)
+       | selectattr('slug', 'in', check_runner_changed_slugs) | list }}
+  loop_control:
+    label: "{{ item['unit'] }}"
+
+# Dropping a repo only stops its runner. Deleting the GitHub registration and
+# the user is a deliberate step (docs/check-runner.md).
+- name: Find units of instances no longer listed
+  ansible.builtin.find:
+    paths: /etc/systemd/system
+    patterns: check-runner-*.service
+  register: check_runner_unit_files
+
+- name: Stop and disable runners no longer listed
+  ansible.builtin.systemd:
+    name: "{{ item | basename }}"
+    enabled: false
+    state: stopped
+  loop: >-
+    {{ check_runner_unit_files['files'] | map(attribute='path') | list
+       | difference(check_runner_instances | map(attribute='unit') | map('regex_replace', '^(.*)$', '/etc/systemd/system/\1.service') | list) }}

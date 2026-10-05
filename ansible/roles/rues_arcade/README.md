@@ -11,7 +11,7 @@ built on the host.
 
 This role owns the *service* concerns only. The Node runtime (`nodejs`), the
 reverse proxy (`nginx`) and base host config (`common`) are separate roles,
-wired together by `playbooks/03_SERVICES/rues-arcade.yml`.
+wired together by `playbooks/02_SERVICES/rues-arcade.yml`.
 
 Requirements
 ------------

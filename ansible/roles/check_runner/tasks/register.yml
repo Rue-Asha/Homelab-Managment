@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Check which runners are registered
+  ansible.builtin.stat:
+    path: "{{ item['dir'] }}/.runner"
+  loop: "{{ check_runner_instances }}"
+  loop_control:
+    label: "{{ item['user'] }}"
+  register: check_runner_registration
+
+- name: List the instances that still need registering
+  ansible.builtin.set_fact:
+    check_runner_unregistered: >-
+      {{ check_runner_registration['results']
+         | rejectattr('stat.exists') | map(attribute='item') | list }}
+
+# Minted on the controller with the operator's gh login, so the host never
+# holds one. Only runs for unregistered instances, which keeps a converged
+# run free of API calls that change anything.
+- name: Mint a registration token for each unregistered instance
+  ansible.builtin.command:
+    argv:
+      - gh
+      - api
+      - -X
+      - POST
+      - "repos/{{ item['repo'] }}/actions/runners/registration-token"
+      - --jq
+      - .token
+  loop: "{{ check_runner_unregistered }}"
+  loop_control:
+    label: "{{ item['repo'] }}"
+  delegate_to: localhost
+  become: false
+  no_log: true
+  changed_when: false
+  when: not ansible_check_mode
+  register: check_runner_tokens
+
+# --disableupdate keeps the runner on the pinned, checksummed release.
+- name: Register each runner with its repository
+  ansible.builtin.command:
+    argv:
+      - "{{ item['item']['dir'] }}/config.sh"
+      - --unattended
+      - --disableupdate
+      - --url
+      - "https://github.com/{{ item['item']['repo'] }}"
+      - --token
+      - "{{ item['stdout'] }}"
+      - --name
+      - "{{ item['item']['name'] }}"
+      - --labels
+      - "{{ check_runner_labels | join(',') }}"
+      - --work
+      - _work
+    chdir: "{{ item['item']['dir'] }}"
+  become: true
+  become_user: "{{ item['item']['user'] }}"
+  loop: "{{ check_runner_tokens['results'] | default([]) | rejectattr('skipped', 'defined') | list }}"
+  loop_control:
+    label: "{{ item['item']['repo'] }}"
+  no_log: true
+  changed_when: true
+
+- name: Record which runners are registered
+  ansible.builtin.stat:
+    path: "{{ item['dir'] }}/.runner"
+  loop: "{{ check_runner_instances }}"
+  loop_control:
+    label: "{{ item['user'] }}"
+  register: check_runner_registered_stat
+
+- name: Remember which runners are registered
+  ansible.builtin.set_fact:
+    check_runner_registered_slugs: >-
+      {{ check_runner_registered_stat['results']
+         | selectattr('stat.exists') | map(attribute='item.slug') | list }}

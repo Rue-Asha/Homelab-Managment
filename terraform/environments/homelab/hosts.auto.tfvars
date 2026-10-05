@@ -23,7 +23,7 @@ lxc_hosts = {
   }
 
   # Self-hosted GitHub Actions runner for the deploy workflow. Configured by
-  # 02_BASE_CONFIGURATION/deploy_runner.yml, never by a deploy. Debian 13
+  # 01_BASE_CONFIGURATION/deploy_runner.yml, never by a deploy. Debian 13
   # because the ansible-core pinned in ci/requirements.txt needs Python 3.12+.
   "runner01" = {
     vmid    = 224
@@ -36,8 +36,22 @@ lxc_hosts = {
     disk_gb = 12
   }
 
+  # Shared check host, one runner per repo in `check_runner_repos`. Holds no
+  # credentials and reaches nothing but the internet. Configured by
+  # 01_BASE_CONFIGURATION/check_runner.yml, never by a deploy.
+  "check01" = {
+    vmid    = 226
+    ipv4    = "192.168.0.226/24"
+    groups  = ["check_runner"]
+    tags    = ["ci", "terraform"]
+    cores   = 4
+    memory  = 16384
+    swap    = 512
+    disk_gb = 32
+  }
+
   # Retired in efa9f49 and brought back with the same identity, so the router
-  # needs no new address. Configured by 03_SERVICES/pihole.yml.
+  # needs no new address. Configured by 02_SERVICES/pihole.yml.
   "pihole01" = {
     vmid    = 225
     ipv4    = "192.168.0.225/24"
@@ -50,7 +64,7 @@ lxc_hosts = {
   }
 
   # Light SSR + node:sqlite, no game servers or long-lived connections; the
-  # games run client-side. Configured by 03_SERVICES/rues-arcade.yml.
+  # games run client-side. Configured by 02_SERVICES/rues-arcade.yml.
   "rues-arcade01" = {
     vmid    = 226
     ipv4    = "192.168.0.226/24"

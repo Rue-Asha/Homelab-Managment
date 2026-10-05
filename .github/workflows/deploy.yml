@@ -2,7 +2,7 @@
 # runner01, in order: `plan` (only when terraform/ changed), `apply` (waits for
 # approval in the `infrastructure` environment, then applies exactly that plan),
 # and `deploy`, which maps the pushed commits, plus the guests `apply` created,
-# to the 03_SERVICES playbooks they affect (scripts/deploy-targets.sh) and runs
+# to the 02_SERVICES playbooks they affect (scripts/deploy-targets.sh) and runs
 # each in full. One workflow and one concurrency group, so an infrastructure
 # change and a service change in the same push never overlap.
 #
@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       playbook:
-        description: 03_SERVICES playbook to run regardless of the diff
+        description: 02_SERVICES playbook to run regardless of the diff
         type: choice
         required: true
         default: all
@@ -161,7 +161,7 @@ jobs:
         run: |
           mapfile -t targets < "$RUNNER_TEMP/targets"
           if [ "${#targets[@]}" -eq 0 ]; then
-            echo "Nothing to deploy: no 03_SERVICES playbook is affected by this change."
+            echo "Nothing to deploy: no 02_SERVICES playbook is affected by this change."
             exit 0
           fi
           for i in "${!targets[@]}"; do

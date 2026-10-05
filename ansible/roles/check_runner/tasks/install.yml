@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Download the runner release and verify its checksum
+  ansible.builtin.get_url:
+    url: "{{ check_runner_url }}"
+    dest: "{{ check_runner_archive_dir }}/{{ check_runner_archive }}"
+    checksum: "sha256:{{ check_runner_sha256 }}"
+    owner: root
+    group: root
+    mode: "0644"
+  register: check_runner_download
+
+- name: Ensure each runner directory exists
+  ansible.builtin.file:
+    path: "{{ item['dir'] }}"
+    state: directory
+    owner: "{{ item['user'] }}"
+    group: "{{ item['user'] }}"
+    mode: "0750"
+  loop: "{{ check_runner_instances }}"
+  loop_control:
+    label: "{{ item['user'] }}"
+
+- name: Unpack the runner release into each instance
+  ansible.builtin.unarchive:
+    src: "{{ check_runner_archive_dir }}/{{ check_runner_archive }}"
+    dest: "{{ item['dir'] }}"
+    mode: "0750"
+    remote_src: true
+  become: true
+  become_user: "{{ item['user'] }}"
+  loop: "{{ check_runner_instances }}"
+  loop_control:
+    label: "{{ item['user'] }}"
+  when: not (ansible_check_mode and check_runner_download['changed'])
+  register: check_runner_unpacked
+
+# The vendor script knows the runtime libraries for each distro release; they
+# are system-wide, so one instance's copy of it is enough.
+- name: Install the runner's runtime dependencies
+  ansible.builtin.command: "{{ check_runner_instances[0]['dir'] }}/bin/installdependencies.sh"
+  register: check_runner_dependencies
+  changed_when: check_runner_dependencies['stdout'] is search('[1-9][0-9]* newly installed')
