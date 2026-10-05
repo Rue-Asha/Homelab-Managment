@@ -104,6 +104,10 @@ Three rounds (fresh-context reviewer each time, static read only). Nothing in th
 
 ### Round 4 — fixed in a495f13, verified at 11ea967
 - [correctness, round 3] Login probe ran before FTL was started. Fixed: `service.yml` now runs before `configure.yml` (the `pihole_ftl_binary` stat moved into `service.yml`; design.md import order updated). Reviewer read the new order for a fresh install, an installed host and a stopped service: sound on a real run. Not executed against a host.
-- Open, not fixed: [correctness] `configure.yml:48-60` login probe runs live under `--check`; on an installed host with `pihole-FTL` stopped, `pihole.yml --check` retries about 30 s and fails instead of reporting "would start the service". A fresh host (no binary) is unaffected. Fix: skip the probe in check mode when the service is not active.
+- [correctness] (fixed in 1953e70, verified at 1953e70; fresh-context reviewer: no findings) `configure.yml` login probe runs live under `--check`; on an installed host with `pihole-FTL` stopped, `pihole.yml --check` retries about 30 s and fails instead of reporting "would start the service". A fresh host (no binary) is unaffected. Fix: skip the probe in check mode when the service is not active.
 - Open, unverified: password set now runs before the handler flush in `verify.yml`; if only the password changed, FTL restarts only if its config watcher reloads `webserver.api.pwhash` live. First real run shows it.
 - Minor: fixture "A terraform-only diff deploys nothing" appends to `terraform/main.tf`, not `hosts.auto.tfvars`; it would still pass if the script treated tfvars specially.
+
+### Round 5 — fixed in 1953e70, verified at 1953e70
+- The `--check` probe finding above: `pihole_ftl_service` is registered in `service.yml`; the login probe and `setpassword` sit in a block skipped when `ansible_check_mode and pihole_ftl_service['changed']`. Real runs unchanged. Not run against a host.
+- Observations, no scenario violated: the skip also fires when the service is running but would be enabled; `--check` never shows password drift (predates the fix).
