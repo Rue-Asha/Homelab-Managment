@@ -29,8 +29,8 @@
 
 ## 5. Live rollout (separate PR and sitting, needs Rue)
 
-- [ ] 5.1 Merge steps 1-4; approve the `infrastructure` apply that creates `check01`
-- [ ] 5.2 Run bootstrap against `check01`, then the check-runner playbook with a registration token (manual)
-- [ ] 5.3 Verify the boundary scenarios from the check-runner spec by hand
-- [ ] 5.4 Confirm fork-PR approval setting for all outside contributors
-- [ ] 5.5 PR flipping `ci.yml` `proof` to `[self-hosted, homelab-check]`, dropping per-job tool setup; it must go green on `check01` before merge
+- [x] 5.1 Merge steps 1-4; approve the `infrastructure` apply that creates `check01`
+- [x] 5.2 Run bootstrap against `check01`, then the check-runner playbook with a registration token (manual)
+- [x] 5.3 Verify the boundary scenarios from the check-runner spec by hand
+- [x] 5.4 Confirm fork-PR approval setting for all outside contributors
+- [x] 5.5 PR flipping `ci.yml` `proof` to `[self-hosted, homelab-check]`, dropping per-job tool setup; it must go green on `check01` before merge

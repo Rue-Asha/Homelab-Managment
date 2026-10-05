@@ -1,6 +1,9 @@
 # The merge verdict for main. Runs the same scripts/proof.sh the git hook runs,
-# in --all mode, from a clean checkout; this file installs tools and owns no
-# check list of its own.
+# in --all mode, from a clean checkout; this file owns no check list of its own.
+#
+# Runs on check01, the isolated self-hosted runner (docs/check-runner.md); its
+# tools are pinned by ansible/roles/check_runner, not installed here. If check01
+# is down, see "When `check01` is down" in that doc.
 #
 # Nothing here reaches the Proxmox node or a guest, and no secret is
 # configured: Terraform initialises without a backend and Ansible only parses
@@ -20,31 +23,12 @@ permissions:
 jobs:
   proof:
     name: proof
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, homelab-check]
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.13"
-
-      - name: Install ansible-core, ansible-lint and checkov
-        run: pip install -r ci/requirements.txt
-
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        with:
-          terraform_version: 1.15.9
-          terraform_wrapper: false
-
-      - name: Set up tflint
-        uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
-        with:
-          tflint_version: v0.64.0
 
       - name: Install Ansible collections
         run: ansible-galaxy collection install -r ansible/collections/requirements.yml
