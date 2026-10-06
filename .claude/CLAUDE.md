@@ -193,6 +193,7 @@ Terraform (anything under `terraform/`):
 - Before changing pihole-dns, read openspec/specs/pihole-dns/spec.md.
 - Before changing continuous-deployment, read openspec/specs/continuous-deployment/spec.md.
 - Before changing release-bump, read openspec/specs/release-bump/spec.md.
+- Before changing check-runner, read openspec/specs/check-runner/spec.md.
 
 ---
 

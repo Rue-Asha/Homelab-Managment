@@ -41,14 +41,14 @@
 - [x] 4.4 Delete the offline legacy `check01` runner from `Homelab-Managment` (`gh api -X DELETE`) ⚠ irreversible
 - [x] 4.5 Re-run the playbook: no token minted, no changes
 - [x] 4.6 Verify the manual spec scenarios: deploy label never lands, `sudo -n true` fails, cross-instance `ls` fails, no token on disk, egress unchanged
-- [ ] 4.7 Open a no-op PR on `Homelab-Managment`; `proof` goes green on `check01-homelab-managment`
+- [x] 4.7 Open a no-op PR on `Homelab-Managment`; `proof` goes green on `check01-homelab-managment`
 
 ## 5. App repos (separate PRs in Life-Manager and Rues-Arcade)
 
 > unit: depends=4 · files=(other repos) .github/workflows/gate.yml, ci.yml, release.yml
 
-- [ ] 5.1 Read each repo's ruleset to find the current required check name (Open Question 2)
-- [ ] 5.2 `Life-Manager`: move the `ci` job body into `gate.yml` (`workflow_call`, input `runner`, `runs-on: ${{ fromJSON(inputs.runner) }}`) and drop `--with-deps` from its Playwright install; `ci.yml` calls the gate with `["self-hosted","homelab-check"]`; `release.yml` calls it with `["ubuntu-24.04"]` (D10)
-- [ ] 5.3 Same for `Rues-Arcade`
-- [ ] 5.4 Each PR goes green on `check01`; update the ruleset's required check name in the same sitting ⚠ irreversible (branch protection change)
-- [ ] 5.5 Push a release tag in one app repo and confirm the release jobs ran on `ubuntu-24.04` ("Scenario: A release tag is pushed") ⚠ irreversible (publishes a release)
+- [x] 5.1 Read each repo's ruleset to find the current required check name (Open Question 2)
+- [x] 5.2 `Life-Manager`: move the `ci` job body into `gate.yml` (`workflow_call`, input `runner`, `runs-on: ${{ fromJSON(inputs.runner) }}`) and drop `--with-deps` from its Playwright install; `ci.yml` calls the gate with `["self-hosted","homelab-check"]`; `release.yml` calls it with `["ubuntu-24.04"]` (D10)
+- [x] 5.3 Same for `Rues-Arcade`
+- [x] 5.4 Each PR goes green on `check01`; update the ruleset's required check name in the same sitting ⚠ irreversible (branch protection change)
+- [x] 5.5 Push a release tag in one app repo and confirm the release jobs ran on `ubuntu-24.04` ("Scenario: A release tag is pushed") ⚠ irreversible (publishes a release)
