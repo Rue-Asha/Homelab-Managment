@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Fails if two hosts in hosts.auto.tfvars share a vmid or an address. Terraform
-cannot catch this at validate time: for_each keys are hostnames, so a clash
-only surfaces as a failed apply (or two guests answering on one IP).
+"""Fails if two hosts in hosts.auto.tfvars share an address, or a vmid when
+both declare one (vmid is optional; Proxmox assigns the rest). Terraform cannot
+catch this at validate time: for_each keys are hostnames, so a clash only
+surfaces as a failed apply (or two guests answering on one IP).
 
     scripts/checks/unique-hosts.py [hosts.auto.tfvars]
 """

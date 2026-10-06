@@ -5,7 +5,7 @@ TBD - created by archiving change add-pihole. Update Purpose after archive.
 ## Requirements
 ### Requirement: pihole01 is declared in Terraform
 
-`terraform/environments/homelab/hosts.auto.tfvars` SHALL declare `pihole01` in `lxc_hosts` with vmid 225, IPv4 192.168.0.225/24, group `pihole`, the same Debian 13 `template_file_id` as `runner01`, 1 core, 512 MiB RAM, 512 MiB swap, 4 GiB disk, tags `dns` and `terraform`, started on boot. vmid and IP SHALL be independent literal declarations, the host SHALL live in the hostname-keyed map (no `count`), and no root password SHALL be set.
+`terraform/environments/homelab/hosts.auto.tfvars` SHALL declare `pihole01` in `lxc_hosts` with IPv4 192.168.0.225/24 and no declared vmid (Proxmox assigns it; the live guest keeps 225), group `pihole`, the same Debian 13 `template_file_id` as `runner01`, 1 core, 512 MiB RAM, 512 MiB swap, 4 GiB disk, tags `dns` and `terraform`, started on boot. the IP SHALL be a literal and no vmid SHALL be derived from it, the host SHALL live in the hostname-keyed map (no `count`), and no root password SHALL be set.
 
 #### Scenario: Terraform shows exactly one new guest
 - **WHEN** Rue runs `terraform plan` with the `pihole01` entry added
@@ -13,9 +13,9 @@ TBD - created by archiving change add-pihole. Update Purpose after archive.
 - **AND** `00-terraform.yml` lists `pihole01` in group `pihole` after apply
 - **proof:** manual (`terraform plan`/`apply` need the Proxmox API; Rue runs both)
 
-#### Scenario: vmid and IP are declared independently
+#### Scenario: IP is a literal and vmid is not derived
 - **WHEN** the `pihole01` entry is read
-- **THEN** `vmid = 225` and `ipv4 = "192.168.0.225/24"` are separate literals, and neither is derived from the other
+- **THEN** `ipv4 = "192.168.0.225/24"` is a literal and no vmid is derived from it
 - **proof:** manual (diff review of `hosts.auto.tfvars`; no sensor distinguishes a literal from a derivation)
 
 #### Scenario: The host is added to the keyed map without count

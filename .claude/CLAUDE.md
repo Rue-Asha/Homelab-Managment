@@ -63,8 +63,8 @@ packages, runtimes, services, application releases.
   always an Ansible run.
 - **`for_each` over a hostname-keyed map, never `count`** — `count` renumbers on
   deletion and proposes recreating unrelated containers.
-- **vmid and IP are independent declarations** — deriving one from the other
-  welds the address plan to container IDs.
+- **IP is static and hand-set; vmid is assigned by Proxmox** — never derive the
+  vmid from the IP, that welds the address plan to container IDs.
 - **Terraform applies run on `runner01` only**, from `deploy.yml` (plan → `infrastructure` approval → apply), with an API token and no SSH to the node. The workstation does not hold state.
 - **No guest root passwords.** `pct enter <ctid>` is the console fallback.
 - Terraform follows HashiCorp style (`terraform fmt`, snake_case,

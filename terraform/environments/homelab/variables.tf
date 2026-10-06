@@ -100,7 +100,9 @@ variable "vm_datastore_id" {
 variable "lxc_hosts" {
   description = "LXC containers, keyed by hostname."
   type = map(object({
-    vmid    = number
+    # ipv4 is static and hand-set. vmid is left to Proxmox (next free ID); the
+    # provider attribute is optional+computed, so unset keeps an existing ID.
+    vmid    = optional(number)
     ipv4    = string
     groups  = list(string)
     cores   = optional(number, 1)

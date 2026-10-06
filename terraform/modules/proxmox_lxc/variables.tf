@@ -7,11 +7,13 @@ variable "hostname" {
 
 variable "vmid" {
   description = <<-EOT
-    Proxmox container ID. Declared explicitly and independently of the IP
-    address -- the pre-Terraform setup derived it from the fourth octet, which
-    welded the address plan to the container ID.
+    Proxmox container ID. Null lets Proxmox assign the next free ID; the
+    assigned ID is exported as the `vmid` output. Never derive it from the IP
+    address -- the pre-Terraform setup did, which welded the address plan to
+    the container ID.
   EOT
   type        = number
+  default     = null
 }
 
 variable "node_name" {
