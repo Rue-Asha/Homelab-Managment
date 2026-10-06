@@ -12,7 +12,11 @@
 # lost, uncomment this and Terraform re-adopts the running containers instead
 # of proposing to recreate them.
 #
-# Import ID format for bpg/proxmox containers is <node_name>/<vm_id>.
+# Import ID format for bpg/proxmox containers is <node_name>/<vm_id>. LXC hosts
+# no longer declare a vmid, so at recovery time write each container's real ID
+# into the id by hand (from `pct list` on the node or the Proxmox UI), e.g. with
+# a local map keyed by hostname. Skipping the import makes apply create new
+# containers with new IDs next to the old ones, on the same static IPs.
 #
 # import {
 #   for_each = var.lxc_hosts

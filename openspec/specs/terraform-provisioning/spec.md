@@ -21,7 +21,7 @@ playbook may call a Proxmox API module for guest lifecycle.
 
 #### Scenario: A new container is added
 - **WHEN** an operator adds an entry to `lxc_hosts` in `hosts.auto.tfvars` and the change is applied
-- **THEN** the container is created from the homelab template with the declared vmid, IP and sizing, and is started
+- **THEN** the container is created from the homelab template with the declared IP and sizing and a Proxmox-assigned vmid (or the declared one, if pinned), and is started
 - **AND** `root` has no authorised key
 
 #### Scenario: An existing container is resized

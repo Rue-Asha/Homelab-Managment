@@ -5,7 +5,7 @@ TBD - created by archiving change add-pihole. Update Purpose after archive.
 ## Requirements
 ### Requirement: pihole01 is declared in Terraform
 
-`terraform/environments/homelab/hosts.auto.tfvars` SHALL declare `pihole01` in `lxc_hosts` with IPv4 192.168.0.225/24 and no declared vmid (Proxmox assigns it; the live guest keeps 225), group `pihole`, the same Debian 13 `template_file_id` as `runner01`, 1 core, 512 MiB RAM, 512 MiB swap, 4 GiB disk, tags `dns` and `terraform`, started on boot. the IP SHALL be a literal and no vmid SHALL be derived from it, the host SHALL live in the hostname-keyed map (no `count`), and no root password SHALL be set.
+`terraform/environments/homelab/hosts.auto.tfvars` SHALL declare `pihole01` in `lxc_hosts` with IPv4 192.168.0.225/24 and no declared vmid (Proxmox assigns it; the live guest keeps 225), group `pihole`, the same Debian 13 `template_file_id` as `runner01`, 1 core, 512 MiB RAM, 512 MiB swap, 4 GiB disk, tags `dns` and `terraform`, started on boot. The IP SHALL be a literal and no vmid SHALL be derived from it, the host SHALL live in the hostname-keyed map (no `count`), and no root password SHALL be set.
 
 #### Scenario: Terraform shows exactly one new guest
 - **WHEN** Rue runs `terraform plan` with the `pihole01` entry added
