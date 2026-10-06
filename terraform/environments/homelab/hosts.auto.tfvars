@@ -66,8 +66,8 @@ lxc_hosts = {
   # Light SSR + node:sqlite, no game servers or long-lived connections; the
   # games run client-side. Configured by 02_SERVICES/rues-arcade.yml.
   "rues-arcade01" = {
-    vmid    = 226
-    ipv4    = "192.168.0.226/24"
+    vmid    = 227
+    ipv4    = "192.168.0.227/24"
     groups  = ["rues_arcade"]
     tags    = ["web", "terraform"]
     cores   = 1

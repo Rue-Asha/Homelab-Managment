@@ -132,6 +132,8 @@ if [ "$workflow_triggers" -eq 1 ]; then
   sensor "workflow-triggers fixtures" WORKFLOW_TRIGGERS_FAILED scripts/tests/workflow-triggers.sh
 fi
 
+sensor "Regression: arcade shares IP with check container" DUPLICATE_HOST_ADDRESS python3 scripts/checks/unique-hosts.py
+
 # The check runner runs PR code, so no deploy credential may be wired into it.
 sensor "check runner role has no deploy credentials" CHECK_RUNNER_HAS_CREDENTIALS sh -c '! git grep -nE "deploy_ed25519|vault_pass|terraform\.env|github_runner_" -- ansible/roles/check_runner ansible/inventory/group_vars/check_runner'
 
