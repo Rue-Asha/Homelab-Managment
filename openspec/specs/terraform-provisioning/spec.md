@@ -21,7 +21,7 @@ playbook may call a Proxmox API module for guest lifecycle.
 
 #### Scenario: A new container is added
 - **WHEN** an operator adds an entry to `lxc_hosts` in `hosts.auto.tfvars` and the change is applied
-- **THEN** the container is created from the homelab template with the declared vmid, IP and sizing, and is started
+- **THEN** the container is created from the homelab template with the declared IP and sizing and a Proxmox-assigned vmid (or the declared one, if pinned), and is started
 - **AND** `root` has no authorised key
 
 #### Scenario: An existing container is resized
@@ -51,14 +51,21 @@ hostname. `count` SHALL NOT be used for guest resources.
 - **THEN** the plan proposes destroying only that host
 - **AND** no other host is proposed for replacement or recreation
 
-### Requirement: vmid and IP address are independent declarations
+### Requirement: IP address is static and vmid is not derived from it
 
-Each guest SHALL declare its vmid and its IPv4 address as separate explicit
-fields. Neither SHALL be derived from the other.
+Each guest SHALL declare a static IPv4 address. An LXC host MAY omit `vmid`, in
+which case Proxmox assigns the next free ID and the generated inventory exposes
+it as `lxc_ctid`. No vmid SHALL be derived from the address, and no two hosts
+SHALL share an IPv4 address or a declared vmid.
 
 #### Scenario: A host is re-addressed
 - **WHEN** a host's IPv4 address is changed while its vmid is left unchanged
 - **THEN** the plan shows only a network configuration change and the container ID is unaffected
+
+#### Scenario: Two hosts claim the same address
+- **WHEN** two hosts in `hosts.auto.tfvars` declare the same `ipv4` (or the same `vmid`)
+- **THEN** `scripts/proof.sh` fails with `DUPLICATE_HOST_ADDRESS`
+- **proof:** `scripts/tests/unique-hosts.sh`
 
 ### Requirement: Terraform does not configure guest internals
 

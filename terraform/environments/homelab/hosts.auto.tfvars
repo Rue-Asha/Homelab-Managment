@@ -1,18 +1,19 @@
 # The host catalogue -- this file replaces inventory/hosts.
 #
-# vmid and ipv4 are declared independently. The pre-Terraform setup derived the
-# container ID from the fourth octet of the address
+# ipv4 is static and set by hand. vmid is not declared: Proxmox assigns the next
+# free container ID and the generated inventory reads it back (lxc_ctid). The
+# pre-Terraform setup derived the ID from the fourth octet of the address
 # (id: "{{ ansible_host.split('.')[-1] | int }}"), which meant a host could not
-# be re-addressed without changing its container ID. The existing values are
-# carried over unchanged so the import in imports.tf matches the live node.
+# be re-addressed without changing its container ID. A host may still pin a
+# `vmid` if one is ever needed; the existing guests keep the IDs they have in
+# state.
 #
 # `groups` are Ansible inventory groups. Every LXC additionally gets
 # lxc_container_proxmox and proxmox_guest -- see ansible.tf.
 
 lxc_hosts = {
-  # 223 / .223 are reused from the retired life-dashboard01.
+  # .223 is reused from the retired life-dashboard01.
   "life-manager01" = {
-    vmid    = 223
     ipv4    = "192.168.0.223/24"
     groups  = ["life_manager"]
     tags    = ["web", "terraform"]
@@ -26,7 +27,6 @@ lxc_hosts = {
   # 01_BASE_CONFIGURATION/deploy_runner.yml, never by a deploy. Debian 13
   # because the ansible-core pinned in ci/requirements.txt needs Python 3.12+.
   "runner01" = {
-    vmid    = 224
     ipv4    = "192.168.0.224/24"
     groups  = ["github_runner"]
     tags    = ["ci", "terraform"]
@@ -40,7 +40,6 @@ lxc_hosts = {
   # credentials and reaches nothing but the internet. Configured by
   # 01_BASE_CONFIGURATION/check_runner.yml, never by a deploy.
   "check01" = {
-    vmid    = 226
     ipv4    = "192.168.0.226/24"
     groups  = ["check_runner"]
     tags    = ["ci", "terraform"]
@@ -53,7 +52,6 @@ lxc_hosts = {
   # Retired in efa9f49 and brought back with the same identity, so the router
   # needs no new address. Configured by 02_SERVICES/pihole.yml.
   "pihole01" = {
-    vmid    = 225
     ipv4    = "192.168.0.225/24"
     groups  = ["pihole"]
     tags    = ["dns", "terraform"]
@@ -66,8 +64,7 @@ lxc_hosts = {
   # Light SSR + node:sqlite, no game servers or long-lived connections; the
   # games run client-side. Configured by 02_SERVICES/rues-arcade.yml.
   "rues-arcade01" = {
-    vmid    = 226
-    ipv4    = "192.168.0.226/24"
+    ipv4    = "192.168.0.227/24"
     groups  = ["rues_arcade"]
     tags    = ["web", "terraform"]
     cores   = 1

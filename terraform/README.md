@@ -77,8 +77,10 @@ Backup: `scripts/fetch-state.sh` copies the state to
 Run it after an apply you care about. The node has no vzdump job as of
 2026-10-05, so `runner01` is not otherwise backed up.
 
-Losing it is recoverable — `imports.tf` stays in the repo precisely so
-re-adoption is one `terraform apply` rather than archaeology.
+Losing it is recoverable — `imports.tf` stays in the repo as a template for
+re-adoption. Hosts no longer declare a vmid, so fill in each container's real ID
+by hand from `pct list` (see the comments in that file) before applying;
+without the import, apply creates duplicate containers on the same static IPs.
 
 ## First run (rebuild)
 
@@ -90,7 +92,7 @@ create path. See design D9 in the OpenSpec change for the full reasoning.
 Consequences to know before starting:
 
 - **There is no rollback.** The old containers must be gone before Terraform can
-  create guests with the same vmids. Existing guest data is discarded by
+  create guests on the same static IPs. Existing guest data is discarded by
   decision — the SQLite databases and uploaded images are not preserved.
 - **The LAN loses DNS** while `pihole01` is down, if the router points at it.
   `pihole01` is declared again (see `docs/pihole.md`); set a fallback

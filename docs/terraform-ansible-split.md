@@ -182,9 +182,11 @@ Two project-specific rules worth stating:
 - **`for_each` over a hostname-keyed map, never `count`.** With `count`,
   deleting a host renumbers every index after it and Terraform proposes
   destroying and recreating unrelated containers.
-- **vmid and IP are independent declarations.** The pre-Terraform inventory
-  derived the container ID from the fourth octet of the address, which meant a
-  host could not be re-addressed without changing its container ID.
+- **IP is static and hand-set; vmid is assigned by Proxmox.** The pre-Terraform
+  inventory derived the container ID from the fourth octet of the address,
+  which meant a host could not be re-addressed without changing its container
+  ID. LXC hosts omit `vmid`; the generated inventory gets the real one as
+  `lxc_ctid` from the module output.
 
 Before committing anything under `terraform/`:
 
