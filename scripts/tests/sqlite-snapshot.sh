@@ -211,7 +211,7 @@ t_role_skips() (
   roles:
     - sqlite_snapshot
 PLAY
-  ANSIBLE_CONFIG=$f/ansible.cfg ansible-playbook --check -i "$f/inventory" "$f/play.yml" >"$f/out" 2>&1 || { cat "$f/out"; return 1; }
+  ANSIBLE_CONFIG=$f/ansible.cfg ANSIBLE_PYTHON_INTERPRETER=auto_silent ansible-playbook --check -v -i "$f/inventory" "$f/play.yml" >"$f/out" 2>&1 || { cat "$f/out"; return 1; }
   python3 - "$f/out" <<'PY'
 import re, sys
 lines = open(sys.argv[1]).read().splitlines()
@@ -219,9 +219,10 @@ tasks = 0
 for i, line in enumerate(lines):
     if line.startswith("TASK [sqlite_snapshot"):
         tasks += 1
-        nxt = next((l for l in lines[i + 1:] if l.strip()), "")
-        if not nxt.startswith("skipping:"):
-            sys.exit(f"not skipped: {line} -> {nxt}")
+        # check mode alone makes a command report "skipping:", so require the when: verdict
+        nxt = next((l for l in lines[i + 1:] if l.startswith(("skipping:", "changed:", "ok:", "fatal:"))), "")
+        if not (nxt.startswith("skipping:") and "Conditional result was False" in nxt):
+            sys.exit(f"not skipped by its condition: {line} -> {nxt}")
 if not tasks:
     sys.exit("no sqlite_snapshot task seen")
 PY

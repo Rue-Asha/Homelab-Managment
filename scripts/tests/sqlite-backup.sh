@@ -173,7 +173,7 @@ one_guest_fails() {
   touch "$FX/fail_exec_101"
   node run
   a test $? -ne 0
-  a has "$FX/stderr" "life-manager01: FAILED"
+  a grep -qE 'life-manager01: FAILED \(.+\)' "$FX/stderr"
   a has "$FX/stderr" "rues-arcade01: ok"
   a exists "$FX/root/rues-arcade01/daily/app-$stamp_new.db"
   a absent "$FX/root/life-manager01/daily/app-$stamp_new.db"
@@ -358,6 +358,21 @@ locate_found() {
   a test $? -eq 0
   a test "$(head -1 "$FX/stdout")" = "$FX/root/rues-arcade01/pre-deploy/app-20261003T010000Z.db"
   a test "$(sed -n '2,$p' "$FX/stdout")" = "node meta 20261003T010000Z"
+  a python3 - ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml <<'PY'
+import sys, yaml
+
+def flat(tasks):
+    for t in tasks:
+        yield t
+        for k in ("block", "rescue", "always"):
+            yield from flat(t.get(k, []))
+
+tasks = list(flat(yaml.safe_load(open(sys.argv[1]))[0]["tasks"]))
+locate = next((i for i, t in enumerate(tasks) if "locate" in str(t.get("ansible.builtin.command", ""))), None)
+stops = [i for i, t in enumerate(tasks) if "ansible.builtin.systemd" in t and t["ansible.builtin.systemd"].get("state") == "stopped"]
+if locate is None or not stops or locate > min(stops):
+    sys.exit(f"locate task at {locate}, stop tasks at {stops}")
+PY
   return "$bad"
 }
 check "Snapshot metadata is shown first" locate_found
@@ -477,19 +492,40 @@ check "Node playbook ignores a host without a registry entry" preflight_ignores_
 registered_without_ctid() {
   new_case
   fixture_inv "https://hc-ping.test/x" "$GUEST_A" "$GUEST_C"
-  play --tags preflight
+  play
   a test $? -ne 0
   a has "$FX/play.out" "guest_c"
   a has "$FX/play.out" "lxc_ctid"
+  a not_has "$FX/play.out" "sqlite_backup : Ensure"
+  a not_has "$FX/play.out" "sqlite_backup : Install"
   return "$bad"
 }
 check "Registered host without a container ID" registered_without_ctid
 
 deploy_never_runs_node_playbook() {
   a test -f "$playbook"
-  a grep -qx '  hosts: proxmox_node' "$playbook"
-  a test "$(grep -c '^  hosts:' "$playbook")" -eq 1
-  a grep -q 'role: sqlite_backup\|- sqlite_backup' "$playbook"
+  unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
+  local r=$FX/repo
+  mkdir -p "$r/scripts"
+  command cp -f scripts/deploy-targets.sh "$r/scripts/"
+  command cp -r ansible "$r/ansible"
+  command rm -f "$r/ansible/inventory/00-terraform.yml"
+  command git -C "$r" init -q
+  command git -C "$r" add -A
+  command git -C "$r" -c user.name=fixture -c user.email=fixture@localhost -c core.hooksPath=/dev/null commit -qm base
+  local before
+  before=$(command git -C "$r" rev-parse HEAD)
+  printf '\n# touched\n' | tee -a "$r/$playbook" "$r/ansible/roles/sqlite_backup/tasks/main.yml" >/dev/null
+  command git -C "$r" -c user.name=fixture -c user.email=fixture@localhost -c core.hooksPath=/dev/null commit -qam change
+  local out
+  out=$(cd "$r" && ANSIBLE_CONFIG="$r/ansible/ansible.cfg" scripts/deploy-targets.sh "$before" HEAD 2>&1)
+  a test $? -eq 0
+  ! grep -q sqlite_backup <<<"$out" || { echo "diff selected: $out"; bad=1; }
+  out=$(cd "$r" && ANSIBLE_CONFIG="$r/ansible/ansible.cfg" scripts/deploy-targets.sh --all 2>&1)
+  ! grep -q sqlite_backup <<<"$out" || { echo "--all selected: $out"; bad=1; }
+  ! grep -qv '^ansible/playbooks/02_SERVICES/' <<<"$out" || { echo "--all left 02_SERVICES: $out"; bad=1; }
+  (cd "$r" && scripts/deploy-targets.sh sqlite_backup) >/dev/null 2>&1
+  a test $? -eq 64
   return "$bad"
 }
 check "The deploy never runs the node playbook" deploy_never_runs_node_playbook
