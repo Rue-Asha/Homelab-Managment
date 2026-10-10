@@ -431,7 +431,7 @@ pre_restore_needs_ctid() {
   a absent "$FX/pull.log"
   return "$bad"
 }
-extra "pre-restore without a container ID fails" pre_restore_needs_ctid
+check "pre-restore without a container ID fails" pre_restore_needs_ctid
 
 pre_restore_rotation_10() {
   new_case
@@ -449,6 +449,22 @@ pre_restore_rotation_10() {
   return "$bad"
 }
 check "Pre-restore rotation keeps the newest 10" pre_restore_rotation_10
+
+pre_restore_keeps_chosen() {
+  new_case
+  std_conf
+  local s
+  for s in $(stamps 1 10); do node_snap rues-arcade01 pre-restore app "$s"; done
+  node pre-restore rues-arcade01 102 app-20260901T030000Z.db
+  a test $? -eq 0
+  local d=$FX/root/rues-arcade01/pre-restore
+  a exists "$d/app-20260901T030000Z.db"
+  a exists "$d/app-20260901T030000Z.meta"
+  a count "$d" '*.db' 11
+  a exists "$d/app-$stamp_new.db"
+  return "$bad"
+}
+extra "pre-restore never rotates away the snapshot being restored" pre_restore_keeps_chosen
 
 # --- 3.4 node playbook preflight -------------------------------------------
 
@@ -540,7 +556,7 @@ registered_without_db_suffix() {
   a not_has "$FX/play.out" "sqlite_backup : Ensure"
   return "$bad"
 }
-extra "Registered database path without .db suffix" registered_without_db_suffix
+check "Registered database path without .db suffix" registered_without_db_suffix
 
 restore_refuses_check_mode() {
   new_case
@@ -566,7 +582,80 @@ YML
   a not_has "$FX/play.out" "Look up the snapshot"
   return "$bad"
 }
-extra "Restore playbook refuses --check" restore_refuses_check_mode
+check "Restore playbook refuses --check" restore_refuses_check_mode
+
+# restore_inv <db...>   one local guest with a stub node command
+restore_inv() {
+  mkdir -p "$FX/inv"
+  cat >"$FX/node-cmd" <<'STUB'
+#!/usr/bin/env bash
+case $1 in
+  locate)
+    case $3 in
+      a-*|b-*) echo "$FX/located.db"; echo meta ;;
+      *) echo "not found: $3" >&2; echo "daily/a-20261001T030000Z.db" >&2; exit 1 ;;
+    esac ;;
+  pre-restore) echo "a-20261009T030000Z.db"; echo "b-20261009T030000Z.db" ;;
+esac
+STUB
+  chmod +x "$FX/node-cmd"
+  cat >"$FX/inv/hosts.yml" <<YML
+all:
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+    proxmox_node_ip: 127.0.0.1
+    ansible_become: false
+  children:
+    proxmox_guest:
+      hosts:
+        guest_a:
+          lxc_ctid: 101
+          sqlite_backups: {service: a, unit: homelab-fixture-none.service, owner: a, group: a, databases: [$(printf '%s,' "$@" | sed 's/,$//')]}
+YML
+}
+# restore_play <snapshot>
+restore_play() {
+  ansible-playbook -i "$FX/inv/hosts.yml" ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml \
+    -e "sqlite_restore_node_cmd=$FX/node-cmd" -e "sqlite_restore_snapshot=$1" >"$FX/play.out" 2>&1
+}
+
+restore_unknown_snapshot_lists() {
+  new_case
+  restore_inv /var/lib/x/a.db
+  restore_play zzz-20261001T030000Z.db
+  a test $? -ne 0
+  a has "$FX/play.out" "daily/a-20261001T030000Z.db"
+  a not_has "$FX/play.out" "Save the current database"
+  return "$bad"
+}
+extra "Restore with an unknown snapshot name lists the available snapshots" restore_unknown_snapshot_lists
+
+restore_failure_recovers() {
+  new_case
+  restore_inv /var/lib/x/a.db /var/lib/x/b.db
+  restore_play a-20261001T030000Z.db
+  a test $? -ne 0
+  a has "$FX/play.out" "saved as a-20261009T030000Z.db"
+  a not_has "$FX/play.out" "saved as b-20261009T030000Z.db"
+  a has "$FX/play.out" "Start the service again"
+  return "$bad"
+}
+extra "Failed restore starts the unit again and names the right pre-restore snapshot" restore_failure_recovers
+
+check_mode_node_play() {
+  new_case
+  fixture_inv "https://hc-ping.test/x" "$GUEST_A"
+  mkdir -p "$FX/roles"
+  command cp -r ansible/roles/sqlite_backup "$FX/roles/sqlite_backup"
+  # apt needs python3-apt even for --check, which a workstation lacks
+  printf -- '---\n' >"$FX/roles/sqlite_backup/tasks/install.yml"
+  ANSIBLE_ROLES_PATH=$FX/roles play
+  a test $? -eq 0
+  a has "$FX/play.out" "Install the backup timer unit"
+  return "$bad"
+}
+extra "Node playbook --check survives units that are not installed yet" check_mode_node_play
 
 deploy_never_runs_node_playbook() {
   a test -f "$playbook"

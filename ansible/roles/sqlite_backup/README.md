@@ -58,7 +58,7 @@ stamp) and runs only for a guest whose run succeeded.
 `HOMELAB_SQLITE_BACKUP_CONF`).
 
 - `run`: what the timer calls. Per guest: daily snapshot in the guest, pull and check, copy missing pre-deploy snapshots, rotate. Logs `<host>: ok` or `<host>: FAILED (<reason>)` to stderr; one failed guest does not stop the others. Pings healthchecks.io afterwards (`<url>` on success, `<url>/fail` with the failed hosts as body otherwise). A failed ping is logged and does not change the exit status, which is 0 only when every guest succeeded.
-- `pre-restore <host> <ctid>`: snapshot the live database into `pre-restore/`, check, rotate, print the kept `.db` name. Used by `sqlite_restore.yml`. No ping.
+- `pre-restore <host> <ctid> [<snapshot.db>]`: snapshot the live database into `pre-restore/`, check, rotate (never deleting `<snapshot.db>`, the snapshot about to be restored), print the kept `.db` name per database. Used by `sqlite_restore.yml`. No ping.
 - `locate <host> <snapshot.db>`: prints the absolute path and the `.meta`, or `not found: <name>` plus the available `<kind>/<name>` on stderr (exit 1). Used by `sqlite_restore.yml`.
 
 ## Timer

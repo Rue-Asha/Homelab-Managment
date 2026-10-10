@@ -28,3 +28,5 @@
     name: homelab-sqlite-backup.timer
     enabled: true
     state: started
+  # --check does not write the unit files, and the module fails on a unit that is not there yet.
+  ignore_errors: "{{ ansible_check_mode }}"

@@ -34,14 +34,10 @@
           - ansible_play_hosts_all | length == 1
           - sqlite_backups is defined
           - sqlite_restore_snapshot is defined
-          - sqlite_restore_snapshot is match('^.+-[0-9]{8}T[0-9]{6}Z\.db$')
           - lxc_ctid is defined
-          - sqlite_restore_db | length > 0
         fail_msg: >-
           Run with exactly one host (-l <host>) that has sqlite_backups and
-          lxc_ctid, and -e sqlite_restore_snapshot=<stem>-<UTC stamp>.db whose
-          stem is one of its registered databases
-          ({{ sqlite_backups.databases | default([]) | join(', ') }}).
+          lxc_ctid, and -e sqlite_restore_snapshot=<stem>-<UTC stamp>.db.
       tags: always
 
     - name: Look up the snapshot on the node
@@ -53,13 +49,24 @@
       changed_when: false
       check_mode: false
 
+    - name: Check the snapshot belongs to a registered database
+      ansible.builtin.assert:
+        that:
+          - sqlite_restore_snapshot is match('^.+-[0-9]{8}T[0-9]{6}Z\.db$')
+          - sqlite_restore_db | length > 0
+        quiet: true
+        fail_msg: >-
+          {{ sqlite_restore_snapshot }} must be <stem>-<UTC stamp>.db whose
+          stem is one of the registered databases
+          ({{ sqlite_backups.databases | join(', ') }}).
+
     - name: Show the snapshot's metadata
       ansible.builtin.debug:
         msg: "{{ sqlite_restore_located.stdout_lines }}"
 
     - name: Save the current database as a pre-restore snapshot
       ansible.builtin.command:
-        argv: ["{{ sqlite_restore_node_cmd }}", pre-restore, "{{ inventory_hostname }}", "{{ lxc_ctid }}"]
+        argv: ["{{ sqlite_restore_node_cmd }}", pre-restore, "{{ inventory_hostname }}", "{{ lxc_ctid }}", "{{ sqlite_restore_snapshot }}"]
       delegate_to: "{{ proxmox_node_ip }}"
       become: false
       register: sqlite_restore_pre
@@ -67,7 +74,7 @@
 
     - name: Record the pre-restore snapshot name
       ansible.builtin.set_fact:
-        sqlite_restore_pre_name: "{{ sqlite_restore_pre.stdout_lines | last }}"
+        sqlite_restore_pre_name: "{{ sqlite_restore_pre.stdout_lines | select('match', '^' ~ (sqlite_restore_stem | regex_escape) ~ '-[0-9]{8}T') | first }}"
 
     - name: Restore and restart
       block:
@@ -112,6 +119,12 @@
           delay: 3
           until: sqlite_restore_health.status == 200
       rescue:
+        - name: Start the service again
+          ansible.builtin.systemd:
+            name: "{{ sqlite_backups.unit }}"
+            state: started
+          failed_when: false
+
         - name: Fail naming the way back
           ansible.builtin.fail:
             msg: >-

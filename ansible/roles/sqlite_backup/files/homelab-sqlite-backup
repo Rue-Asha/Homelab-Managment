@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Node-side SQLite backup: collects snapshots from registered guests via pct.
 #   homelab-sqlite-backup run
-#   homelab-sqlite-backup pre-restore <host> <ctid>
+#   homelab-sqlite-backup pre-restore <host> <ctid> [<snapshot.db to keep>]
 #   homelab-sqlite-backup locate <host> <snapshot.db>
 # Config: key=value file (never sourced), see docs/backups.md.
 
@@ -60,10 +60,11 @@ pull_snapshot() {
   }
 }
 
-# rotate <dir> <keep>   keeps the newest <keep> .db per stem (with their .meta).
-# Names carry a UTC stamp, so name order is time order.
+# rotate <dir> <keep> [<protect>]   keeps the newest <keep> .db per stem (with
+# their .meta), and never deletes <protect>. Names carry a UTC stamp, so name
+# order is time order.
 rotate() {
-  local dir=$1 keep=$2 f name stem i
+  local dir=$1 keep=$2 protect=${3:-} f name stem i
   local -A files=()
   for f in "$dir"/*.db; do
     name=${f##*/}
@@ -74,6 +75,7 @@ rotate() {
   for stem in "${!files[@]}"; do
     mapfile -t sorted < <(printf '%s' "${files[$stem]}" | sort)
     for ((i = 0; i < ${#sorted[@]} - keep; i++)); do
+      [ "${sorted[$i]}" = "$protect" ] && continue
       command rm -f "$dir/${sorted[$i]}" "$dir/${sorted[$i]%.db}.meta"
     done
   done
@@ -135,7 +137,7 @@ cmd_run() {
 }
 
 cmd_pre_restore() {
-  local host=${1:?usage: pre-restore <host> <ctid>} ctid=${2:?usage: pre-restore <host> <ctid>} paths path
+  local host=${1:?usage: pre-restore <host> <ctid>} ctid=${2:?usage: pre-restore <host> <ctid>} protect=${3:-} paths path
   local -a written=()
   paths=$(timeout "$GUEST_TIMEOUT" pct exec "$ctid" -- "$SNAPSHOT_CMD" pre-restore) || {
     echo "$host: FAILED (pre-restore snapshot in guest $ctid failed)" >&2
@@ -147,7 +149,7 @@ cmd_pre_restore() {
     written+=("${path##*/}")
   done <<<"$paths"
   [ "${#written[@]}" -gt 0 ] || { echo "$host: FAILED (pre-restore snapshot wrote nothing)" >&2; return 1; }
-  rotate "$BACKUP_ROOT/$host/pre-restore" "$KEEP_PRE_RESTORE"
+  rotate "$BACKUP_ROOT/$host/pre-restore" "$KEEP_PRE_RESTORE" "$protect"
   printf '%s\n' "${written[@]}"
 }
 

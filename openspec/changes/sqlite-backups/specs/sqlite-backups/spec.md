@@ -24,6 +24,16 @@ Each service host whose service keeps a SQLite database SHALL declare one invent
 - **THEN** the play fails before changing anything, with a message naming that host
 - **proof:** unit
 
+#### Scenario: Registered database path without .db suffix
+- **WHEN** a host registers a database path that does not end in `.db` and the node playbook runs
+- **THEN** the play fails in preflight before anything is installed, with a message naming that host and `.db`
+- **proof:** unit
+
+#### Scenario: Role rejects a database path without .db suffix
+- **WHEN** `sqlite_snapshot` is applied to a host whose registered database path does not end in `.db`
+- **THEN** the role fails before any snapshot is taken, with a message naming the path
+- **proof:** unit
+
 ### Requirement: Service playbooks snapshot the database before the service role runs
 
 The guest-side role `sqlite_snapshot` SHALL install the `sqlite3` CLI and, on every run of a service playbook, SHALL write a consistent `sqlite3 .backup` (WAL-safe) snapshot of each registered database to a pre-deploy directory on the guest before the service role runs, keeping the newest 10 per database. If a snapshot fails the play SHALL fail before the release changes. A database that does not exist yet SHALL be skipped with a message.
@@ -195,7 +205,7 @@ The node job SHALL send a success ping to the healthchecks.io URL when every ser
 
 ### Requirement: A snapshot can be restored from the workstation
 
-A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service host and a snapshot name, print the snapshot's metadata, save the current database as a `pre-restore` snapshot on the node, stop the unit, push the snapshot into the guest, remove stale `-wal`/`-shm` files, set owner and mode, start the unit and wait for `/healthz` to answer 200. A snapshot name that is not found SHALL fail the run listing the available snapshots; a `/healthz` that does not answer 200 SHALL fail the run naming the pre-restore snapshot to roll back with. A snapshot whose schema is newer than the running release is not detected automatically; the metadata is shown first and `/healthz` is the guard.
+A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service host and a snapshot name, print the snapshot's metadata, save the current database as a `pre-restore` snapshot on the node, stop the unit, push the snapshot into the guest, remove stale `-wal`/`-shm` files, set owner and mode, start the unit and wait for `/healthz` to answer 200. A snapshot name that is not found (including a typo in the database stem) SHALL fail the run listing the available snapshots; a failure after the unit was stopped SHALL start the unit again before the run fails; a `/healthz` that does not answer 200 SHALL fail the run naming the pre-restore snapshot to roll back with. A snapshot whose schema is newer than the running release is not detected automatically; the metadata is shown first and `/healthz` is the guard.
 
 #### Scenario: Snapshot metadata is shown first
 - **WHEN** `homelab-sqlite-backup locate <host> <name>` is called for an existing snapshot
@@ -204,12 +214,32 @@ A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service h
 
 #### Scenario: Snapshot name not found
 - **WHEN** `homelab-sqlite-backup locate <host> <name>` is called for a name that exists in none of `daily/`, `pre-deploy/`, `pre-restore/`
-- **THEN** it prints `not found: <name>` and every available `<kind>/<name>` for that host, and exits non-zero, so the playbook fails before changing anything
+- **THEN** it prints `not found: <name>` and every available `<kind>/<name>` for that host, and exits non-zero, so the playbook fails before changing anything; the playbook runs it before checking the stem against the registry, so a mistyped stem gets this listing too
 - **proof:** unit
 
 #### Scenario: Current database is saved before the restore
 - **WHEN** `homelab-sqlite-backup pre-restore <host> <ctid>` runs
 - **THEN** a snapshot of the live database, with `.meta`, lands in `/var/backups/homelab/<host>/pre-restore/` after passing the integrity check, and its name is printed
+- **proof:** unit
+
+#### Scenario: pre-restore without a container ID fails
+- **WHEN** `homelab-sqlite-backup pre-restore <host>` is called without a container ID
+- **THEN** it exits non-zero and pulls nothing
+- **proof:** unit
+
+#### Scenario: Restore playbook refuses --check
+- **WHEN** the restore playbook runs with `--check`
+- **THEN** it fails before the snapshot lookup with a message that the restore has no dry run
+- **proof:** unit
+
+#### Scenario: Restore of the oldest pre-restore snapshot
+- **WHEN** the restore playbook restores the oldest of 10 pre-restore snapshots
+- **THEN** its own `pre-restore` call does not rotate that snapshot away before it is pushed
+- **proof:** unit
+
+#### Scenario: Failed restore brings the unit back
+- **WHEN** a step after "Stop the service" fails
+- **THEN** the playbook starts the unit again, and its failure message names the pre-restore snapshot of the restored database (not another registered database's)
 - **proof:** unit
 
 #### Scenario: Restore ends with a healthy service
@@ -233,8 +263,8 @@ A playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL apply the node-side role
 
 #### Scenario: Check-mode run on proxmox1
 - **WHEN** the node playbook runs with `--check` against proxmox1
-- **THEN** nothing on the node changes and the output shows what would be installed
-- **proof:** manual (needs proxmox1; Gate 2 evidence, unit 5)
+- **THEN** nothing on the node changes and the output shows what would be installed; a timer unit that is not installed yet does not fail the run
+- **proof:** unit (local fixture run with the apt task stubbed out) and manual (needs proxmox1 (needs proxmox1; Gate 2 evidence, unit 5)
 
 #### Scenario: Check-mode run of the service playbooks
 - **WHEN** `02_SERVICES/life-manager.yml` and `02_SERVICES/rues-arcade.yml` run with `--check` from the workstation on this branch

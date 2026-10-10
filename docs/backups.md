@@ -89,7 +89,7 @@ An unknown snapshot name fails before anything is touched, listing what is
 available. The playbook refuses `--check`: saving the pre-restore snapshot writes.
 
 **Rolling back a restore:** if `/healthz` never answers 200, the playbook fails
-and prints the pre-restore snapshot name and the exact command. It is the same
+and prints the pre-restore snapshot name and the exact command (the unit is started again first). It is the same
 playbook with that name:
 
 ```

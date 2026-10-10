@@ -9,4 +9,5 @@
   ansible.builtin.systemd:
     name: homelab-sqlite-backup.timer
     state: restarted
+  ignore_errors: "{{ ansible_check_mode }}"
   listen: sqlite_backup_restart_timer
