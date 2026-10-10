@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT-0
+---
+# A host without a registry entry is ignored: every task below is skipped.
+- name: Install the sqlite3 CLI
+  ansible.builtin.import_tasks: install.yml
+  when: sqlite_backups is defined
+
+- name: Install the snapshot script and its configuration
+  ansible.builtin.import_tasks: configure.yml
+  when: sqlite_backups is defined
+
+- name: Snapshot the registered databases before the service role runs
+  ansible.builtin.import_tasks: snapshot.yml
+  when: sqlite_backups is defined
