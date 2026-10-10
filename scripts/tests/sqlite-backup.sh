@@ -464,7 +464,6 @@ pre_restore_keeps_chosen() {
   a exists "$d/app-$stamp_new.db"
   return "$bad"
 }
-extra "pre-restore never rotates away the snapshot being restored" pre_restore_keeps_chosen
 
 # --- 3.4 node playbook preflight -------------------------------------------
 
@@ -595,10 +594,21 @@ case $1 in
       a-*|b-*) echo "$FX/located.db"; echo meta ;;
       *) echo "not found: $3" >&2; echo "daily/a-20261001T030000Z.db" >&2; exit 1 ;;
     esac ;;
-  pre-restore) echo "a-20261009T030000Z.db"; echo "b-20261009T030000Z.db" ;;
+  pre-restore) echo "$*" >>"$FX/node.log"; echo "a-20261009T030000Z.db"; echo "b-20261009T030000Z.db" ;;
 esac
 STUB
   chmod +x "$FX/node-cmd"
+  mkdir -p "$FX/sysbin"
+  cat >"$FX/sysbin/systemctl" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >>"$FX/systemctl.log"
+case $* in
+  stop*) echo inactive >"$FX/unit_state" ;;
+  start*) echo active >"$FX/unit_state" ;;
+  *show*) printf 'LoadState=loaded\nActiveState=%s\nSubState=running\nUnitFileState=enabled\n' "$(cat "$FX/unit_state" 2>/dev/null || echo active)" ;;
+esac
+STUB
+  chmod +x "$FX/sysbin/systemctl"
   cat >"$FX/inv/hosts.yml" <<YML
 all:
   vars:
@@ -616,9 +626,23 @@ YML
 }
 # restore_play <snapshot>
 restore_play() {
-  ansible-playbook -i "$FX/inv/hosts.yml" ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml \
+  PATH=$FX/sysbin:$PATH ansible-playbook -i "$FX/inv/hosts.yml" ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml \
     -e "sqlite_restore_node_cmd=$FX/node-cmd" -e "sqlite_restore_snapshot=$1" >"$FX/play.out" 2>&1
 }
+
+restore_passes_chosen_snapshot() {
+  new_case
+  restore_inv /var/lib/x/a.db
+  restore_play a-20261001T030000Z.db
+  a has "$FX/node.log" "pre-restore guest_a 101 a-20261001T030000Z.db"
+  return "$bad"
+}
+
+restore_oldest_pre_restore() {
+  pre_restore_keeps_chosen || return 1
+  restore_passes_chosen_snapshot
+}
+check "Restore of the oldest pre-restore snapshot" restore_oldest_pre_restore
 
 restore_unknown_snapshot_lists() {
   new_case
@@ -638,10 +662,11 @@ restore_failure_recovers() {
   a test $? -ne 0
   a has "$FX/play.out" "saved as a-20261009T030000Z.db"
   a not_has "$FX/play.out" "saved as b-20261009T030000Z.db"
-  a has "$FX/play.out" "Start the service again"
+  a grep -q "stop homelab-fixture-none.service" "$FX/systemctl.log"
+  a test "$(grep -v show "$FX/systemctl.log" | tail -1)" = "start homelab-fixture-none.service"
   return "$bad"
 }
-extra "Failed restore starts the unit again and names the right pre-restore snapshot" restore_failure_recovers
+check "Failed restore brings the unit back" restore_failure_recovers
 
 check_mode_node_play() {
   new_case
@@ -655,7 +680,7 @@ check_mode_node_play() {
   a has "$FX/play.out" "Install the backup timer unit"
   return "$bad"
 }
-extra "Node playbook --check survives units that are not installed yet" check_mode_node_play
+check "Check-mode run on proxmox1" check_mode_node_play
 
 deploy_never_runs_node_playbook() {
   a test -f "$playbook"

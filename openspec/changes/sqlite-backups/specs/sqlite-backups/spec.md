@@ -264,7 +264,7 @@ A playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL apply the node-side role
 #### Scenario: Check-mode run on proxmox1
 - **WHEN** the node playbook runs with `--check` against proxmox1
 - **THEN** nothing on the node changes and the output shows what would be installed; a timer unit that is not installed yet does not fail the run
-- **proof:** unit (local fixture run with the apt task stubbed out) and manual (needs proxmox1 (needs proxmox1; Gate 2 evidence, unit 5)
+- **proof:** unit (local fixture run with the apt task stubbed out) and manual (the real node run needs proxmox1; Gate 2 evidence, unit 5)
 
 #### Scenario: Check-mode run of the service playbooks
 - **WHEN** `02_SERVICES/life-manager.yml` and `02_SERVICES/rues-arcade.yml` run with `--check` from the workstation on this branch

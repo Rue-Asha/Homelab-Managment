@@ -28,5 +28,8 @@
     name: homelab-sqlite-backup.timer
     enabled: true
     state: started
+  register: sqlite_backup_timer
   # --check does not write the unit files, and the module fails on a unit that is not there yet.
-  ignore_errors: "{{ ansible_check_mode }}"
+  failed_when:
+    - sqlite_backup_timer is failed
+    - not (ansible_check_mode and 'Could not find the requested service' in (sqlite_backup_timer.msg | default('')))

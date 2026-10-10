@@ -252,7 +252,7 @@ PLAY
     echo "role accepted data.sqlite"
     return 1
   fi
-  grep -q 'must end in .db' "$f/out" || { cat "$f/out"; return 1; }
+  grep -q 'must end in .db' "$f/out" && grep -qF /var/lib/x/data.sqlite "$f/out" || { cat "$f/out"; return 1; }
   ! grep -q 'Install the sqlite3 CLI' "$f/out" || { echo "ran past the assert"; return 1; }
 )
 
@@ -294,7 +294,7 @@ check "Registered database missing in the guest" t_db_missing
 extra "daily keeps only the newest snapshot" t_daily_keeps_newest
 extra "list pre-deploy prints basenames" t_list
 check "Guest role skips a host without a registry entry" t_role_skips
-extra "Role rejects a database path without .db suffix" t_role_requires_db_suffix
+check "Role rejects a database path without .db suffix" t_role_requires_db_suffix
 check "Life-Manager and Rues-Arcade are registered" t_registered
 check "Service playbooks run the snapshot role before the service role" t_playbook_order
 
