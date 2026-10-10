@@ -1,0 +1,7 @@
+triage: "feature + live — new backup capability for every service guest plus a node-side job on proxmox1; first apply on real hosts. Appetite: two sessions."
+base: main
+track: feature
+live: true
+gate0: 2026-10-10
+learnings:
+  - "a trailing plain `ls` hung a main-session Bash call for 120s after the writes had succeeded → use `command ls` in agent shells (alias, like rm/mv/cp)"
