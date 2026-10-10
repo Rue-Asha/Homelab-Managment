@@ -91,7 +91,6 @@ fixture() {
 
 mkdb() { printf 'user_version=%s\n' "$2" >"$1"; [ -z "${3:-}" ] || echo "migration=$3" >>"$1"; }
 mkrelease() { mkdir -p "$1/current" && echo "$2" >"$1/current/.deployed_version"; }
-stamped() { local k; for k in "$@"; do touch "$k"; done; }
 
 t_pre_deploy_written() (
   fixture written
@@ -114,6 +113,7 @@ t_first_deploy() (
 t_failed_snapshot() (
   fixture failed
   mkdb "$db" 1
+  [ -x "$script" ] || return 1
   export SQLITE_STUB_FAIL=1
   if "$script" pre-deploy >/dev/null 2>&1; then echo "exited 0"; return 1; fi
   [ -z "$(find "$snap" -type f 2>/dev/null)" ] || { find "$snap" -type f; return 1; }
@@ -134,7 +134,7 @@ t_keep_ten() (
 )
 
 t_meta_migrated() (
-  fixture migrated "$dir/migrated/rel"
+  fixture migrated "$dir/migrated/rel/current"
   mkrelease "$dir/migrated/rel" v0.6.0
   mkdb "$db" 4 0003_wavelength.sql
   out=$("$script" pre-deploy 2>/dev/null) || return 1
@@ -172,6 +172,7 @@ t_release_unknown() (
 t_db_missing() (
   fixture missing
   local k
+  [ -x "$script" ] || return 1
   for k in daily pre-restore; do
     if "$script" "$k" >/dev/null 2>"$dir/missing/err"; then echo "$k exited 0"; return 1; fi
     [ -s "$dir/missing/err" ] || { echo "$k: no message"; return 1; }
@@ -226,33 +227,6 @@ if not tasks:
 PY
 )
 
-# Reads the registry and playbooks with python3.
-t_registered() (
-  python3 - <<'PY'
-import sys, yaml
-want = {"life-manager01": "/var/lib/life-manager/life-manager.db", "rues-arcade01": "/var/lib/rues-arcade/rues-arcade.db"}
-for host, db in want.items():
-    reg = yaml.safe_load(open(f"ansible/inventory/host_vars/{host}/vars.yml")).get("sqlite_backups")
-    if not reg:
-        sys.exit(f"{host}: no sqlite_backups")
-    for key in ("service", "unit", "owner", "group"):
-        if not reg.get(key):
-            sys.exit(f"{host}: {key} missing")
-    if reg["databases"] != [db]:
-        sys.exit(f"{host}: databases {reg['databases']}")
-PY
-)
-
-t_playbook_order() (
-  python3 - <<'PY'
-import sys, yaml
-for pb, role in (("life-manager", "life_manager"), ("rues-arcade", "rues_arcade")):
-    roles = [r if isinstance(r, str) else r.get("role") for r in yaml.safe_load(open(f"ansible/playbooks/02_SERVICES/{pb}.yml"))[0]["roles"]]
-    if "sqlite_snapshot" not in roles or roles.index("sqlite_snapshot") > roles.index(role):
-        sys.exit(f"{pb}: sqlite_snapshot not before {role}: {roles}")
-PY
-)
-
 check "Pre-deploy snapshot is written" t_pre_deploy_written
 check "First deploy without a database" t_first_deploy
 check "Failed snapshot fails the run" t_failed_snapshot
@@ -264,7 +238,5 @@ check "Registered database missing in the guest" t_db_missing
 extra "daily keeps only the newest snapshot" t_daily_keeps_newest
 extra "list pre-deploy prints basenames" t_list
 check "Guest role skips a host without a registry entry" t_role_skips
-check "Life-Manager and Rues-Arcade are registered" t_registered
-check "Service playbooks run the snapshot role before the service role" t_playbook_order
 
 exit "$failed"

@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: MIT-0
+---
+galaxy_info:
+  author: Rue Asha
+  description: >-
+    Guest-side SQLite snapshots: installs the sqlite3 CLI and a snapshot
+    script, and writes a consistent pre-deploy snapshot of every database
+    registered in sqlite_backups before the service role runs.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - sqlite
+    - backup
+
+dependencies: []

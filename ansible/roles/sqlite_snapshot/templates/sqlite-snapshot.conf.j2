@@ -1,0 +1,9 @@
+{# SPDX-License-Identifier: MIT-0 #}
+# {{ ansible_managed }}
+SERVICE={{ sqlite_backups.service }}
+RELEASE_LINK={{ sqlite_backups.release_link | default('') }}
+SNAPSHOT_DIR={{ sqlite_snapshot_dir }}
+KEEP_PRE_DEPLOY={{ sqlite_snapshot_keep_pre_deploy }}
+{% for database in sqlite_backups.databases %}
+DATABASE={{ database }}
+{% endfor %}
