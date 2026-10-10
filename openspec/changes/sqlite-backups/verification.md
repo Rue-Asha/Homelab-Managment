@@ -1,4 +1,4 @@
-verified-at: 8111dcb
+verified-at: 9480623
 
 ## Layer 1 (scripts/proof.sh --all, green)
 
@@ -15,7 +15,7 @@ proof: 24 sensor(s), 0 failed
 
 ## Layer 2 coverage
 
-Unit scenarios: ok lines from scripts/tests/sqlite-snapshot.sh (S) and scripts/tests/sqlite-backup.sh (B), both run directly, rc 0.
+Unit scenarios: ok lines from scripts/tests/sqlite-snapshot.sh (S) and scripts/tests/sqlite-backup.sh (B), both run directly at 9480623 (round 2, after 9480623 strengthened 5 tests), rc 0, no non-ok lines.
 
 | Scenario | proof | Evidence |
 |---|---|---|
