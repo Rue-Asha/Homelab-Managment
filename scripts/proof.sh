@@ -38,6 +38,8 @@ deploy_targets=0
 plan_protected=0
 workflow_triggers=0
 unique_hosts=0
+sqlite_snapshot=0
+sqlite_backup=0
 for f in "${files[@]}"; do
   case "$f" in
     *.tfstate|*.tfstate.*) tfstate+=("$f") ;;
@@ -47,6 +49,8 @@ for f in "${files[@]}"; do
     scripts/checks/plan-protected.sh|scripts/tests/plan-protected.sh) plan_protected=1 ;;
     scripts/checks/unique-hosts.py|scripts/tests/unique-hosts.sh) unique_hosts=1 ;;
     scripts/checks/workflow-triggers.py|scripts/tests/workflow-triggers.sh) workflow_triggers=1 ;;
+    ansible/roles/sqlite_snapshot/*|ansible/playbooks/02_SERVICES/*|ansible/inventory/host_vars/*|scripts/tests/sqlite-snapshot.sh) sqlite_snapshot=1 ;;
+    ansible/roles/sqlite_backup/*|ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml|scripts/tests/sqlite-backup.sh) sqlite_backup=1 ;;
   esac
   case "$f" in
     terraform/*) tf_changed=1 ;;
@@ -138,6 +142,14 @@ sensor "Regression: arcade shares IP with check container" DUPLICATE_HOST_ADDRES
 
 if [ "$unique_hosts" -eq 1 ]; then
   sensor "unique-hosts fixtures" UNIQUE_HOSTS_FAILED scripts/tests/unique-hosts.sh
+fi
+
+if [ "$sqlite_snapshot" -eq 1 ]; then
+  sensor "sqlite-snapshot fixtures" SQLITE_SNAPSHOT_FIXTURES_FAILED scripts/tests/sqlite-snapshot.sh
+fi
+
+if [ "$sqlite_backup" -eq 1 ]; then
+  sensor "sqlite-backup fixtures" SQLITE_BACKUP_FIXTURES_FAILED scripts/tests/sqlite-backup.sh
 fi
 
 # The check runner runs PR code, so no deploy credential may be wired into it.
