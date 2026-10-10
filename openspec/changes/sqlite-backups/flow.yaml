@@ -5,6 +5,8 @@ live: true
 gate0: 2026-10-10
 gate1: 2026-10-10
 learnings:
+  - "Fixer mutation checks → only in a scratch copy outside the worktree, never mutate-in-place with backup/restore via cp, and no background processes left at return (a round-1 fixer's in-place mutation script hung 15 min on an aliased cp -i while restoring a mutant; had it resumed, it would have mutated the tree under the next verifier; orchestrator killed it by PID)"
+  - "zsh in agent shells: `git show $rev:path` hits the `:s` history modifier (bad substitution) → write `${rev}:path` (orchestrator)"
   - "proof.sh --all rewrites terraform/.terraform.lock.hcl in every flow worktree, and reverting it with git checkout breaks the next terraform validate (provider not cached) → leave the drift unstaged, or rm the ignored .terraform cache before re-running proof (U2, U3, orchestrator; recurrence of deploy-new-guests)"
   - "flow-unit drop uses branch -d, which fails when the primary checkout is on another branch → flow-unit should check merge-base --is-ancestor against flow/<change> and use -D itself (recurred in this change)"
   - "proof.sh --all lints and syntax-checks only tracked files → builders git add a new playbook/role before the proof run, else it passes unchecked (U4)"
