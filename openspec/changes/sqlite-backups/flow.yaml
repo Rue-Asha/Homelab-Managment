@@ -5,6 +5,8 @@ live: true
 gate0: 2026-10-10
 gate1: 2026-10-10
 learnings:
+  - "proof.sh --all rewrites terraform/.terraform.lock.hcl in every flow worktree, and reverting it with git checkout breaks the next terraform validate (provider not cached) → leave the drift unstaged, or rm the ignored .terraform cache before re-running proof (U2, U3, orchestrator; recurrence of deploy-new-guests)"
+  - "flow-unit drop uses branch -d, which fails when the primary checkout is on another branch → flow-unit should check merge-base --is-ancestor against flow/<change> and use -D itself (recurred in this change)"
   - "proof.sh --all lints and syntax-checks only tracked files → builders git add a new playbook/role before the proof run, else it passes unchecked (U4)"
   - "Gate 1 correction: Rue wanted pre-restore snapshots rotated (newest 10), the planner had left them unbounded → planner: every snapshot class a design creates gets a retention rule"
   - "ansible --check skips command/shell tasks, so --check dry runs on live hosts prove almost nothing for script-driven roles → planner: put the real proof in offline fixture tests and say plainly at Gate 1 that live behaviour is only proven after merge"
