@@ -112,3 +112,8 @@ Four fresh-context review rounds (Layer 3) plus three fixer rounds and one clean
 Accepted, not changed:
 - Fixture suites need `~/.config/homelab/vault_pass` (ansible.cfg `vault_password_file`); in a clean HOME 10 scenarios fail with a bare `test 1 -eq 0`. CI writes a dummy vault file, so CI is unaffected. Same precondition as the repo's other ansible-based tests.
 - `write_meta` reading the snapshot vs the live DB is not distinguishable with the stub (byte-identical copy); outside every scenario's THEN.
+
+## Live dry runs (Gate 2 evidence, unit 5)
+
+- 5.3 `ansible-playbook --check --diff` of `02_SERVICES/life-manager.yml` and `rues-arcade.yml` from the workstation at 3c993f1 (rendered inventory via `scripts/fetch-inventory.sh`): both exit 0, `ok=36 changed=4 unreachable=0 failed=0 skipped=12`. The 4 would-change tasks are exactly the sqlite_snapshot ones: apt `sqlite3` (only new package), snapshot script, config (SERVICE / RELEASE_LINK / SNAPSHOT_DIR=/var/backups/sqlite-snapshot / KEEP_PRE_DEPLOY=10 / DATABASE=/var/lib/<svc>/<svc>.db), snapshot dir. `.db` assert ok; the pre-deploy snapshot task is skipped in check mode (command task), so the snapshot itself is only proven after merge (6.2).
+- 5.2 node playbook `--check` on proxmox1: pending (needs 5.1, the vaulted ping URL).
