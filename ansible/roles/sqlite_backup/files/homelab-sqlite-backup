@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Node-side SQLite backup: collects snapshots from registered guests via pct.
 #   homelab-sqlite-backup run
-#   homelab-sqlite-backup pre-restore <host>
+#   homelab-sqlite-backup pre-restore <host> <ctid>
 #   homelab-sqlite-backup locate <host> <snapshot.db>
 # Config: key=value file (never sourced), see docs/backups.md.
 
@@ -134,20 +134,9 @@ cmd_run() {
   [ "$failures" -eq 0 ]
 }
 
-ctid_of() {
-  local entry host ctid
-  for entry in "${GUESTS[@]}"; do
-    read -r host ctid <<<"$entry"
-    [ "$host" = "$1" ] && { echo "$ctid"; return 0; }
-  done
-  echo "unknown host: $1" >&2
-  return 1
-}
-
 cmd_pre_restore() {
-  local host=${1:?usage: pre-restore <host>} ctid paths path
+  local host=${1:?usage: pre-restore <host> <ctid>} ctid=${2:?usage: pre-restore <host> <ctid>} paths path
   local -a written=()
-  ctid=$(ctid_of "$host") || return 1
   paths=$(timeout "$GUEST_TIMEOUT" pct exec "$ctid" -- "$SNAPSHOT_CMD" pre-restore) || {
     echo "$host: FAILED (pre-restore snapshot in guest $ctid failed)" >&2
     return 1
@@ -193,7 +182,7 @@ main() {
     run) cmd_run ;;
     pre-restore) shift; cmd_pre_restore "$@" ;;
     locate) shift; cmd_locate "$@" ;;
-    *) echo "usage: $0 run|locate <host> <snapshot>|pre-restore <host>" >&2; exit 64 ;;
+    *) echo "usage: $0 run|locate <host> <snapshot>|pre-restore <host> <ctid>" >&2; exit 64 ;;
   esac
 }
 

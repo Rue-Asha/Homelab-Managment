@@ -31,7 +31,8 @@ Registry entry
         - /var/lib/life-manager/life-manager.db
 
 Paths are literal, not `{{ life_manager_db_path }}`: the node play reads them
-without the service role loaded. Database basenames are unique per host.
+without the service role loaded. Paths must end in `.db` (asserted) and database
+basenames are unique per host.
 
 Role Variables
 --------------

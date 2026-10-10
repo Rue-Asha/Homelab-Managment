@@ -86,7 +86,7 @@ From the workstation (same inventory and node key as above):
    unit and waits for `/healthz` to answer 200.
 
 An unknown snapshot name fails before anything is touched, listing what is
-available.
+available. The playbook refuses `--check`: saving the pre-restore snapshot writes.
 
 **Rolling back a restore:** if `/healthz` never answers 200, the playbook fails
 and prints the pre-restore snapshot name and the exact command. It is the same
@@ -115,7 +115,7 @@ stopped automatically. `/healthz` is the only guard.
      release_link: /opt/my-service/current  # optional, for the release in .meta
      healthz_url: http://127.0.0.1/healthz  # optional, default as shown
      databases:
-       - /var/lib/my-service/my-service.db  # stems unique per host
+       - /var/lib/my-service/my-service.db  # must end in .db; stems unique per host
    ```
 2. In the service's `02_SERVICES` playbook list `sqlite_snapshot` directly
    before the service role.

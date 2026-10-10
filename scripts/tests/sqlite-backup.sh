@@ -23,6 +23,19 @@ check() {
   fi
 }
 
+# extra <label> <command...>   like check, for assertions that are not a spec scenario
+extra() {
+  local name=$1
+  shift
+  if "$@" >"$dir/out" 2>&1; then
+    echo "ok: $name"
+  else
+    echo "FAIL: $name (exit $?)"
+    sed 's/^/  /' "$dir/out"
+    failed=1
+  fi
+}
+
 script=$PWD/ansible/roles/sqlite_backup/files/homelab-sqlite-backup
 snapdir=/var/backups/sqlite-snapshot
 stamp_new=20261011T033012Z
@@ -395,25 +408,37 @@ check "Snapshot name not found" locate_not_found
 pre_restore_saves() {
   new_case
   std_conf
-  node pre-restore rues-arcade01
+  node pre-restore rues-arcade01 102
   a test $? -eq 0
   local d=$FX/root/rues-arcade01/pre-restore
   a exists "$d/app-$stamp_new.db"
   a exists "$d/app-$stamp_new.meta"
   a has "$FX/sqlite.log" "PRAGMA integrity_check;"
   a test "$(tail -1 "$FX/stdout")" = "app-$stamp_new.db"
+  a has "$FX/pull.log" "102 "
+  a not_has "$FX/pull.log" "101 "
   a absent "$FX/curl.log"
   a absent "$FX/root/life-manager01"
   return "$bad"
 }
 check "Current database is saved before the restore" pre_restore_saves
 
+pre_restore_needs_ctid() {
+  new_case
+  std_conf
+  node pre-restore rues-arcade01
+  a test $? -ne 0
+  a absent "$FX/pull.log"
+  return "$bad"
+}
+extra "pre-restore without a container ID fails" pre_restore_needs_ctid
+
 pre_restore_rotation_10() {
   new_case
   std_conf
   local s
   for s in $(stamps 1 10); do node_snap rues-arcade01 pre-restore app "$s"; done
-  node pre-restore rues-arcade01
+  node pre-restore rues-arcade01 102
   a test $? -eq 0
   local d=$FX/root/rues-arcade01/pre-restore
   a count "$d" '*.db' 10
@@ -458,6 +483,9 @@ GUEST_A='        guest_a:
           sqlite_backups: {service: a, unit: a.service, owner: a, group: a, databases: [/var/lib/a/a.db]}'
 GUEST_B='        guest_b:
           lxc_ctid: 102'
+GUEST_D='        guest_d:
+          lxc_ctid: 103
+          sqlite_backups: {service: d, unit: d.service, owner: d, group: d, databases: [/var/lib/d/data.sqlite]}'
 GUEST_C='        guest_c:
           sqlite_backups: {service: c, unit: c.service, owner: c, group: c, databases: [/var/lib/c/c.db]}'
 
@@ -502,8 +530,52 @@ registered_without_ctid() {
 }
 check "Registered host without a container ID" registered_without_ctid
 
+registered_without_db_suffix() {
+  new_case
+  fixture_inv "https://hc-ping.test/x" "$GUEST_A" "$GUEST_D"
+  play
+  a test $? -ne 0
+  a has "$FX/play.out" "guest_d"
+  a has "$FX/play.out" ".db"
+  a not_has "$FX/play.out" "sqlite_backup : Ensure"
+  return "$bad"
+}
+extra "Registered database path without .db suffix" registered_without_db_suffix
+
+restore_refuses_check_mode() {
+  new_case
+  mkdir -p "$FX/inv"
+  cat >"$FX/inv/hosts.yml" <<'YML'
+all:
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+    proxmox_node_ip: 127.0.0.1
+    ansible_become: false
+  children:
+    proxmox_guest:
+      hosts:
+        guest_a:
+          lxc_ctid: 101
+          sqlite_backups: {service: a, unit: a.service, owner: a, group: a, databases: [/var/lib/a/a.db]}
+YML
+  ansible-playbook -i "$FX/inv/hosts.yml" ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml --check \
+    -e sqlite_restore_snapshot=a-20261001T030000Z.db >"$FX/play.out" 2>&1
+  a test $? -ne 0
+  a has "$FX/play.out" "has no dry run"
+  a not_has "$FX/play.out" "Look up the snapshot"
+  return "$bad"
+}
+extra "Restore playbook refuses --check" restore_refuses_check_mode
+
 deploy_never_runs_node_playbook() {
   a test -f "$playbook"
+  a python3 - "$playbook" <<'PY'
+import sys, yaml
+plays = yaml.safe_load(open(sys.argv[1]))
+if [p["hosts"] for p in plays] != ["proxmox_node"]:
+    sys.exit(f"node playbook targets {[p['hosts'] for p in plays]}")
+PY
   unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE
   local r=$FX/repo
   mkdir -p "$r/scripts"

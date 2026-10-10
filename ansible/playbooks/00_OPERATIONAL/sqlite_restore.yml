@@ -19,6 +19,15 @@
          | select('match', '^.*/' ~ (sqlite_restore_stem | regex_escape) ~ '\.db$')
          | first | default('') }}
   tasks:
+    - name: Refuse check mode
+      ansible.builtin.assert:
+        that: not ansible_check_mode
+        quiet: true
+        fail_msg: >-
+          The restore has no dry run: saving the pre-restore snapshot writes
+          on the node. Run it without --check.
+      tags: always
+
     - name: Check the request is well formed
       ansible.builtin.assert:
         that:
@@ -50,7 +59,7 @@
 
     - name: Save the current database as a pre-restore snapshot
       ansible.builtin.command:
-        argv: ["{{ sqlite_restore_node_cmd }}", pre-restore, "{{ inventory_hostname }}"]
+        argv: ["{{ sqlite_restore_node_cmd }}", pre-restore, "{{ inventory_hostname }}", "{{ lxc_ctid }}"]
       delegate_to: "{{ proxmox_node_ip }}"
       become: false
       register: sqlite_restore_pre

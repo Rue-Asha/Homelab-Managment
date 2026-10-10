@@ -45,12 +45,13 @@ for f in "${files[@]}"; do
     *.tfstate|*.tfstate.*) tfstate+=("$f") ;;
   esac
   case "$f" in
-    scripts/deploy-targets.sh|scripts/tests/deploy-targets.sh) deploy_targets=1 ;;
+    scripts/deploy-targets.sh) deploy_targets=1; sqlite_backup=1 ;;
+    scripts/tests/deploy-targets.sh) deploy_targets=1 ;;
     scripts/checks/plan-protected.sh|scripts/tests/plan-protected.sh) plan_protected=1 ;;
     scripts/checks/unique-hosts.py|scripts/tests/unique-hosts.sh) unique_hosts=1 ;;
     scripts/checks/workflow-triggers.py|scripts/tests/workflow-triggers.sh) workflow_triggers=1 ;;
     ansible/roles/sqlite_snapshot/*|ansible/playbooks/02_SERVICES/*|ansible/inventory/host_vars/*|scripts/tests/sqlite-snapshot.sh) sqlite_snapshot=1 ;;
-    ansible/roles/sqlite_backup/*|ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml|scripts/tests/sqlite-backup.sh) sqlite_backup=1 ;;
+    ansible/roles/sqlite_backup/*|ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml|ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml|scripts/tests/sqlite-backup.sh) sqlite_backup=1 ;;
   esac
   case "$f" in
     terraform/*) tf_changed=1 ;;

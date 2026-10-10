@@ -39,7 +39,8 @@ extra() {
   fi
 }
 
-# Stub sqlite3: a "database" is a text file with user_version=N and an optional migration=NAME line.
+# Stub sqlite3: a "database" is a text file with user_version=N and optional migration=NAME lines.
+# A failing .backup leaves a partial file at the destination, like a real mid-backup error.
 mkdir -p "$dir/bin"
 cat >"$dir/bin/sqlite3" <<'STUB'
 #!/usr/bin/env bash
@@ -55,13 +56,14 @@ db=$1 sql=$2
 echo "cmds=${cmds[*]} db=$db sql=$sql" >>"$SQLITE_STUB_LOG"
 case $sql in
   ".backup '"*"'")
-    [ -z "${SQLITE_STUB_FAIL:-}" ] || { echo "database is locked" >&2; exit 5; }
     dest=${sql#".backup '"}
-    cp "$db" "${dest%\'}"
+    dest=${dest%\'}
+    [ -z "${SQLITE_STUB_FAIL:-}" ] || { head -c 4 "$db" >"$dest"; echo "database is locked" >&2; exit 5; }
+    cp "$db" "$dest"
     ;;
   "PRAGMA user_version"*) sed -n 's/^user_version=//p' "$db" ;;
   "SELECT name FROM sqlite_master"*) grep -q '^migration=' "$db" && echo schema_migrations ;;
-  "SELECT name FROM schema_migrations"*) sed -n 's/^migration=//p' "$db" ;;
+  "SELECT name FROM schema_migrations"*"ORDER BY name DESC LIMIT 1"*) sed -n 's/^migration=//p' "$db" | sort -r | head -n1 ;;
   *) echo "stub sqlite3: unhandled: $sql" >&2; exit 2 ;;
 esac
 exit 0
@@ -89,7 +91,12 @@ fixture() {
   unset SQLITE_STUB_FAIL
 }
 
-mkdb() { printf 'user_version=%s\n' "$2" >"$1"; [ -z "${3:-}" ] || echo "migration=$3" >>"$1"; }
+mkdb() {
+  local f=$1 v=$2
+  shift 2
+  printf 'user_version=%s\n' "$v" >"$f"
+  while [ $# -gt 0 ]; do echo "migration=$1" >>"$f"; shift; done
+}
 mkrelease() { mkdir -p "$1/current" && echo "$2" >"$1/current/.deployed_version"; }
 
 t_pre_deploy_written() (
@@ -136,7 +143,7 @@ t_keep_ten() (
 t_meta_migrated() (
   fixture migrated "$dir/migrated/rel/current"
   mkrelease "$dir/migrated/rel" v0.6.0
-  mkdb "$db" 4 0003_wavelength.sql
+  mkdb "$db" 4 0002_players.sql 0003_wavelength.sql 0001_init.sql
   out=$("$script" pre-deploy 2>/dev/null) || return 1
   meta=${out%.db}.meta
   head -n1 "$meta" | grep -Eq '^timestamp=[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' || { cat "$meta"; return 1; }
@@ -228,6 +235,27 @@ if not tasks:
 PY
 )
 
+t_role_requires_db_suffix() (
+  f=$dir/suffix
+  mkdir -p "$f"
+  printf 'fixture ansible_connection=local\n' >"$f/inventory"
+  printf '[defaults]\nroles_path=%s/ansible/roles\nlocalhost_warning=False\n' "$PWD" >"$f/ansible.cfg"
+  cat >"$f/play.yml" <<'PLAY'
+- hosts: all
+  gather_facts: false
+  vars:
+    sqlite_backups: {service: x, unit: x.service, owner: x, group: x, databases: [/var/lib/x/data.sqlite]}
+  roles:
+    - sqlite_snapshot
+PLAY
+  if ANSIBLE_CONFIG=$f/ansible.cfg ANSIBLE_PYTHON_INTERPRETER=auto_silent ansible-playbook --check -i "$f/inventory" "$f/play.yml" >"$f/out" 2>&1; then
+    echo "role accepted data.sqlite"
+    return 1
+  fi
+  grep -q 'must end in .db' "$f/out" || { cat "$f/out"; return 1; }
+  ! grep -q 'Install the sqlite3 CLI' "$f/out" || { echo "ran past the assert"; return 1; }
+)
+
 # Reads the registry and playbooks with python3.
 t_registered() (
   python3 - <<'PY'
@@ -266,6 +294,7 @@ check "Registered database missing in the guest" t_db_missing
 extra "daily keeps only the newest snapshot" t_daily_keeps_newest
 extra "list pre-deploy prints basenames" t_list
 check "Guest role skips a host without a registry entry" t_role_skips
+extra "Role rejects a database path without .db suffix" t_role_requires_db_suffix
 check "Life-Manager and Rues-Arcade are registered" t_registered
 check "Service playbooks run the snapshot role before the service role" t_playbook_order
 

@@ -25,6 +25,15 @@
       it with pct. Register only LXC guests that Terraform provisions.
   loop: "{{ sqlite_backup_registered }}"
 
+- name: Assert every registered database path ends in .db
+  ansible.builtin.assert:
+    that: hostvars[item]['sqlite_backups'].databases | select('match', '^.*\.db$') | list | length == hostvars[item]['sqlite_backups'].databases | length
+    quiet: true
+    fail_msg: >-
+      {{ item }} registers a database path that does not end in .db; snapshot
+      names and the restore lookup are derived from that suffix.
+  loop: "{{ sqlite_backup_registered }}"
+
 - name: Collect host and container ID of each registered guest
   ansible.builtin.set_fact:
     sqlite_backup_guests: "{{ (sqlite_backup_guests | default([])) + [item ~ ' ' ~ hostvars[item]['lxc_ctid']] }}"

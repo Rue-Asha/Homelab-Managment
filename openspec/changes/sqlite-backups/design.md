@@ -73,7 +73,7 @@ sqlite_backups:
 
 Rues-Arcade: same shape with `rues-arcade`, `/opt/rues-arcade/current`,
 `/var/lib/rues-arcade/rues-arcade.db`. A host without `sqlite_backups` is
-ignored by both roles. DB basenames (stem without `.db`) are unique per host.
+ignored by both roles. Every database path ends in `.db` (both roles assert it) and its basename stem is unique per host.
 
 ### Guest side — `roles/sqlite_snapshot`
 
@@ -129,16 +129,16 @@ ignored by both roles. DB basenames (stem without `.db`) are unique per host.
   3. Host succeeded → rotate `daily/` to `KEEP_DAILY` and `pre-deploy/` to `KEEP_PRE_DEPLOY` newest per stem (`.db` and `.meta` together). Host failed → delete nothing for it.
   4. Logs `<host>: ok` or `<host>: FAILED (<reason>)`; any non-zero `pct`, `sqlite3` or write is a failure of that host only.
   - After all hosts: all ok → `curl -fsS -m 10 --retry 3 -o /dev/null "$PING_URL"`; otherwise `curl … --data-raw "<one line per failed host with reason>" "$PING_URL/fail"`. A curl failure is logged to stderr and does not change the exit status. Exit 0 iff every host succeeded.
-- `homelab-sqlite-backup pre-restore <host>`: runs `$SNAPSHOT_CMD pre-restore` in that guest, pulls + checks into `$BACKUP_ROOT/<host>/pre-restore/`, then rotates `pre-restore/` to `KEEP_PRE_RESTORE` newest per stem, prints the kept `.db` basename. Non-zero on any failure, and then deletes nothing. No ping.
+- `homelab-sqlite-backup pre-restore <host> <ctid>`: runs `$SNAPSHOT_CMD pre-restore` in that guest, pulls + checks into `$BACKUP_ROOT/<host>/pre-restore/`, then rotates `pre-restore/` to `KEEP_PRE_RESTORE` newest per stem, prints the kept `.db` basename. Non-zero on any failure, and then deletes nothing. No ping.
 - `homelab-sqlite-backup locate <host> <snapshot>`: finds `<snapshot>` (a `.db` basename) under `$BACKUP_ROOT/<host>/{daily,pre-deploy,pre-restore}/`. Found → first line is the absolute path, then the `.meta` content; exit 0. Not found → stderr `not found: <snapshot>` followed by every available `<kind>/<name>`; exit 1.
 - systemd: `homelab-sqlite-backup.service` (oneshot, `ExecStart=/usr/local/sbin/homelab-sqlite-backup run`), `homelab-sqlite-backup.timer` (`OnCalendar=` from `sqlite_backup_on_calendar`, `Persistent=true`), timer enabled.
-- Role vars: `sqlite_backup_root`, `sqlite_backup_keep_daily` (14), `sqlite_backup_keep_pre_deploy` (10), `sqlite_backup_keep_pre_restore` (10), `sqlite_backup_ping_url` (default `""`, real value in `host_vars/proxmox1/vault.yml`), `sqlite_backup_on_calendar`, `sqlite_backup_snapshot_cmd` (must equal `sqlite_snapshot_script`). Tasks: `preflight.yml` (tag `preflight`: assert ping URL non-empty; collect every inventory host with `sqlite_backups`, assert each has `lxc_ctid`, failing with a message naming the host; print the collected list), `install.yml` (apt `sqlite3`), `configure.yml`, `service.yml`.
+- Role vars: `sqlite_backup_root`, `sqlite_backup_keep_daily` (14), `sqlite_backup_keep_pre_deploy` (10), `sqlite_backup_keep_pre_restore` (10), `sqlite_backup_ping_url` (default `""`, real value in `host_vars/proxmox1/vault.yml`), `sqlite_backup_on_calendar`, `sqlite_backup_snapshot_cmd` (must equal `sqlite_snapshot_script`). Tasks: `preflight.yml` (tag `preflight`: assert ping URL non-empty; collect every inventory host with `sqlite_backups`, assert each has `lxc_ctid` and only `.db` database paths, failing with a message naming the host; print the collected list), `install.yml` (apt `sqlite3`), `configure.yml`, `service.yml`.
 - Playbook `ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml`: `hosts: proxmox_node`, applies `sqlite_backup`.
 
 ### Restore — `ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml`
 
 - Invocation: `ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml -l <host> -e sqlite_restore_snapshot=<name>.db`. `hosts: proxmox_guest`; asserts exactly one host in the play, that it has `sqlite_backups`, and that the snapshot's stem matches one of its `databases`.
-- Order: `locate` (delegated to `{{ proxmox_node_ip }}`; print the metadata) → `pre-restore <host>` (record the name) → stop `unit` → `pct push <ctid> <node path> <db>` (delegated) → remove `<db>-wal`, `<db>-shm` → set owner/group/mode → start `unit` → `uri` `healthz_url` with retries. Healthz never 200 → fail naming the pre-restore snapshot and the command to restore it.
+- Order: `locate` (delegated to `{{ proxmox_node_ip }}`; print the metadata) → `pre-restore <host> <ctid>` (record the name) → stop `unit` → `pct push <ctid> <node path> <db>` (delegated) → remove `<db>-wal`, `<db>-shm` → set owner/group/mode → start `unit` → `uri` `healthz_url` with retries. Healthz never 200 → fail naming the pre-restore snapshot and the command to restore it.
 
 ### Fixture tests and proof wiring
 

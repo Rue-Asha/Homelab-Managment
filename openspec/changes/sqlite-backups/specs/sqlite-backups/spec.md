@@ -145,7 +145,7 @@ After a service's run succeeded, the node SHALL keep the newest 14 daily, the ne
 - **proof:** unit
 
 #### Scenario: Pre-restore rotation keeps the newest 10
-- **WHEN** `homelab-sqlite-backup pre-restore <host>` succeeds while 10 pre-restore snapshots already exist for that database
+- **WHEN** `homelab-sqlite-backup pre-restore <host> <ctid>` succeeds while 10 pre-restore snapshots already exist for that database
 - **THEN** the oldest pre-restore snapshot and its `.meta` are deleted and 10 remain, the new one among them
 - **proof:** unit
 
@@ -208,7 +208,7 @@ A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service h
 - **proof:** unit
 
 #### Scenario: Current database is saved before the restore
-- **WHEN** `homelab-sqlite-backup pre-restore <host>` runs
+- **WHEN** `homelab-sqlite-backup pre-restore <host> <ctid>` runs
 - **THEN** a snapshot of the live database, with `.meta`, lands in `/var/backups/homelab/<host>/pre-restore/` after passing the integrity check, and its name is printed
 - **proof:** unit
 
