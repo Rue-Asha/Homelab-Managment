@@ -7,4 +7,5 @@
     - common        # base host config (02 layer)
     - nodejs        # Node.js runtime
     - nginx         # reverse proxy (:80 -> 127.0.0.1:{{ rues_arcade_port }})
+    - sqlite_snapshot  # pre-deploy database snapshot; a failure stops the play before the release changes
     - rues_arcade   # service: fetch release, systemd unit, smoke check through nginx

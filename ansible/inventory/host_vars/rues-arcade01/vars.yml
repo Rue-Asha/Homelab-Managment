@@ -11,3 +11,15 @@ nginx_reverse_proxy_enabled: true
 nginx_backend_host: 127.0.0.1
 nginx_backend_port: "{{ rues_arcade_port }}"
 nginx_service_description: "the Rues Arcade web service"
+
+# --- sqlite backups (roles/sqlite_snapshot, roles/sqlite_backup, 00_OPERATIONAL/sqlite_restore.yml) ---
+sqlite_backups:
+  service: rues-arcade
+  unit: rues-arcade.service
+  owner: rues-arcade
+  group: rues-arcade
+  mode: "0640"
+  release_link: /opt/rues-arcade/current
+  healthz_url: http://127.0.0.1/healthz
+  databases:
+    - /var/lib/rues-arcade/rues-arcade.db
