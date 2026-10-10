@@ -134,12 +134,65 @@ cmd_run() {
   [ "$failures" -eq 0 ]
 }
 
+ctid_of() {
+  local entry host ctid
+  for entry in "${GUESTS[@]}"; do
+    read -r host ctid <<<"$entry"
+    [ "$host" = "$1" ] && { echo "$ctid"; return 0; }
+  done
+  echo "unknown host: $1" >&2
+  return 1
+}
+
+cmd_pre_restore() {
+  local host=${1:?usage: pre-restore <host>} ctid paths path
+  local -a written=()
+  ctid=$(ctid_of "$host") || return 1
+  paths=$(timeout "$GUEST_TIMEOUT" pct exec "$ctid" -- "$SNAPSHOT_CMD" pre-restore) || {
+    echo "$host: FAILED (pre-restore snapshot in guest $ctid failed)" >&2
+    return 1
+  }
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    pull_snapshot "$host" "$ctid" pre-restore "$path" || { echo "$host: FAILED ($reason)" >&2; return 1; }
+    written+=("${path##*/}")
+  done <<<"$paths"
+  [ "${#written[@]}" -gt 0 ] || { echo "$host: FAILED (pre-restore snapshot wrote nothing)" >&2; return 1; }
+  rotate "$BACKUP_ROOT/$host/pre-restore" "$KEEP_PRE_RESTORE"
+  printf '%s\n' "${written[@]}"
+}
+
+cmd_locate() {
+  local host=${1:?usage: locate <host> <snapshot>} snap=${2:?usage: locate <host> <snapshot>} kind f
+  if [[ $snap != *.db || $snap == */* ]]; then
+    echo "not found: $snap" >&2
+    return 1
+  fi
+  for kind in daily pre-deploy pre-restore; do
+    f=$BACKUP_ROOT/$host/$kind/$snap
+    if [ -f "$f" ]; then
+      echo "$f"
+      cat "${f%.db}.meta" 2>/dev/null
+      return 0
+    fi
+  done
+  echo "not found: $snap" >&2
+  for kind in daily pre-deploy pre-restore; do
+    for f in "$BACKUP_ROOT/$host/$kind"/*.db; do
+      [ -e "$f" ] && echo "$kind/${f##*/}" >&2
+    done
+  done
+  return 1
+}
+
 main() {
   local sub=${1:-}
   [ -r "$CONF" ] || { echo "cannot read config $CONF" >&2; exit 1; }
   load_conf
   case $sub in
     run) cmd_run ;;
+    pre-restore) shift; cmd_pre_restore "$@" ;;
+    locate) shift; cmd_locate "$@" ;;
     *) echo "usage: $0 run|locate <host> <snapshot>|pre-restore <host>" >&2; exit 64 ;;
   esac
 }

@@ -348,4 +348,66 @@ ping_unreachable() {
 }
 check "healthchecks.io unreachable" ping_unreachable
 
+# --- 3.3 locate and pre-restore --------------------------------------------
+
+locate_found() {
+  new_case
+  std_conf
+  node_snap rues-arcade01 pre-deploy app 20261003T010000Z
+  node locate rues-arcade01 app-20261003T010000Z.db
+  a test $? -eq 0
+  a test "$(head -1 "$FX/stdout")" = "$FX/root/rues-arcade01/pre-deploy/app-20261003T010000Z.db"
+  a test "$(sed -n '2,$p' "$FX/stdout")" = "node meta 20261003T010000Z"
+  return "$bad"
+}
+check "Snapshot metadata is shown first" locate_found
+
+locate_not_found() {
+  new_case
+  std_conf
+  node_snap rues-arcade01 daily app 20261001T030000Z
+  node_snap rues-arcade01 pre-restore app 20261002T030000Z
+  node locate rues-arcade01 app-20261009T030000Z.db
+  a test $? -eq 1
+  a has "$FX/stderr" "not found: app-20261009T030000Z.db"
+  a has "$FX/stderr" "daily/app-20261001T030000Z.db"
+  a has "$FX/stderr" "pre-restore/app-20261002T030000Z.db"
+  a test ! -s "$FX/stdout"
+  return "$bad"
+}
+check "Snapshot name not found" locate_not_found
+
+pre_restore_saves() {
+  new_case
+  std_conf
+  node pre-restore rues-arcade01
+  a test $? -eq 0
+  local d=$FX/root/rues-arcade01/pre-restore
+  a exists "$d/app-$stamp_new.db"
+  a exists "$d/app-$stamp_new.meta"
+  a has "$FX/sqlite.log" "PRAGMA integrity_check;"
+  a test "$(tail -1 "$FX/stdout")" = "app-$stamp_new.db"
+  a absent "$FX/curl.log"
+  a absent "$FX/root/life-manager01"
+  return "$bad"
+}
+check "Current database is saved before the restore" pre_restore_saves
+
+pre_restore_rotation_10() {
+  new_case
+  std_conf
+  local s
+  for s in $(stamps 1 10); do node_snap rues-arcade01 pre-restore app "$s"; done
+  node pre-restore rues-arcade01
+  a test $? -eq 0
+  local d=$FX/root/rues-arcade01/pre-restore
+  a count "$d" '*.db' 10
+  a count "$d" '*.meta' 10
+  a absent "$d/app-20260901T030000Z.db"
+  a absent "$d/app-20260901T030000Z.meta"
+  a exists "$d/app-$stamp_new.db"
+  return "$bad"
+}
+check "Pre-restore rotation keeps the newest 10" pre_restore_rotation_10
+
 exit "$failed"
