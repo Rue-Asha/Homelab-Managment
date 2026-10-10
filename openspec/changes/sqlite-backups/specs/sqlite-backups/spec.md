@@ -56,7 +56,7 @@ The guest-side role `sqlite_snapshot` SHALL install the `sqlite3` CLI and, on ev
 #### Scenario: Re-run without a version change still snapshots
 - **WHEN** a service playbook runs with the version that is already deployed
 - **THEN** a new pre-deploy snapshot is written all the same
-- **proof:** manual (needs a real guest; observed in the live service-playbook runs of unit 5)
+- **proof:** manual (needs a real guest; observed in the post-merge CI deploy of unit 6, which runs both playbooks without a version change)
 
 ### Requirement: Every snapshot carries metadata
 
@@ -114,7 +114,7 @@ A node-side role `sqlite_backup` on proxmox1 SHALL install a script and a daily 
 #### Scenario: Timer runs the job daily on proxmox1
 - **WHEN** the node playbook has been applied to proxmox1
 - **THEN** `systemctl list-timers` shows `homelab-sqlite-backup.timer` enabled with a daily next run, and a manual start of the service lands snapshots for both registered guests
-- **proof:** manual (needs proxmox1 and real `pct exec`/`pct pull`; unit 5)
+- **proof:** manual (needs proxmox1 and real `pct exec`/`pct pull`; post-merge, unit 6)
 
 ### Requirement: Only intact snapshots are kept
 
@@ -132,7 +132,7 @@ Each pulled snapshot SHALL pass `PRAGMA integrity_check` on the node before it i
 
 ### Requirement: Old snapshots are rotated only after a successful run
 
-After a service's run succeeded, the node SHALL keep the newest 14 daily and the newest 10 pre-deploy snapshots per database and delete older ones (each with its `.meta`). A service whose run failed SHALL have none of its snapshots deleted.
+After a service's run succeeded, the node SHALL keep the newest 14 daily, the newest 10 pre-deploy and the newest 10 pre-restore snapshots per database and delete older ones (each with its `.meta`). A service whose run failed SHALL have none of its snapshots deleted.
 
 #### Scenario: Daily rotation keeps the newest 14
 - **WHEN** a successful run adds a daily snapshot while 14 already exist for that database
@@ -142,6 +142,11 @@ After a service's run succeeded, the node SHALL keep the newest 14 daily and the
 #### Scenario: Pre-deploy rotation keeps the newest 10
 - **WHEN** a successful run leaves 12 pre-deploy snapshots for a database on the node
 - **THEN** the two oldest are deleted with their `.meta` and 10 remain
+- **proof:** unit
+
+#### Scenario: Pre-restore rotation keeps the newest 10
+- **WHEN** `homelab-sqlite-backup pre-restore <host>` succeeds while 10 pre-restore snapshots already exist for that database
+- **THEN** the oldest pre-restore snapshot and its `.meta` are deleted and 10 remain, the new one among them
 - **proof:** unit
 
 #### Scenario: Fewer than 14 present
@@ -181,7 +186,7 @@ The node job SHALL send a success ping to the healthchecks.io URL when every ser
 #### Scenario: Success ping arrives
 - **WHEN** the job runs on proxmox1 with both guests healthy
 - **THEN** the healthchecks.io check shows a success ping at that time
-- **proof:** manual (external service; observed by Rue in unit 5)
+- **proof:** manual (external service; observed by Rue after merge, unit 6)
 
 #### Scenario: Job never runs
 - **WHEN** no ping arrives within the check's period plus grace (timer broken, node down)
@@ -210,7 +215,7 @@ A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service h
 #### Scenario: Restore ends with a healthy service
 - **WHEN** the restore playbook runs for `rues-arcade01` with a snapshot from the node
 - **THEN** the unit runs again on the restored database, no `-wal`/`-shm` from before remains, owner and mode match the registry, `/healthz` answers 200 and the snapshot's content is visible in the app
-- **proof:** manual (needs proxmox1 and a real guest; restore drill in unit 5)
+- **proof:** manual (needs proxmox1 and a real guest; post-merge restore drill, unit 6)
 
 #### Scenario: Restore leaves an unhealthy service
 - **WHEN** `/healthz` does not answer 200 within the retries after a restore
@@ -229,7 +234,12 @@ A playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL apply the node-side role
 #### Scenario: Check-mode run on proxmox1
 - **WHEN** the node playbook runs with `--check` against proxmox1
 - **THEN** nothing on the node changes and the output shows what would be installed
-- **proof:** manual (needs proxmox1; unit 5)
+- **proof:** manual (needs proxmox1; Gate 2 evidence, unit 5)
+
+#### Scenario: Check-mode run of the service playbooks
+- **WHEN** `02_SERVICES/life-manager.yml` and `02_SERVICES/rues-arcade.yml` run with `--check` from the workstation on this branch
+- **THEN** nothing on the guests changes and the output shows `sqlite3`, the script and its config as would-change, with the play otherwise succeeding
+- **proof:** manual (needs the real guests; Gate 2 evidence, unit 5)
 
 ### Requirement: Backups are documented and new services must register
 

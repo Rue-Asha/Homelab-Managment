@@ -30,6 +30,8 @@ drill, no monitoring stack.
 - **Only app DBs** — Rue's choice.
 - **Daily + pre-deploy, healthchecks.io for alerting** — Rue's choice (recommended option).
 - **Retention 14 daily + 10 pre-deploy** — Rue's choice.
+- **Pre-restore snapshots rotate too, newest 10 per service** — Rue at Gate 1. Rotated by `pre-restore` itself after its snapshot was kept, with the same per-stem, name-sorted rule.
+- **Live order: before Gate 2 only `--check` runs; real runs after merge** — Rue at Gate 1, same as the pihole01 rebuild. Nothing unmerged lands on a real host.
 - **Pre-deploy snapshot on every service playbook run, not only on version change** — deploy-targets only runs changed playbooks, so extra snapshots are rare; simpler than detecting version changes.
 - **A failing pre-deploy snapshot blocks the deploy** — no migration without a way back.
 - **Rue creates the healthchecks.io check and puts the ping URL into the vault** — it's an external account.
@@ -116,6 +118,7 @@ ignored by both roles. DB basenames (stem without `.db`) are unique per host.
   BACKUP_ROOT=/var/backups/homelab
   KEEP_DAILY=14
   KEEP_PRE_DEPLOY=10
+  KEEP_PRE_RESTORE=10
   PING_URL=https://hc-ping.com/<uuid>
   SNAPSHOT_CMD=/usr/local/sbin/sqlite-snapshot
   GUEST=life-manager01 <lxc_ctid>          # one line per registered host
@@ -126,10 +129,10 @@ ignored by both roles. DB basenames (stem without `.db`) are unique per host.
   3. Host succeeded → rotate `daily/` to `KEEP_DAILY` and `pre-deploy/` to `KEEP_PRE_DEPLOY` newest per stem (`.db` and `.meta` together). Host failed → delete nothing for it.
   4. Logs `<host>: ok` or `<host>: FAILED (<reason>)`; any non-zero `pct`, `sqlite3` or write is a failure of that host only.
   - After all hosts: all ok → `curl -fsS -m 10 --retry 3 -o /dev/null "$PING_URL"`; otherwise `curl … --data-raw "<one line per failed host with reason>" "$PING_URL/fail"`. A curl failure is logged to stderr and does not change the exit status. Exit 0 iff every host succeeded.
-- `homelab-sqlite-backup pre-restore <host>`: runs `$SNAPSHOT_CMD pre-restore` in that guest, pulls + checks into `$BACKUP_ROOT/<host>/pre-restore/` (no rotation), prints the kept `.db` basename. Non-zero on any failure. No ping.
+- `homelab-sqlite-backup pre-restore <host>`: runs `$SNAPSHOT_CMD pre-restore` in that guest, pulls + checks into `$BACKUP_ROOT/<host>/pre-restore/`, then rotates `pre-restore/` to `KEEP_PRE_RESTORE` newest per stem, prints the kept `.db` basename. Non-zero on any failure, and then deletes nothing. No ping.
 - `homelab-sqlite-backup locate <host> <snapshot>`: finds `<snapshot>` (a `.db` basename) under `$BACKUP_ROOT/<host>/{daily,pre-deploy,pre-restore}/`. Found → first line is the absolute path, then the `.meta` content; exit 0. Not found → stderr `not found: <snapshot>` followed by every available `<kind>/<name>`; exit 1.
 - systemd: `homelab-sqlite-backup.service` (oneshot, `ExecStart=/usr/local/sbin/homelab-sqlite-backup run`), `homelab-sqlite-backup.timer` (`OnCalendar=` from `sqlite_backup_on_calendar`, `Persistent=true`), timer enabled.
-- Role vars: `sqlite_backup_root`, `sqlite_backup_keep_daily` (14), `sqlite_backup_keep_pre_deploy` (10), `sqlite_backup_ping_url` (default `""`, real value in `host_vars/proxmox1/vault.yml`), `sqlite_backup_on_calendar`, `sqlite_backup_snapshot_cmd` (must equal `sqlite_snapshot_script`). Tasks: `preflight.yml` (tag `preflight`: assert ping URL non-empty; collect every inventory host with `sqlite_backups`, assert each has `lxc_ctid`, failing with a message naming the host; print the collected list), `install.yml` (apt `sqlite3`), `configure.yml`, `service.yml`.
+- Role vars: `sqlite_backup_root`, `sqlite_backup_keep_daily` (14), `sqlite_backup_keep_pre_deploy` (10), `sqlite_backup_keep_pre_restore` (10), `sqlite_backup_ping_url` (default `""`, real value in `host_vars/proxmox1/vault.yml`), `sqlite_backup_on_calendar`, `sqlite_backup_snapshot_cmd` (must equal `sqlite_snapshot_script`). Tasks: `preflight.yml` (tag `preflight`: assert ping URL non-empty; collect every inventory host with `sqlite_backups`, assert each has `lxc_ctid`, failing with a message naming the host; print the collected list), `install.yml` (apt `sqlite3`), `configure.yml`, `service.yml`.
 - Playbook `ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml`: `hosts: proxmox_node`, applies `sqlite_backup`.
 
 ### Restore — `ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml`
@@ -150,21 +153,27 @@ ignored by both roles. DB basenames (stem without `.db`) are unique per host.
 - [Terraform recreate wipes guest-local pre-deploy snapshots] → accepted; the node copies them within a day.
 - [Concurrent deploy restarts the service mid-run] → that host fails, the fail ping names it, the next night retries.
 - [A hung `pct exec` stalls the whole job] → each guest call is bounded with `timeout`; a timeout is a failure of that host.
-- [Stubs encode assumptions about `pct`/`sqlite3` output] → real behaviour is covered by the live tasks (unit 5).
+- [Stubs encode assumptions about `pct`/`sqlite3` output] → real behaviour is covered by the post-merge live tasks (unit 6).
 - [New services forget to register] → CLAUDE.md rule only, no automated check.
 - [Snapshot schema newer than the running release on restore] → not detected; metadata is printed first, healthz is the guard (accepted).
-- [Merging deploys both services] → expected: `sqlite3` lands on both guests and they get their first pre-deploy snapshot; the snapshot runs before the service role, so a failure blocks only that deploy.
+- [Merging deploys both services] → intended: the CI deploy is the first real run on the guests (`sqlite3`, script, first pre-deploy snapshot); the snapshot runs before the service role, so a failure blocks only that deploy.
+- [`--check` evidence misses what check mode skips] → `command` tasks (the snapshot itself, `pct`) do not run in check mode; Gate 2 rests on the fixture tests plus the dry runs, the real behaviour is proven after merge (unit 6).
 
 ## Migration Plan
 
-1. Rue creates the healthchecks.io check and the vaulted ping URL.
-2. Node playbook with `--check`, then for real, from the workstation.
-3. Service playbooks run (by hand from this branch, or by the merge deploy) → guest script installed, first pre-deploy snapshots.
-4. One manual node run → first daily snapshots, success ping.
-5. Restore drill on rues-arcade01.
+Before Gate 2 (evidence, nothing changes on a real host):
+1. Rue creates the healthchecks.io check and the vaulted ping URL (committed on this branch).
+2. Node playbook with `--check` against proxmox1, from the workstation.
+3. Both service playbooks with `--check` against their guests, from the workstation.
+
+After the merge (Ship):
+4. Node playbook for real, by hand from the workstation.
+5. The merge's CI deploy runs both service playbooks → guest script installed, first pre-deploy snapshots.
+6. One manual node-job run → first daily snapshots, pre-deploy copies on the node, success ping.
+7. Restore drill on rues-arcade01.
 
 Rollback: disable the timer (`systemctl disable --now homelab-sqlite-backup.timer`); remove `sqlite_snapshot` from the service playbooks. Snapshots on disk are inert.
 
 ## Open Questions
 
-- None blocking. Pre-restore snapshots are not rotated (scope sets no retention for them); docs say to delete them by hand.
+- None.
