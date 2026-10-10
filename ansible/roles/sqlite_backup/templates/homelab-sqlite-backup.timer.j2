@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Nightly SQLite snapshot collection
+
+[Timer]
+OnCalendar={{ sqlite_backup_on_calendar }}
+Persistent=true
+
+[Install]
+WantedBy=timers.target

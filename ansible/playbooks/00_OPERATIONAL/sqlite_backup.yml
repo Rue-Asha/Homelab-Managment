@@ -1,0 +1,15 @@
+---
+# Install the nightly SQLite backup job on the Proxmox node. Run by hand from
+# the workstation (needs the node key; CI cannot reach the node, and deploy.yml
+# only runs 02_SERVICES):
+#
+#   scripts/fetch-inventory.sh
+#   ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml --check
+#   ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml
+#
+# Re-run whenever a service is registered or removed. See docs/backups.md.
+- name: Install the nightly SQLite backup job on the node
+  hosts: proxmox_node
+  gather_facts: false
+  roles:
+    - sqlite_backup

@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: MIT-0
+---
+sqlite_backup_script: /usr/local/sbin/homelab-sqlite-backup
+sqlite_backup_conf: /etc/homelab-sqlite-backup.conf
+sqlite_backup_root: /var/backups/homelab
+sqlite_backup_keep_daily: 14
+sqlite_backup_keep_pre_deploy: 10
+sqlite_backup_keep_pre_restore: 10
+
+# Real value lives in host_vars/proxmox1/vault.yml; the preflight fails while empty.
+sqlite_backup_ping_url: ""
+
+# Must equal the guest role's sqlite_snapshot_script.
+sqlite_backup_snapshot_cmd: /usr/local/sbin/sqlite-snapshot
+
+# Upper bound for every pct/sqlite3 call, per guest call.
+sqlite_backup_guest_timeout: 300
+
+sqlite_backup_on_calendar: "*-*-* 03:30:00"

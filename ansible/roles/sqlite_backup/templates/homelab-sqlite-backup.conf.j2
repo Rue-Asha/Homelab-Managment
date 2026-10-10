@@ -1,0 +1,11 @@
+# {{ ansible_managed }}
+BACKUP_ROOT={{ sqlite_backup_root }}
+KEEP_DAILY={{ sqlite_backup_keep_daily }}
+KEEP_PRE_DEPLOY={{ sqlite_backup_keep_pre_deploy }}
+KEEP_PRE_RESTORE={{ sqlite_backup_keep_pre_restore }}
+PING_URL={{ sqlite_backup_ping_url }}
+SNAPSHOT_CMD={{ sqlite_backup_snapshot_cmd }}
+GUEST_TIMEOUT={{ sqlite_backup_guest_timeout }}
+{% for guest in sqlite_backup_guests | default([]) %}
+GUEST={{ guest }}
+{% endfor %}

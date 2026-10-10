@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install the backup service unit
+  ansible.builtin.template:
+    src: homelab-sqlite-backup.service.j2
+    dest: /etc/systemd/system/homelab-sqlite-backup.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: sqlite_backup_reload_systemd
+
+- name: Install the backup timer unit
+  ansible.builtin.template:
+    src: homelab-sqlite-backup.timer.j2
+    dest: /etc/systemd/system/homelab-sqlite-backup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - sqlite_backup_reload_systemd
+    - sqlite_backup_restart_timer
+
+- name: Apply unit changes before enabling the timer
+  ansible.builtin.meta: flush_handlers
+
+- name: Ensure the backup timer is enabled and running
+  ansible.builtin.systemd:
+    name: homelab-sqlite-backup.timer
+    enabled: true
+    state: started

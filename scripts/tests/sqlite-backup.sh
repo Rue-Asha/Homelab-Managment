@@ -410,4 +410,88 @@ pre_restore_rotation_10() {
 }
 check "Pre-restore rotation keeps the newest 10" pre_restore_rotation_10
 
+# --- 3.4 node playbook preflight -------------------------------------------
+
+playbook=ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml
+export ANSIBLE_CONFIG="${ANSIBLE_CONFIG:-$PWD/ansible/ansible.cfg}"
+
+# fixture_inv <ping url> <extra guest lines...>   inventory of local hosts
+fixture_inv() {
+  local ping_url=$1
+  shift
+  mkdir -p "$FX/inv"
+  {
+    cat <<YML
+all:
+  vars:
+    ansible_connection: local
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
+  children:
+    proxmox_node:
+      hosts:
+        node1:
+          sqlite_backup_ping_url: "$ping_url"
+    proxmox_guest:
+      hosts:
+YML
+    printf '%s\n' "$@"
+  } >"$FX/inv/hosts.yml"
+}
+
+GUEST_A='        guest_a:
+          lxc_ctid: 101
+          sqlite_backups: {service: a, unit: a.service, owner: a, group: a, databases: [/var/lib/a/a.db]}'
+GUEST_B='        guest_b:
+          lxc_ctid: 102'
+GUEST_C='        guest_c:
+          sqlite_backups: {service: c, unit: c.service, owner: c, group: c, databases: [/var/lib/c/c.db]}'
+
+# play <extra ansible-playbook args...>   output to a file, never a pipe
+play() {
+  ansible-playbook -i "$FX/inv/hosts.yml" "$playbook" --check "$@" >"$FX/play.out" 2>&1
+}
+
+ping_unset() {
+  new_case
+  fixture_inv "" "$GUEST_A"
+  play
+  a test $? -ne 0
+  a has "$FX/play.out" "sqlite_backup_ping_url"
+  a has "$FX/play.out" "host_vars/proxmox1/vault.yml"
+  a not_has "$FX/play.out" "sqlite_backup : Ensure"
+  return "$bad"
+}
+check "Ping URL unset" ping_unset
+
+preflight_ignores_unregistered() {
+  new_case
+  fixture_inv "https://hc-ping.test/x" "$GUEST_A" "$GUEST_B"
+  play --tags preflight
+  a test $? -eq 0
+  a has "$FX/play.out" "guest_a 101"
+  a not_has "$FX/play.out" "guest_b"
+  return "$bad"
+}
+check "Node playbook ignores a host without a registry entry" preflight_ignores_unregistered
+
+registered_without_ctid() {
+  new_case
+  fixture_inv "https://hc-ping.test/x" "$GUEST_A" "$GUEST_C"
+  play --tags preflight
+  a test $? -ne 0
+  a has "$FX/play.out" "guest_c"
+  a has "$FX/play.out" "lxc_ctid"
+  return "$bad"
+}
+check "Registered host without a container ID" registered_without_ctid
+
+deploy_never_runs_node_playbook() {
+  a test -f "$playbook"
+  a grep -qx '  hosts: proxmox_node' "$playbook"
+  a test "$(grep -c '^  hosts:' "$playbook")" -eq 1
+  a grep -q 'role: sqlite_backup\|- sqlite_backup' "$playbook"
+  return "$bad"
+}
+check "The deploy never runs the node playbook" deploy_never_runs_node_playbook
+
 exit "$failed"
