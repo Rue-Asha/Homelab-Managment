@@ -1,4 +1,4 @@
-verified-at: 9480623
+verified-at: 2df3e08
 
 ## Layer 1 (scripts/proof.sh --all, green)
 
@@ -15,7 +15,7 @@ proof: 24 sensor(s), 0 failed
 
 ## Layer 2 coverage
 
-Unit scenarios: ok lines from scripts/tests/sqlite-snapshot.sh (S) and scripts/tests/sqlite-backup.sh (B), both run directly at 9480623 (round 2, after 9480623 strengthened 5 tests), rc 0, no non-ok lines.
+Unit scenarios: ok lines from scripts/tests/sqlite-snapshot.sh (S) and scripts/tests/sqlite-backup.sh (B), each run directly 5 times at 2df3e08 (round 3), 10/10 rc 0, no non-ok lines in any run, no flake. All 34 unit scenarios map to a spec scenario; the 11 spec scenarios not in the test output are manual or covered by proof.sh PASS lines.
 
 | Scenario | proof | Evidence |
 |---|---|---|
@@ -64,7 +64,11 @@ Unit scenarios: ok lines from scripts/tests/sqlite-snapshot.sh (S) and scripts/t
 | CLAUDE.md requires registration | manual | read .claude/CLAUDE.md at Gate 2 |
 | Script change runs its fixture tests | unit | proof.sh --all prints PASS: sqlite-snapshot fixtures and PASS: sqlite-backup fixtures |
 
-Gaps: none.
+Gaps (tests for behaviour with no scenario in the delta spec; none of these names appears in a `#### Scenario:` heading):
+- "Restore playbook refuses --check": B ok, behaviour not in spec
+- "Role rejects a database path without .db suffix": S ok, behaviour not in spec
+- "Registered database path without .db suffix": ok, behaviour not in spec
+- "pre-restore without a container ID fails": B ok, spec only gives the `pre-restore <host> <ctid>` form and no failure scenario
 
 ## Manual checklist
 
@@ -74,7 +78,7 @@ Gaps: none.
 - Post-merge (6.x): timer enabled on proxmox1, manual start lands both snapshots, success ping on healthchecks.io, restore drill on rues-arcade01, re-run deploy writes a new pre-deploy snapshot
 - healthchecks.io missing-ping alert configured by Rue; unhealthy-restore message not drilled
 
-## Diffstat
+## Diffstat (round 3)
 
  40 files changed, 2485 insertions(+) (40 files; top: scripts/tests/sqlite-backup.sh 497, scripts/tests/sqlite-snapshot.sh 271, spec.md 265, design.md 179, docs/backups.md 137)
 
