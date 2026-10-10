@@ -89,3 +89,26 @@ Notes:
 ## Screenshots
 
 none
+
+## Review
+
+Four fresh-context review rounds (Layer 3) plus three fixer rounds and one cleanup round. Correctness bugs found by review: 5 (all fixed with red-first tests); no weakened tests in any round.
+
+| Round | Finding | Resolution |
+|---|---|---|
+| 1 | 5 weak tests (guest role skip relied on check-mode semantics; FAILED reason; restore call order; preflight-before-install; deploy-targets never exercised) | Strengthened, each reviewer mutant red (9480623) |
+| 2 | 3 weak tests (partial file on failed snapshot; newest migration; node play `hosts:`) | Strengthened (2df3e08) |
+| 2 | proof trigger missed sqlite_restore.yml / deploy-targets.sh | Trigger extended (2df3e08) |
+| 2 | Restore crashed under --check | Restore refuses --check with a clear message; scenario added (2df3e08) |
+| 2 | Two sources for the container ID | `pre-restore <host> <ctid>` takes the live inventory ctid (2df3e08) |
+| 2 | Registry paths not ending in .db broke restore | Preflight asserts in both roles, documented (2df3e08) |
+| 3 | Node playbook --check failed on a fresh proxmox1 (timer unit missing) | Check-mode tolerance for "unit not found" only (a6daff9, narrowed in dbb34f9) |
+| 3 | Typo'd snapshot name didn't list available snapshots | `locate` runs before the name assert (a6daff9) |
+| 3 | Pre-restore rotation could delete the snapshot being restored | `pre-restore` protects the chosen snapshot (a6daff9) |
+| 3 | Rescue left the service stopped | Rescue starts the unit again (a6daff9) |
+| 3 | Multi-DB host: rollback message could name the wrong DB's snapshot | Name matched by stem (a6daff9) |
+| 4 | 2 weak tests (playbook passes protect arg; rescue really starts unit), naming gaps, broad check-mode ignore | Strengthened, renamed, narrowed to "Could not find the requested service" (dbb34f9) |
+
+Accepted, not changed:
+- Fixture suites need `~/.config/homelab/vault_pass` (ansible.cfg `vault_password_file`); in a clean HOME 10 scenarios fail with a bare `test 1 -eq 0`. CI writes a dummy vault file, so CI is unaffected. Same precondition as the repo's other ansible-based tests.
+- `write_meta` reading the snapshot vs the live DB is not distinguishable with the stub (byte-identical copy); outside every scenario's THEN.
