@@ -60,6 +60,25 @@ pull_snapshot() {
   }
 }
 
+# rotate <dir> <keep>   keeps the newest <keep> .db per stem (with their .meta).
+# Names carry a UTC stamp, so name order is time order.
+rotate() {
+  local dir=$1 keep=$2 f name stem i
+  local -A files=()
+  for f in "$dir"/*.db; do
+    name=${f##*/}
+    [[ $name =~ ^(.+)-[0-9]{8}T[0-9]{6}Z\.db$ ]] || continue
+    stem=${BASH_REMATCH[1]}
+    files[$stem]+="$name"$'\n'
+  done
+  for stem in "${!files[@]}"; do
+    mapfile -t sorted < <(printf '%s' "${files[$stem]}" | sort)
+    for ((i = 0; i < ${#sorted[@]} - keep; i++)); do
+      command rm -f "$dir/${sorted[$i]}" "$dir/${sorted[$i]%.db}.meta"
+    done
+  done
+}
+
 # process_host <host> <ctid>   returns 1 with $reason set when the host failed
 process_host() {
   local host=$1 ctid=$2 paths names path name snap_dir
@@ -82,10 +101,24 @@ process_host() {
     [ -e "$BACKUP_ROOT/$host/pre-deploy/$name" ] && continue
     pull_snapshot "$host" "$ctid" pre-deploy "$snap_dir/pre-deploy/$name" || return 1
   done <<<"$names"
+
+  rotate "$BACKUP_ROOT/$host/daily" "$KEEP_DAILY"
+  rotate "$BACKUP_ROOT/$host/pre-deploy" "$KEEP_PRE_DEPLOY"
+}
+
+# ping <failure report>   empty report means success
+ping() {
+  local report=$1
+  [ -n "$PING_URL" ] || { echo "ping skipped: PING_URL is empty" >&2; return; }
+  if [ -z "$report" ]; then
+    curl -fsS -m 10 --retry 3 -o /dev/null "$PING_URL"
+  else
+    curl -fsS -m 10 --retry 3 -o /dev/null --data-raw "$report" "${PING_URL%/}/fail"
+  fi || echo "ping to healthchecks.io failed" >&2
 }
 
 cmd_run() {
-  local entry host ctid failures=0
+  local entry host ctid failures=0 report=
   for entry in "${GUESTS[@]}"; do
     read -r host ctid <<<"$entry"
     reason=
@@ -94,8 +127,10 @@ cmd_run() {
     else
       echo "$host: FAILED ($reason)" >&2
       failures=$((failures + 1))
+      report+="$host: $reason"$'\n'
     fi
   done
+  ping "${report%$'\n'}"
   [ "$failures" -eq 0 ]
 }
 

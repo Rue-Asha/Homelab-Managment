@@ -241,4 +241,111 @@ corrupt_discarded() {
 }
 check "Corrupt snapshot is discarded" corrupt_discarded
 
+# --- 3.2 rotation and ping -------------------------------------------------
+
+daily_rotation_14() {
+  new_case
+  write_conf "life-manager01 101"
+  local s
+  for s in $(stamps 1 14); do node_snap life-manager01 daily app "$s"; done
+  node run
+  a test $? -eq 0
+  local d=$FX/root/life-manager01/daily
+  a count "$d" '*.db' 14
+  a count "$d" '*.meta' 14
+  a absent "$d/app-20260901T030000Z.db"
+  a absent "$d/app-20260901T030000Z.meta"
+  a exists "$d/app-20260902T030000Z.db"
+  a exists "$d/app-$stamp_new.db"
+  return "$bad"
+}
+check "Daily rotation keeps the newest 14" daily_rotation_14
+
+pre_deploy_rotation_10() {
+  new_case
+  write_conf "life-manager01 101"
+  local s
+  for s in $(stamps 1 12); do guest_snap 101 pre-deploy app "$s"; done
+  node run
+  a test $? -eq 0
+  local d=$FX/root/life-manager01/pre-deploy
+  a count "$d" '*.db' 10
+  a count "$d" '*.meta' 10
+  a absent "$d/app-20260901T030000Z.db"
+  a absent "$d/app-20260902T030000Z.meta"
+  a exists "$d/app-20260903T030000Z.db"
+  a exists "$d/app-20260912T030000Z.db"
+  return "$bad"
+}
+check "Pre-deploy rotation keeps the newest 10" pre_deploy_rotation_10
+
+fewer_than_14() {
+  new_case
+  write_conf "life-manager01 101"
+  local s
+  for s in $(stamps 1 5); do node_snap life-manager01 daily app "$s"; done
+  node run
+  a test $? -eq 0
+  a count "$FX/root/life-manager01/daily" '*.db' 6
+  a count "$FX/root/life-manager01/daily" '*.meta' 6
+  return "$bad"
+}
+check "Fewer than 14 present" fewer_than_14
+
+failed_run_deletes_nothing() {
+  new_case
+  write_conf "life-manager01 101"
+  local s
+  for s in $(stamps 1 20); do node_snap life-manager01 daily app "$s"; done
+  touch "$FX/fail_exec_101"
+  node run
+  a test $? -ne 0
+  a count "$FX/root/life-manager01/daily" '*.db' 20
+  a count "$FX/root/life-manager01/daily" '*.meta' 20
+  return "$bad"
+}
+check "Failed run deletes nothing" failed_run_deletes_nothing
+
+ping_success() {
+  new_case
+  std_conf
+  node run
+  a test $? -eq 0
+  a test "$(wc -l <"$FX/curl.log")" -eq 1
+  a test "$(cut -d' ' -f1 "$FX/curl.log")" = "$ping"
+  return "$bad"
+}
+check "All services succeeded" ping_success
+
+ping_failure() {
+  new_case
+  std_conf
+  touch "$FX/fail_exec_102"
+  node run
+  a test $? -ne 0
+  a test "$(wc -l <"$FX/curl.log")" -eq 1
+  a test "$(cut -d' ' -f1 "$FX/curl.log")" = "$ping/fail"
+  a has "$FX/curl.log" "rues-arcade01"
+  a has "$FX/curl.log" "snapshot in guest 102 failed"
+  a not_has "$FX/curl.log" "life-manager01"
+  return "$bad"
+}
+not_has() { ! grep -qF -- "$2" "$1"; }
+check "A service failed" ping_failure
+
+ping_unreachable() {
+  new_case
+  std_conf
+  touch "$FX/curl_fail"
+  node run
+  a test $? -eq 0
+  a has "$FX/stderr" "ping"
+  touch "$FX/fail_exec_101"
+  node run
+  a test $? -ne 0
+  a has "$FX/stderr" "ping"
+  return "$bad"
+}
+check "healthchecks.io unreachable" ping_unreachable
+
 exit "$failed"
