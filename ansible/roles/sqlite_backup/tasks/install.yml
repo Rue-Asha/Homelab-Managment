@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure sqlite3 is installed for the integrity check
+  ansible.builtin.apt:
+    name: sqlite3
+    state: present
+    cache_valid_time: 3600

@@ -1,0 +1,7 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Collect SQLite snapshots from registered guests
+
+[Service]
+Type=oneshot
+ExecStart={{ sqlite_backup_script }} run

@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+# Node-side SQLite backup: collects snapshots from registered guests via pct.
+#   homelab-sqlite-backup run
+#   homelab-sqlite-backup pre-restore <host>
+#   homelab-sqlite-backup locate <host> <snapshot.db>
+# Config: key=value file (never sourced), see docs/backups.md.
+
+set -uo pipefail
+export LC_ALL=C
+
+CONF=${HOMELAB_SQLITE_BACKUP_CONF:-/etc/homelab-sqlite-backup.conf}
+
+BACKUP_ROOT=/var/backups/homelab
+KEEP_DAILY=14
+KEEP_PRE_DEPLOY=10
+KEEP_PRE_RESTORE=10
+PING_URL=
+SNAPSHOT_CMD=/usr/local/sbin/sqlite-snapshot
+GUEST_TIMEOUT=300
+GUESTS=()
+
+load_conf() {
+  local key value
+  while IFS='=' read -r key value; do
+    case $key in
+      BACKUP_ROOT|KEEP_DAILY|KEEP_PRE_DEPLOY|KEEP_PRE_RESTORE|PING_URL|SNAPSHOT_CMD|GUEST_TIMEOUT)
+        printf -v "$key" '%s' "$value" ;;
+      GUEST) GUESTS+=("$value") ;;
+    esac
+  done <"$CONF"
+}
+
+reason=
+
+# pull_snapshot <host> <ctid> <kind> <guest path of the .db>
+# Pulls .db and .meta under temp names, keeps them only if the db passes the
+# integrity check. Sets $reason on failure and leaves nothing behind.
+pull_snapshot() {
+  local host=$1 ctid=$2 kind=$3 src=$4
+  local dest=$BACKUP_ROOT/$host/$kind name=${4##*/}
+  local tmp_db=$dest/.$name.tmp tmp_meta=$dest/.${name%.db}.meta.tmp
+  mkdir -p "$dest" || { reason="cannot create $dest"; return 1; }
+  if ! timeout "$GUEST_TIMEOUT" pct pull "$ctid" "$src" "$tmp_db" ||
+    ! timeout "$GUEST_TIMEOUT" pct pull "$ctid" "${src%.db}.meta" "$tmp_meta"; then
+    command rm -f "$tmp_db" "$tmp_meta"
+    reason="pct pull of $name failed"
+    return 1
+  fi
+  local result
+  result=$(timeout "$GUEST_TIMEOUT" sqlite3 "$tmp_db" 'PRAGMA integrity_check;' 2>&1)
+  if [ "$result" != ok ]; then
+    command rm -f "$tmp_db" "$tmp_meta"
+    reason="integrity_check failed for $name"
+    return 1
+  fi
+  mv -f "$tmp_meta" "$dest/${name%.db}.meta" && mv -f "$tmp_db" "$dest/$name" || {
+    command rm -f "$tmp_db" "$tmp_meta"
+    reason="cannot write $name under $dest"
+    return 1
+  }
+}
+
+# rotate <dir> <keep>   keeps the newest <keep> .db per stem (with their .meta).
+# Names carry a UTC stamp, so name order is time order.
+rotate() {
+  local dir=$1 keep=$2 f name stem i
+  local -A files=()
+  for f in "$dir"/*.db; do
+    name=${f##*/}
+    [[ $name =~ ^(.+)-[0-9]{8}T[0-9]{6}Z\.db$ ]] || continue
+    stem=${BASH_REMATCH[1]}
+    files[$stem]+="$name"$'\n'
+  done
+  for stem in "${!files[@]}"; do
+    mapfile -t sorted < <(printf '%s' "${files[$stem]}" | sort)
+    for ((i = 0; i < ${#sorted[@]} - keep; i++)); do
+      command rm -f "$dir/${sorted[$i]}" "$dir/${sorted[$i]%.db}.meta"
+    done
+  done
+}
+
+# process_host <host> <ctid>   returns 1 with $reason set when the host failed
+process_host() {
+  local host=$1 ctid=$2 paths names path name snap_dir
+  if ! paths=$(timeout "$GUEST_TIMEOUT" pct exec "$ctid" -- "$SNAPSHOT_CMD" daily); then
+    reason="snapshot in guest $ctid failed"
+    return 1
+  fi
+  [ -n "$paths" ] || { reason="snapshot in guest $ctid wrote nothing"; return 1; }
+  while IFS= read -r path; do
+    pull_snapshot "$host" "$ctid" daily "$path" || return 1
+  done <<<"$paths"
+
+  snap_dir=$(dirname "$(dirname "${paths%%$'\n'*}")")
+  if ! names=$(timeout "$GUEST_TIMEOUT" pct exec "$ctid" -- "$SNAPSHOT_CMD" list pre-deploy); then
+    reason="listing pre-deploy snapshots in guest $ctid failed"
+    return 1
+  fi
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    [ -e "$BACKUP_ROOT/$host/pre-deploy/$name" ] && continue
+    pull_snapshot "$host" "$ctid" pre-deploy "$snap_dir/pre-deploy/$name" || return 1
+  done <<<"$names"
+
+  rotate "$BACKUP_ROOT/$host/daily" "$KEEP_DAILY"
+  rotate "$BACKUP_ROOT/$host/pre-deploy" "$KEEP_PRE_DEPLOY"
+}
+
+# ping <failure report>   empty report means success
+ping() {
+  local report=$1
+  [ -n "$PING_URL" ] || { echo "ping skipped: PING_URL is empty" >&2; return; }
+  if [ -z "$report" ]; then
+    curl -fsS -m 10 --retry 3 -o /dev/null "$PING_URL"
+  else
+    curl -fsS -m 10 --retry 3 -o /dev/null --data-raw "$report" "${PING_URL%/}/fail"
+  fi || echo "ping to healthchecks.io failed" >&2
+}
+
+cmd_run() {
+  local entry host ctid failures=0 report=
+  for entry in "${GUESTS[@]}"; do
+    read -r host ctid <<<"$entry"
+    reason=
+    if process_host "$host" "$ctid"; then
+      echo "$host: ok" >&2
+    else
+      echo "$host: FAILED ($reason)" >&2
+      failures=$((failures + 1))
+      report+="$host: $reason"$'\n'
+    fi
+  done
+  ping "${report%$'\n'}"
+  [ "$failures" -eq 0 ]
+}
+
+ctid_of() {
+  local entry host ctid
+  for entry in "${GUESTS[@]}"; do
+    read -r host ctid <<<"$entry"
+    [ "$host" = "$1" ] && { echo "$ctid"; return 0; }
+  done
+  echo "unknown host: $1" >&2
+  return 1
+}
+
+cmd_pre_restore() {
+  local host=${1:?usage: pre-restore <host>} ctid paths path
+  local -a written=()
+  ctid=$(ctid_of "$host") || return 1
+  paths=$(timeout "$GUEST_TIMEOUT" pct exec "$ctid" -- "$SNAPSHOT_CMD" pre-restore) || {
+    echo "$host: FAILED (pre-restore snapshot in guest $ctid failed)" >&2
+    return 1
+  }
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    pull_snapshot "$host" "$ctid" pre-restore "$path" || { echo "$host: FAILED ($reason)" >&2; return 1; }
+    written+=("${path##*/}")
+  done <<<"$paths"
+  [ "${#written[@]}" -gt 0 ] || { echo "$host: FAILED (pre-restore snapshot wrote nothing)" >&2; return 1; }
+  rotate "$BACKUP_ROOT/$host/pre-restore" "$KEEP_PRE_RESTORE"
+  printf '%s\n' "${written[@]}"
+}
+
+cmd_locate() {
+  local host=${1:?usage: locate <host> <snapshot>} snap=${2:?usage: locate <host> <snapshot>} kind f
+  if [[ $snap != *.db || $snap == */* ]]; then
+    echo "not found: $snap" >&2
+    return 1
+  fi
+  for kind in daily pre-deploy pre-restore; do
+    f=$BACKUP_ROOT/$host/$kind/$snap
+    if [ -f "$f" ]; then
+      echo "$f"
+      cat "${f%.db}.meta" 2>/dev/null
+      return 0
+    fi
+  done
+  echo "not found: $snap" >&2
+  for kind in daily pre-deploy pre-restore; do
+    for f in "$BACKUP_ROOT/$host/$kind"/*.db; do
+      [ -e "$f" ] && echo "$kind/${f##*/}" >&2
+    done
+  done
+  return 1
+}
+
+main() {
+  local sub=${1:-}
+  [ -r "$CONF" ] || { echo "cannot read config $CONF" >&2; exit 1; }
+  load_conf
+  case $sub in
+    run) cmd_run ;;
+    pre-restore) shift; cmd_pre_restore "$@" ;;
+    locate) shift; cmd_locate "$@" ;;
+    *) echo "usage: $0 run|locate <host> <snapshot>|pre-restore <host>" >&2; exit 64 ;;
+  esac
+}
+
+main "$@"
