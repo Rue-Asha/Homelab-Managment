@@ -88,6 +88,7 @@ Application services are deployed **app-per-LXC**, not via container images. Eac
 - **Release layout:** unpack into `/opt/<svc>/releases/<ts>`, flip a `current` symlink, restart — atomic deploy + instant rollback. Persistent data (e.g. a SQLite file) lives outside releases (e.g. `/var/lib/<svc>/`) and is never touched by a redeploy.
 - **Role split:** reusable machine-config concerns are their own roles (runtime e.g. `nodejs`, `nginx`, base/hardening in `common`); a service gets its **own role** only when it has config/deps beyond a declarative `02_SERVICES` playbook. **Host-level concerns (firewall, runtime install) must not live in a service/app role.**
 - **nginx** is a host-level reverse proxy in front of the service (`:80` → `127.0.0.1:<port>`), enabled via the service host's vars. It comes before the service role in the playbook, so the smoke check can go through it.
+- **Persistent data must be backed up:** a service with persistent data (e.g. a SQLite file) must be registered in the backup registry — `sqlite_backups` in its host vars and `sqlite_snapshot` before its service role in the playbook; see `docs/backups.md`.
 - **The runner never manages itself:** `runner01` is configured only by `01_BASE_CONFIGURATION/deploy_runner.yml`, run by hand. Nothing under `02_SERVICES` may target the `github_runner` group.
 
 Worked example: `docs/party-games-webservice-architecture.md`.
