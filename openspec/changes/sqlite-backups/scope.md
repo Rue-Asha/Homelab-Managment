@@ -20,7 +20,7 @@ Rue's self-hosted web services (today Life-Manager and Rues-Arcade, later more) 
   - edges: guest stopped / pct exec fails → that service is marked failed, the others still run | registered DB missing in the guest → failed (abnormal after first deploy) | concurrent deploy restarts the service mid-run → that snapshot fails, reported, next night retries | node disk full → failed
 - **S4** Each pulled snapshot passes `PRAGMA integrity_check` on the node before it is kept; a failing one is deleted and the service marked failed.
   - edges: none (binary outcome, covered by S3 failure path)
-- **S5** Rotation on the node: newest 14 daily and newest 10 pre-deploy snapshots per service; older ones deleted after a successful run.
+- **S5** Rotation on the node: newest 14 daily, newest 10 pre-deploy and newest 10 pre-restore snapshots per service; older ones deleted after a successful run.
   - edges: a failed run never deletes old snapshots | fewer than 14 present → nothing deleted
 - **S6** The node job pings healthchecks.io: success ping when every service succeeded, fail ping (body lists failed services) otherwise. Ping URL lives in ansible-vault (`host_vars/proxmox1/vault.yml`).
   - edges: ping URL unset → node playbook assert fails at apply time | healthchecks.io unreachable → logged, job exit status still reflects the backup result | job never runs (timer broken, node down) → healthchecks.io alerts on the missing ping (grace configured there by Rue)
@@ -68,6 +68,8 @@ Rue's self-hosted web services (today Life-Manager and Rues-Arcade, later more) 
 - Only app DBs — Rue's choice.
 - Daily + pre-deploy, healthchecks.io for alerting — Rue's choice (recommended option).
 - Retention 14 daily + 10 pre-deploy — Rue's choice.
+- Pre-restore snapshots rotate too, newest 10 per service — Rue at Gate 1.
+- Live order: before Gate 2 only `--check` runs as evidence; real runs after merge (node playbook by hand, services via the CI deploy, then a manual job run + restore drill) — Rue at Gate 1, same as the pihole01 rebuild.
 - Pre-deploy snapshot on every service playbook run, not only on version change — deploy-targets only runs changed playbooks, so extra snapshots are rare; simpler than detecting version changes.
 - A failing pre-deploy snapshot blocks the deploy — no migration without a way back.
 - Rue creates the healthchecks.io check and puts the ping URL into the vault — it's an external account.

@@ -3,5 +3,9 @@ base: main
 track: feature
 live: true
 gate0: 2026-10-10
+gate1: 2026-10-10
 learnings:
+  - "Gate 1 correction: Rue wanted pre-restore snapshots rotated (newest 10), the planner had left them unbounded → planner: every snapshot class a design creates gets a retention rule"
+  - "ansible --check skips command/shell tasks, so --check dry runs on live hosts prove almost nothing for script-driven roles → planner: put the real proof in offline fixture tests and say plainly at Gate 1 that live behaviour is only proven after merge"
+  - "proof.sh prints only PASS: <sensor> and hides per-scenario ok lines → verifier (layer 2) must run scripts/tests/*.sh directly to map scenarios to tests (planner)"
   - "a trailing plain `ls` hung a main-session Bash call for 120s after the writes had succeeded → use `command ls` in agent shells (alias, like rm/mv/cp)"
