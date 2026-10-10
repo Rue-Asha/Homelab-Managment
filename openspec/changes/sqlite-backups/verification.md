@@ -1,4 +1,4 @@
-verified-at: 2df3e08
+verified-at: a6daff9
 
 ## Layer 1 (scripts/proof.sh --all, green)
 
@@ -15,7 +15,7 @@ proof: 24 sensor(s), 0 failed
 
 ## Layer 2 coverage
 
-Unit scenarios: ok lines from scripts/tests/sqlite-snapshot.sh (S) and scripts/tests/sqlite-backup.sh (B), each run directly 5 times at 2df3e08 (round 3), 10/10 rc 0, no non-ok lines in any run, no flake. All 34 unit scenarios map to a spec scenario; the 11 spec scenarios not in the test output are manual or covered by proof.sh PASS lines.
+Unit scenarios: ok lines from scripts/tests/sqlite-snapshot.sh (S) and scripts/tests/sqlite-backup.sh (B), each run directly 3 times at a6daff9 (round 4), 6/6 rc 0, no non-ok lines, no flake. Every `Scenario:` name in the tests exists in the spec.
 
 | Scenario | proof | Evidence |
 |---|---|---|
@@ -64,11 +64,13 @@ Unit scenarios: ok lines from scripts/tests/sqlite-snapshot.sh (S) and scripts/t
 | CLAUDE.md requires registration | manual | read .claude/CLAUDE.md at Gate 2 |
 | Script change runs its fixture tests | unit | proof.sh --all prints PASS: sqlite-snapshot fixtures and PASS: sqlite-backup fixtures |
 
-Gaps (tests for behaviour with no scenario in the delta spec; none of these names appears in a `#### Scenario:` heading):
-- "Restore playbook refuses --check": B ok, behaviour not in spec
-- "Role rejects a database path without .db suffix": S ok, behaviour not in spec
-- "Registered database path without .db suffix": ok, behaviour not in spec
-- "pre-restore without a container ID fails": B ok, spec only gives the `pre-restore <host> <ctid>` form and no failure scenario
+New spec scenarios this round (unit): Registered database path without .db suffix (B ok); Restore playbook refuses --check (B ok); pre-restore without a container ID fails (ok line without `Scenario:` prefix, matching name).
+
+Gaps (test runs and passes, but is not named `Scenario: <title>`, so no lookup match; evidence is by name or intent only):
+- Role rejects a database path without .db suffix: S runs it via `extra` as "Role rejects a database path without .db suffix" (passes, same title, no `Scenario:` prefix)
+- Restore of the oldest pre-restore snapshot: only "pre-restore never rotates away the snapshot being restored" (B, extra), different name
+- Failed restore brings the unit back: only "Failed restore starts the unit again and names the right pre-restore snapshot" (B, extra), different name
+- pre-restore without a container ID fails: B ok as "pre-restore without a container ID fails" (extra, no `Scenario:` prefix)
 
 ## Manual checklist
 
