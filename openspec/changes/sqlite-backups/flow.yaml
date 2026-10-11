@@ -5,8 +5,10 @@ live: true
 gate0: 2026-10-10
 gate1: 2026-10-10
 gate1_replan: 2026-10-11
+gate2: 2026-10-11
 scope_change: "2026-10-11 — S6 alerting removed (Rue)"
 learnings:
+  - "Gate 2 approval given inside an extra verify round (\"option 1\") → set gate2 in flow.yaml in the same turn, not after the round closes. (weil: gate2 was only noted in verification.md; next session flow-status reported phase build and proposed starting the post-merge live-apply wave) (orchestrator)"
   - "Fixture stubs for external commands (pct, systemctl, curl) → let every call succeed by default and make a test opt into failure; a scenario test must show it reached the step its THEN is about. (weil: a pct stub failed every push, so a restore scenario never reached the health check and stayed green with the push task deleted — cost a fixer round) [2026-10-11 · sqlite-backups]"
   - "Proof in a flow worktree of Homelab-Managment → expect proof.sh to rewrite terraform/environments/homelab/.terraform.lock.hcl and need the ignored .terraform cache cleared; never stage the lock file from a flow unit. (weil: U7 builder had to clear .terraform before each run and the lock file stayed modified, first mistaken for a foreign change) [2026-10-11 · sqlite-backups]"
   - "Explore recommending an external service (account, SaaS) for a small homelab → ask Rue whether an extra external account is acceptable before recommending it; offer the no-alerting option explicitly. (weil: healthchecks.io was chosen as the recommended option at explore, then cut during build because Rue found alerting not worth it for few services) [2026-10-11 · sqlite-backups]"
