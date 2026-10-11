@@ -76,6 +76,11 @@ case $1 in
     echo "$2 $3" >>"$FX/pull.log"
     [ -e "$FX/diskfull_$2" ] && { head -c 4 "$FX/guest/$2$3" >"$4"; echo "no space left on device" >&2; exit 1; }
     cp "$FX/guest/$2$3" "$4" ;;
+  push)
+    [ -e "$FX/push_ok" ] || exit 2
+    echo "$*" >>"$FX/push.log"
+    mkdir -p "$(dirname "$4")"
+    echo pushed >"$4" ;;
   *) exit 2 ;;
 esac
 STUB
@@ -634,12 +639,21 @@ extra "Restore with an unknown snapshot name lists the available snapshots" rest
 
 restore_live_db_missing() {
   new_case
-  restore_inv /var/lib/x/a.db
+  local db=$FX/live/a.db
+  restore_inv "$db"
+  touch "$FX/push_ok"
   sed -i 's/^  pre-restore) .*/  pre-restore) echo "$*" >>"$FX\/node.log" ;;/' "$FX/node-cmd"
-  restore_play a-20261001T030000Z.db
+  sed -i "s/owner: a, group: a,/owner: $(id -un), group: $(id -gn), healthz_url: 'http:\/\/127.0.0.1:9\/healthz',/" "$FX/inv/hosts.yml"
+  # the fixture's health check must fail; a zero delay keeps the 10 retries instant
+  sed 's/delay: 3/delay: 0/' ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml >"$FX/restore.yml"
+  PATH=$FX/sysbin:$PATH ansible-playbook -i "$FX/inv/hosts.yml" "$FX/restore.yml" \
+    -e "sqlite_restore_node_cmd=$FX/node-cmd" -e sqlite_restore_snapshot=a-20261001T030000Z.db >"$FX/play.out" 2>&1
+  a test $? -ne 0
   a has "$FX/node.log" "pre-restore guest_a 101 a-20261001T030000Z.db"
   a grep -q "stop homelab-fixture-none.service" "$FX/systemctl.log"
-  a has "$FX/play.out" "no pre-restore snapshot"
+  a has "$FX/push.log" "push 101 $FX/located.db $db"
+  a has "$FX/play.out" "Wait for /healthz through nginx"
+  a has "$FX/play.out" "There is no pre-restore snapshot"
   return "$bad"
 }
 check "Restore proceeds when the live database is gone" restore_live_db_missing
