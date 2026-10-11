@@ -200,6 +200,15 @@ t_restore_db_missing() (
   [ -z "$out" ] || { echo "stdout: $out"; return 1; }
 )
 
+t_failed_pre_restore() (
+  fixture failedrestore
+  mkdb "$db" 1
+  export SQLITE_STUB_FAIL=1
+  if "$script" pre-restore >/dev/null 2>"$dir/failedrestore/err"; then echo "exited 0"; return 1; fi
+  grep -qx "error: snapshot of $db failed" "$dir/failedrestore/err" || { echo "stderr: $(cat "$dir/failedrestore/err")"; return 1; }
+  [ -z "$(find "$snap" -type f 2>/dev/null)" ] || { find "$snap" -type f; return 1; }
+)
+
 t_daily_keeps_newest() (
   fixture daily
   mkdb "$db" 1
@@ -305,6 +314,7 @@ check "Database without schema_migrations" t_meta_no_migrations
 check "Release version unknown" t_release_unknown
 check "Registered database missing in the guest" t_db_missing
 check "Restore when the live database is missing" t_restore_db_missing
+check "Failed pre-restore snapshot aborts" t_failed_pre_restore
 extra "daily keeps only the newest snapshot" t_daily_keeps_newest
 extra "list pre-deploy prints basenames" t_list
 check "Guest role skips a host without a registry entry" t_role_skips

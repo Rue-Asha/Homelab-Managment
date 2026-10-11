@@ -421,6 +421,20 @@ pre_restore_needs_ctid() {
 }
 check "pre-restore without a container ID fails" pre_restore_needs_ctid
 
+pre_restore_snapshot_fails() {
+  new_case
+  std_conf
+  touch "$FX/fail_exec_102"
+  node pre-restore rues-arcade01 102
+  a test $? -ne 0
+  a has "$FX/stderr" "rues-arcade01: FAILED (pre-restore snapshot in guest 102 failed)"
+  a absent "$FX/pull.log"
+  a absent "$FX/root/rues-arcade01"
+  a test ! -s "$FX/stdout"
+  return "$bad"
+}
+check "Failed pre-restore snapshot aborts" pre_restore_snapshot_fails
+
 pre_restore_db_gone() {
   new_case
   std_conf
@@ -659,6 +673,20 @@ restore_live_db_missing() {
   return "$bad"
 }
 check "Restore proceeds when the live database is gone" restore_live_db_missing
+
+restore_pre_restore_fails() {
+  new_case
+  restore_inv /var/lib/x/a.db
+  sed -i 's/^  pre-restore) .*/  pre-restore) echo "$*" >>"$FX\/node.log"; echo "a: FAILED (pre-restore snapshot in guest 101 failed)" >\&2; exit 1 ;;/' "$FX/node-cmd"
+  restore_play a-20261001T030000Z.db
+  a test $? -ne 0
+  a has "$FX/node.log" "pre-restore guest_a 101 a-20261001T030000Z.db"
+  a has "$FX/play.out" "Save the current database as a pre-restore snapshot"
+  a not_has "$FX/play.out" "Stop the service"
+  a not_has "$FX/systemctl.log" "stop "
+  return "$bad"
+}
+extra "Failed pre-restore snapshot aborts the restore before the stop" restore_pre_restore_fails
 
 restore_failure_recovers() {
   new_case
