@@ -500,8 +500,7 @@ registered_without_ctid() {
   fixture_inv "$GUEST_A" "$GUEST_C"
   play
   a test $? -ne 0
-  a has "$FX/play.out" "guest_c"
-  a has "$FX/play.out" "lxc_ctid"
+  a has "$FX/play.out" "guest_c has sqlite_backups but no lxc_ctid"
   a not_has "$FX/play.out" "sqlite_backup : Ensure"
   a not_has "$FX/play.out" "sqlite_backup : Install"
   return "$bad"
@@ -513,8 +512,7 @@ registered_without_db_suffix() {
   fixture_inv "$GUEST_A" "$GUEST_D"
   play
   a test $? -ne 0
-  a has "$FX/play.out" "guest_d"
-  a has "$FX/play.out" ".db"
+  a has "$FX/play.out" "guest_d registers a database path that does not end in .db"
   a not_has "$FX/play.out" "sqlite_backup : Ensure"
   return "$bad"
 }
