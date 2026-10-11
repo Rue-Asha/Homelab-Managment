@@ -94,7 +94,7 @@ Every snapshot (daily, pre-deploy and pre-restore) SHALL have a `.meta` file nex
 
 ### Requirement: A nightly node job collects every registered guest
 
-A node-side role `sqlite_backup` on proxmox1 SHALL install a script and a daily systemd timer that, for each registered guest, takes a snapshot inside the guest via `pct exec`, pulls it with `pct pull` to `/var/backups/homelab/<host>/daily/`, and copies every pre-deploy snapshot the node does not have yet to `/var/backups/homelab/<host>/pre-deploy/`. A failure on one guest (guest stopped, `pct exec` failing, database missing, service restarted mid-run, node disk full) SHALL mark that service failed and SHALL NOT stop the other guests from being processed. The job SHALL log `<host>: ok` or `<host>: FAILED (<reason>)` per guest to stderr, SHALL exit 0 only when every guest succeeded, and SHALL make no network request (no alerting; a failed run is seen in the journal and in `systemctl --failed`).
+A node-side role `sqlite_backup` on proxmox1 SHALL install a script and a daily systemd timer that, for each registered guest, takes a snapshot inside the guest via `pct exec`, pulls it with `pct pull` to `/var/backups/homelab/<host>/daily/`, and copies every pre-deploy snapshot the node does not have yet to `/var/backups/homelab/<host>/pre-deploy/`. A failure on one guest (guest stopped, `pct exec` failing, database missing, service restarted mid-run, node disk full) SHALL mark that service failed and SHALL NOT stop the other guests from being processed. The job SHALL log `<host>: ok` or `<host>: FAILED (<reason>)` per guest to stderr, SHALL exit 0 only when every guest succeeded, and SHALL make no network request (no alerting; a failed run is seen in the journal and in `systemctl --failed`). A pre-deploy snapshot that fails the integrity check on the node SHALL NOT fail its guest: it is handled once as described under "Only intact snapshots are kept", and the daily snapshot alone decides the guest's status.
 
 #### Scenario: Nightly run collects every registered guest
 - **WHEN** `homelab-sqlite-backup run` runs with two registered guests that both answer
@@ -133,7 +133,7 @@ A node-side role `sqlite_backup` on proxmox1 SHALL install a script and a daily 
 
 ### Requirement: Only intact snapshots are kept
 
-Each pulled snapshot SHALL pass `PRAGMA integrity_check` on the node before it is kept; a snapshot that does not report `ok` SHALL be deleted together with its `.meta`, and the service SHALL be marked failed.
+Each pulled daily snapshot SHALL pass `PRAGMA integrity_check` on the node before it is kept; a daily snapshot that does not report `ok` SHALL be deleted together with its `.meta`, and the service SHALL be marked failed. A pre-restore snapshot (the live database about to be replaced) or a pre-deploy snapshot that does not report `ok` SHALL instead be kept under a name marked `-corrupt` (`<stem>-<UTC stamp>-corrupt.db` with its `.meta`), with a warning on stderr, and SHALL NOT fail the service or block a restore. A pre-deploy snapshot already held on the node, under its own or its `-corrupt` name, SHALL NOT be pulled again, so a corrupt one is handled once. Corrupt-marked files SHALL NOT be offered as restore sources and SHALL NOT be counted or deleted by rotation.
 
 #### Scenario: Intact snapshot is kept
 - **WHEN** a pulled snapshot's `PRAGMA integrity_check` prints `ok`
@@ -141,8 +141,23 @@ Each pulled snapshot SHALL pass `PRAGMA integrity_check` on the node before it i
 - **proof:** unit
 
 #### Scenario: Corrupt snapshot is discarded
-- **WHEN** a pulled snapshot's `PRAGMA integrity_check` prints anything other than `ok`
+- **WHEN** a pulled daily snapshot's `PRAGMA integrity_check` prints anything other than `ok`
 - **THEN** the snapshot and its `.meta` are deleted and the service is reported `FAILED`
+- **proof:** unit
+
+#### Scenario: Corrupt live database is kept marked at pre-restore
+- **WHEN** `homelab-sqlite-backup pre-restore <host> <ctid>` pulls a snapshot of the live database whose `PRAGMA integrity_check` prints anything other than `ok`
+- **THEN** `<stem>-<stamp>-corrupt.db` and `<stem>-<stamp>-corrupt.meta` are kept under `pre-restore/`, stderr has a warning naming the file, the name is not printed on stdout, and the command exits 0
+- **proof:** unit
+
+#### Scenario: Corrupt pre-deploy snapshot is kept marked once
+- **WHEN** a guest lists a pre-deploy snapshot that fails the integrity check on the node, on two consecutive nightly runs
+- **THEN** the first run keeps it as `<stem>-<stamp>-corrupt.db` with its `.meta` under `pre-deploy/` with a warning, logs `<host>: ok` and exits 0 when the daily snapshot is fine; the second run does not pull it again and prints no warning
+- **proof:** unit
+
+#### Scenario: Rotation ignores corrupt-marked snapshots
+- **WHEN** a successful run rotates a directory that holds corrupt-marked files next to a full set of intact snapshots
+- **THEN** the corrupt-marked files are not counted toward the keep limit and are not deleted, and the intact snapshots rotate as before
 - **proof:** unit
 
 ### Requirement: Old snapshots are rotated only after a successful run
@@ -176,7 +191,7 @@ After a service's run succeeded, the node SHALL keep the newest 14 daily, the ne
 
 ### Requirement: A snapshot can be restored from the workstation
 
-A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service host and a snapshot name, print the snapshot's metadata, save the current database as a `pre-restore` snapshot on the node, stop the unit, push the snapshot into the guest, remove stale `-wal`/`-shm` files, set owner and mode, start the unit and wait for `/healthz` to answer 200. A snapshot name that is not found (including a typo in the database stem) SHALL fail the run listing the available snapshots; a failure after the unit was stopped SHALL start the unit again before the run fails; a `/healthz` that does not answer 200 SHALL fail the run naming the pre-restore snapshot to roll back with. A registered database that no longer exists in the guest (an accidental delete) SHALL NOT block the restore: it is skipped with a message when saving the pre-restore snapshot, and the restore proceeds. A snapshot whose schema is newer than the running release is not detected automatically; the metadata is shown first and `/healthz` is the guard.
+A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service host and a snapshot name, print the snapshot's metadata, save the current database as a `pre-restore` snapshot on the node, stop the unit, push the snapshot into the guest, remove stale `-wal`/`-shm` files, set owner and mode, start the unit and wait for `/healthz` to answer 200. A snapshot name that is not found (including a typo in the database stem) SHALL fail the run listing the available snapshots; a failure after the unit was stopped SHALL start the unit again before the run fails; a `/healthz` that does not answer 200 SHALL fail the run naming the pre-restore snapshot to roll back with. A registered database that no longer exists in the guest (an accidental delete) SHALL NOT block the restore: it is skipped with a message when saving the pre-restore snapshot, and the restore proceeds. A live database that fails the integrity check SHALL NOT block the restore either: its pre-restore snapshot is kept marked `-corrupt` with a warning (see "Only intact snapshots are kept"), and the restore proceeds. Any other failure while saving the pre-restore snapshot (snapshot command, pull, disk) SHALL abort the run before the unit is stopped. A snapshot name that is not found, however it was written (without `.db`, with a path), SHALL fail with the listing of available snapshots; `<kind>/<name>.db` as printed by that listing SHALL be accepted as the name to look up. A snapshot whose schema is newer than the running release is not detected automatically; the metadata is shown first and `/healthz` is the guard.
 
 #### Scenario: Snapshot metadata is shown first
 - **WHEN** `homelab-sqlite-backup locate <host> <name>` is called for an existing snapshot
@@ -188,6 +203,16 @@ A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service h
 - **THEN** it prints `not found: <name>` and every available `<kind>/<name>` for that host, and exits non-zero, so the playbook fails before changing anything; the playbook runs it before checking the stem against the registry, so a mistyped stem gets this listing too
 - **proof:** unit
 
+#### Scenario: Snapshot name not found in any form
+- **WHEN** `homelab-sqlite-backup locate <host> <name>` is called with a name without `.db`, with a `/` that is not a known `<kind>/` prefix, or with a `<kind>/<name>.db` that does not exist
+- **THEN** each prints `not found: <name>` and the available `<kind>/<name>` list, including corrupt-marked files under their `-corrupt` name, and exits 1
+- **proof:** unit
+
+#### Scenario: Snapshot given as kind and name
+- **WHEN** `homelab-sqlite-backup locate <host> daily/<name>.db` is called for an existing daily snapshot
+- **THEN** it prints the absolute path and the `.meta` and exits 0, and `pre-deploy/<name>.db` for a snapshot that only exists under `daily/` is not found
+- **proof:** unit
+
 #### Scenario: Current database is saved before the restore
 - **WHEN** `homelab-sqlite-backup pre-restore <host> <ctid>` runs
 - **THEN** a snapshot of the live database, with `.meta`, lands in `/var/backups/homelab/<host>/pre-restore/` after passing the integrity check, and its name is printed
@@ -196,6 +221,21 @@ A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service h
 #### Scenario: Restore when the live database is missing
 - **WHEN** `sqlite-snapshot pre-restore` runs in a guest where a registered database file does not exist
 - **THEN** it prints `skip: <db> does not exist` to stderr, snapshots the other registered databases and exits 0 (a genuine snapshot failure still exits non-zero)
+- **proof:** unit
+
+#### Scenario: Failed pre-restore snapshot aborts
+- **WHEN** `sqlite-snapshot pre-restore` runs and `sqlite3 .backup` fails for a registered database that exists
+- **THEN** it exits non-zero with `error: snapshot of <db> failed` and leaves no file under a snapshot name, and the node's `pre-restore` command exits non-zero, so the restore playbook fails before it stops the unit
+- **proof:** unit
+
+#### Scenario: Restore proceeds when the live database is corrupt
+- **WHEN** the restore playbook runs and `homelab-sqlite-backup pre-restore` exits 0 with a corrupt-database warning on stderr and no snapshot name of the chosen database on stdout
+- **THEN** the playbook shows the warning, still stops the unit and pushes the snapshot, and a failed health check says there is no pre-restore snapshot to roll back to
+- **proof:** unit
+
+#### Scenario: Restore refuses a corrupt-marked snapshot
+- **WHEN** the restore playbook is given a `<stem>-<stamp>-corrupt.db` name
+- **THEN** it fails before saving the pre-restore snapshot or stopping the unit
 - **proof:** unit
 
 #### Scenario: Restore proceeds when the live database is gone

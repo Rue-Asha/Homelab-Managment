@@ -17,7 +17,14 @@ Only the application databases of registered service hosts. Nothing else.
 Snapshots are named `<db stem>-<YYYYmmddTHHMMSSZ>.db` with a `.meta` next to
 them. They are made with `sqlite3 .backup`, so they are consistent while the
 service runs. The node checks every pulled snapshot with `PRAGMA
-integrity_check` before it keeps it.
+integrity_check` before it keeps it. A daily snapshot that fails the check is
+deleted and the guest is reported `FAILED`. A pre-deploy snapshot or the
+pre-restore snapshot of a live database that fails it is kept instead as
+`<db stem>-<stamp>-corrupt.db` (+ `.meta`) with a warning in the journal or the
+restore output, and does not fail the guest or block a restore. Corrupt-marked
+files are never restored from, never counted or deleted by rotation (delete them
+by hand), and are listed under their marked name when a snapshot is not found.
+A corrupt pre-deploy snapshot is copied once, not every night.
 
 The nightly job is `homelab-sqlite-backup.timer` on proxmox1. A guest that
 fails does not stop the others.
@@ -88,10 +95,14 @@ From the workstation (same inventory and node key as above):
    unit and waits for `/healthz` to answer 200. If the live database file is
    gone (accidental delete) there is nothing to save: that file is skipped with
    a message and the restore proceeds, so there is no pre-restore snapshot to
-   roll back to.
+   roll back to. If the live database is corrupt, its pre-restore snapshot is
+   kept as `...-corrupt.db`, the playbook shows a warning, and the restore
+   proceeds the same way (nothing to roll back to). Any other failure while
+   saving the pre-restore snapshot aborts before the unit is stopped.
 
 An unknown snapshot name fails before anything is touched, listing what is
-available. The playbook refuses `--check`: saving the pre-restore snapshot writes.
+available (`<kind>/<name>.db` from that listing is accepted by `locate` too).
+The playbook needs the plain `<stem>-<stamp>.db` name and refuses corrupt-marked ones. The playbook refuses `--check`: saving the pre-restore snapshot writes.
 
 **Rolling back a restore:** if `/healthz` never answers 200, the playbook fails
 and prints the pre-restore snapshot name and the exact command (the unit is started again first). It is the same

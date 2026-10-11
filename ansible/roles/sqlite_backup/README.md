@@ -50,6 +50,14 @@ Pulls go to hidden temp names in the target dir and are renamed into place only
 after `PRAGMA integrity_check` prints `ok`. Rotation sorts by file name (the UTC
 stamp) and runs only for a guest whose run succeeded.
 
+A pre-deploy snapshot, or the pre-restore snapshot of a live database, that
+fails the integrity check is kept as `<stem>-<stamp>-corrupt.db` + `.meta`
+(warning on stderr, not a failure) instead of being deleted; the nightly run does
+not pull a corrupt pre-deploy snapshot again. The `-corrupt` name does not match
+the `<stem>-<stamp>.db` pattern, so rotation ignores these files (clean up by
+hand) and the restore playbook refuses them. A corrupt daily snapshot is still
+deleted and fails the guest.
+
 ## Script
 
 `/usr/local/sbin/homelab-sqlite-backup`, config `/etc/homelab-sqlite-backup.conf`
@@ -57,8 +65,8 @@ stamp) and runs only for a guest whose run succeeded.
 `HOMELAB_SQLITE_BACKUP_CONF`).
 
 - `run`: what the timer calls. Per guest: daily snapshot in the guest, pull and check, copy missing pre-deploy snapshots, rotate. Logs `<host>: ok` or `<host>: FAILED (<reason>)` to stderr; one failed guest does not stop the others. The exit status is 0 only when every guest succeeded; the job reports nowhere else.
-- `pre-restore <host> <ctid> [<snapshot.db>]`: snapshot the live database into `pre-restore/`, check, rotate (never deleting `<snapshot.db>`, the snapshot about to be restored), print the kept `.db` name per database (none for a database that no longer exists in the guest; the restore proceeds without a snapshot of it). Used by `sqlite_restore.yml`.
-- `locate <host> <snapshot.db>`: prints the absolute path and the `.meta`, or `not found: <name>` plus the available `<kind>/<name>` on stderr (exit 1). Used by `sqlite_restore.yml`.
+- `pre-restore <host> <ctid> [<snapshot.db>]`: snapshot the live database into `pre-restore/`, check, rotate (never deleting `<snapshot.db>`, the snapshot about to be restored), print the kept `.db` name per database (none for a database that no longer exists in the guest, nor for a corrupt one, which is kept as `-corrupt` with a stderr warning; the restore proceeds without a snapshot of it). Any other failure exits non-zero. Used by `sqlite_restore.yml`.
+- `locate <host> <snapshot.db>`: prints the absolute path and the `.meta`, or `not found: <name>` plus the available `<kind>/<name>` (corrupt-marked ones included) on stderr (exit 1), whatever the input looked like. `<kind>/<name>.db` is accepted. Used by `sqlite_restore.yml`.
 
 ## Timer
 
