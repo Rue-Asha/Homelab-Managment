@@ -4,8 +4,7 @@ galaxy_info:
   author: Rue Asha
   description: >-
     Nightly collection of registered guests' SQLite snapshots onto the Proxmox
-    node (pct exec/pull), with integrity check, rotation and a healthchecks.io
-    ping. Run by hand from the workstation.
+    node (pct exec/pull), with integrity check and rotation. Run by hand from the workstation.
   license: MIT
   min_ansible_version: "2.15"
   platforms:

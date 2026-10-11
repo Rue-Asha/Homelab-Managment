@@ -2,7 +2,7 @@
 
 Installs a nightly job on the Proxmox node (`proxmox1`) that collects the SQLite
 snapshots of every registered service guest with `pct exec` / `pct pull`, checks
-them, rotates them and pings healthchecks.io. The guest side is the
+them, and rotates them. The guest side is the
 `sqlite_snapshot` role; what is backed up and how to restore is in `docs/backups.md`.
 
 **Runs only from the workstation.** `ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml`
@@ -21,7 +21,6 @@ Re-run it whenever a service is registered or removed.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `sqlite_backup_ping_url` | `""` | healthchecks.io ping URL. Set in `host_vars/proxmox1/vault.yml` (ansible-vault); the preflight fails while it is empty. |
 | `sqlite_backup_root` | `/var/backups/homelab` | Where snapshots land on the node. |
 | `sqlite_backup_keep_daily` | `14` | Newest daily snapshots kept per database. |
 | `sqlite_backup_keep_pre_deploy` | `10` | Newest pre-deploy snapshots kept per database. |
@@ -34,7 +33,7 @@ Re-run it whenever a service is registered or removed.
 ## Preflight
 
 `tasks/preflight.yml` (tag `preflight`, always runs) fails before anything is
-installed when the ping URL is empty or when a host that has `sqlite_backups` has
+installed when a host that has `sqlite_backups` has
 no `lxc_ctid` or a database path not ending in `.db` (the message names the host). It then prints the `<host> <ctid>`
 list that goes into the config as `GUEST=` lines. Hosts without `sqlite_backups`
 are ignored. Check the printed list after onboarding a service.
@@ -57,8 +56,8 @@ stamp) and runs only for a guest whose run succeeded.
 (root, 0600, `key=value`, read not sourced; override path with
 `HOMELAB_SQLITE_BACKUP_CONF`).
 
-- `run`: what the timer calls. Per guest: daily snapshot in the guest, pull and check, copy missing pre-deploy snapshots, rotate. Logs `<host>: ok` or `<host>: FAILED (<reason>)` to stderr; one failed guest does not stop the others. Pings healthchecks.io afterwards (`<url>` on success, `<url>/fail` with the failed hosts as body otherwise). A failed ping is logged and does not change the exit status, which is 0 only when every guest succeeded.
-- `pre-restore <host> <ctid> [<snapshot.db>]`: snapshot the live database into `pre-restore/`, check, rotate (never deleting `<snapshot.db>`, the snapshot about to be restored), print the kept `.db` name per database. Used by `sqlite_restore.yml`. No ping.
+- `run`: what the timer calls. Per guest: daily snapshot in the guest, pull and check, copy missing pre-deploy snapshots, rotate. Logs `<host>: ok` or `<host>: FAILED (<reason>)` to stderr; one failed guest does not stop the others. The exit status is 0 only when every guest succeeded; the job reports nowhere else.
+- `pre-restore <host> <ctid> [<snapshot.db>]`: snapshot the live database into `pre-restore/`, check, rotate (never deleting `<snapshot.db>`, the snapshot about to be restored), print the kept `.db` name per database. Used by `sqlite_restore.yml`.
 - `locate <host> <snapshot.db>`: prints the absolute path and the `.meta`, or `not found: <name>` plus the available `<kind>/<name>` on stderr (exit 1). Used by `sqlite_restore.yml`.
 
 ## Timer
@@ -70,6 +69,6 @@ stamp) and runs only for a guest whose run succeeded.
 ## Tests
 
 `scripts/tests/sqlite-backup.sh` (run by `scripts/proof.sh`) tests the script with
-stub `pct`, `sqlite3` and `curl`, and the preflight with `--check` against a
+stub `pct`, `sqlite3` and a `curl` tripwire (it only records calls; the job must make none), and the preflight with `--check` against a
 fixture inventory of `ansible_connection: local` hosts. Real `pct` behaviour is
 only proven by the post-merge run on the node.

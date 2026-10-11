@@ -47,13 +47,15 @@ user_version=4
 schema_migration=0003_wavelength.sql   # only when a schema_migrations table exists
 ```
 
-## Alerting
+## Checking the job
 
-The node job pings healthchecks.io: a success ping when every service
-succeeded, a fail ping listing the failed services otherwise. A job that never
-runs is caught by the missing ping (grace is set on healthchecks.io). The ping
-URL is `sqlite_backup_ping_url` in `ansible/inventory/host_vars/proxmox1/vault.yml`
-(ansible-vault, same inline style as `host_vars/pihole01/vault.yml`).
+Nothing alerts; check by hand on proxmox1:
+
+- `journalctl -u homelab-sqlite-backup.service` shows one `<host>: ok` or
+  `<host>: FAILED (<reason>)` line per guest.
+- `systemctl --failed` lists the unit after a failed night.
+- `systemctl list-timers homelab-sqlite-backup.timer` shows the last and next run.
+- The newest file in `/var/backups/homelab/<host>/daily/` should be from last night.
 
 ## Applying the node role
 
@@ -133,5 +135,7 @@ stopped automatically. `/healthz` is the only guard.
   state, vault password), the workstation.
 - Encryption of snapshots.
 - A snapshot whose schema is newer than the running release (not detected on restore).
+- Alerting on missing or failed backups (no healthchecks.io or heartbeat; check
+  by hand as above).
 - Automatic restore drills; the nightly integrity check and the restore
   playbook's healthz check are the only verification.
