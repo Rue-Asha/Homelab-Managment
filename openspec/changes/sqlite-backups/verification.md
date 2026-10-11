@@ -1,8 +1,8 @@
-verified-at: 5775ac8
+verified-at: 69fe333
 
 ## Layer 1 (scripts/proof.sh --all, green)
 
-Run at 5775ac8 with the ignored `.terraform` cache cleared (25 sensors), rc 0.
+Run at 69fe333 with the ignored `.terraform` cache cleared (25 sensors), rc 0.
 
 ```
 PASS: Regression: arcade shares IP with check container
@@ -16,7 +16,9 @@ proof: 25 sensor(s), 0 failed
 
 ## Layer 2 coverage
 
-Scope as of 2026-10-11 (S6 alerting removed). Evidence: `ok: Scenario: <title>` lines from `scripts/tests/sqlite-snapshot.sh` (16 ok lines) and `scripts/tests/sqlite-backup.sh` (38 ok lines), each run directly at 5775ac8, rc 0, no non-ok lines. All 55 scenarios in the delta spec accounted for: 46 unit via a named ok line, 1 unit+manual (Check-mode run on proxmox1) with a named ok line, 1 via the proof.sh sensors, 7 manual (one of them, "Check-mode run on proxmox1", is unit + manual).
+Scope as of 2026-10-11 (S6 alerting removed). Evidence: `ok: Scenario: <title>` lines from `scripts/tests/sqlite-snapshot.sh` (14 named) and `scripts/tests/sqlite-backup.sh` (37 named), each run directly at 69fe333, rc 0, no non-ok lines. All 56 scenarios in the delta spec accounted for: 47 unit via a named ok line, 1 unit+manual (Check-mode run on proxmox1) with a named ok line, 1 via the proof.sh sensors, 7 manual.
+
+Round 5 (69fe333): the restore playbook normalises `<kind>/<name>.db`; 1 scenario added ("Restore accepts the name as printed by the listing"); docs/backups.md and the spec updated. Changed since 5775ac8: `sqlite_restore.yml`, `docs/backups.md`, the delta spec, `scripts/tests/sqlite-backup.sh`; nothing else under `ansible/`.
 
 Round 4 (506c1ce, ea7d84c, f06e24c, 5775ac8): 8 scenarios added (corrupt-marked snapshots, locate on every not-found path and `kind/name`, failed pre-restore snapshot, corrupt live DB at restore, refusing corrupt-marked names); 3 existing requirement texts widened ("Only intact snapshots are kept" now daily-only, node job requirement, restore playbook requirement). Changed since 2ee056f: restore playbook, node script, sqlite_backup README, docs, design/spec, the two test scripts. Both round-3 open findings (pre-restore failure test, locate listing) now have named passing tests.
 
@@ -65,6 +67,7 @@ Earlier rounds: round 3 e547c8a/1e736ce/2ee056f test-only; round 2 fd240d6 (full
 | Restore when the live database is missing | unit | `scripts/tests/sqlite-snapshot.sh` ok + `scripts/tests/sqlite-backup.sh` ok ✓ |
 | Failed pre-restore snapshot aborts | unit | `scripts/tests/sqlite-snapshot.sh` ok + `scripts/tests/sqlite-backup.sh` ok ✓ (added round 4; closes round-3 weak-test finding) |
 | Restore proceeds when the live database is corrupt | unit | `scripts/tests/sqlite-backup.sh` ok ✓ (added round 4) |
+| Restore accepts the name as printed by the listing | unit | `scripts/tests/sqlite-backup.sh` ok ✓ (added round 5; closes the round-4 spec-mismatch finding) |
 | Restore refuses a corrupt-marked snapshot | unit | `scripts/tests/sqlite-backup.sh` ok ✓ (added round 4) |
 | Restore proceeds when the live database is gone | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
 | pre-restore without a container ID fails | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
@@ -74,8 +77,8 @@ Earlier rounds: round 3 e547c8a/1e736ce/2ee056f test-only; round 2 fd240d6 (full
 | Restore ends with a healthy service | manual | post-merge 6.4 restore drill |
 | Restore leaves an unhealthy service | manual | not drilled (needs deliberately broken restore) |
 | The deploy never runs the node playbook | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
-| Check-mode run on proxmox1 | unit + manual | B ok (fixture, pins `changed:` on the five would-install tasks); live (round 1 evidence, still valid after round 4: since 2ee056f only the node script `homelab-sqlite-backup`, `sqlite_restore.yml`, the sqlite_backup README, docs and tests changed; no role tasks/templates/defaults, no sqlite_snapshot file and no node or service playbook): check log `sqlite_backup_check.log` (exit 0): preflight asserts ok for life-manager01 and rues-arcade01, "Show the guests the nightly job will cover" lists `life-manager01 223`, `rues-arcade01 100`; would-change: backup root, script, config, service unit, timer unit (`changed`, 5); `sqlite3` already installed (ok); recap `proxmox1 ok=14 changed=5 unreachable=0 failed=0` |
-| Check-mode run of the service playbooks | manual | 5.3 evidence from a02644d, run at 3c993f1 (sqlite_snapshot role tasks/config/script and 02_SERVICES playbooks unchanged since, also through 5775ac8): both playbooks exit 0, `ok=36 changed=4 failed=0`; would-change = apt sqlite3, snapshot script, config, snapshot dir; snapshot task skipped in check mode |
+| Check-mode run on proxmox1 | unit + manual | B ok (fixture, pins `changed:` on the five would-install tasks); live (round 1 evidence, still valid after round 5: since 2ee056f only the node script `homelab-sqlite-backup`, `sqlite_restore.yml` (again in 69fe333, a playbook not part of the check-mode run), the sqlite_backup README, docs and tests changed; no role tasks/templates/defaults, no sqlite_snapshot file and no node or service playbook): check log `sqlite_backup_check.log` (exit 0): preflight asserts ok for life-manager01 and rues-arcade01, "Show the guests the nightly job will cover" lists `life-manager01 223`, `rues-arcade01 100`; would-change: backup root, script, config, service unit, timer unit (`changed`, 5); `sqlite3` already installed (ok); recap `proxmox1 ok=14 changed=5 unreachable=0 failed=0` |
+| Check-mode run of the service playbooks | manual | 5.3 evidence from a02644d, run at 3c993f1 (sqlite_snapshot role tasks/config/script and 02_SERVICES playbooks unchanged since, also through 69fe333): both playbooks exit 0, `ok=36 changed=4 failed=0`; would-change = apt sqlite3, snapshot script, config, snapshot dir; snapshot task skipped in check mode |
 | Onboarding a new service from the docs | manual | Gate 2 read of docs/backups.md |
 | CLAUDE.md requires registration | manual | Gate 2 read of .claude/CLAUDE.md |
 | Script change runs its fixture tests | unit | `scripts/proof.sh --all` prints `PASS: sqlite-snapshot fixtures` and `PASS: sqlite-backup fixtures` |
@@ -99,7 +102,8 @@ Notes:
 
 ## Diffstat
 
-origin/main...flow/sqlite-backups: 41 files changed, 3193 insertions(+), 1 deletion(-)
+origin/main...flow/sqlite-backups: 41 files changed, 3265 insertions(+), 1 deletion(-)
+Top: scripts/tests/sqlite-backup.sh (+928), scripts/tests/sqlite-snapshot.sh (+325), delta spec (+321), homelab-sqlite-backup (+197), design.md (+182), sqlite_restore.yml (+161)
 
 ## Screenshots
 
