@@ -95,3 +95,23 @@ origin/main...flow/sqlite-backups: 41 files changed, 2909 insertions(+), 1 delet
 ## Screenshots
 
 none
+
+## Review
+
+Fresh-context reviewer (opus), three rounds against `origin/main...flow/sqlite-backups`.
+
+### Round 1 (at f56e552)
+- [weak] "Registered database path without .db suffix" matched loop label and assertion text, not the fail_msg → fixed in fd240d6 (asserts the full fail_msg; red under a "bad input" mutation).
+- [weak] "Registered host without a container ID", same cause → fixed in fd240d6.
+- [correctness] Restore failed when the live database was missing (guest `pre-restore` errored) → fixed in 5f92228: `pre-restore` skips a missing DB like `pre-deploy`; new scenarios "Restore when the live database is missing" and "Restore proceeds when the live database is gone".
+
+### Round 2 (at 5f92228)
+- [weak] "Restore proceeds when the live database is gone" never reached the health check (pct stub failed every push) → fixed in e547c8a (push succeeds in that fixture, push and healthz pinned; red when the push task is deleted).
+- [weak, low] node-side "Restore when the live database is missing" asserted stub text → fixed in 1e736ce (asserts node-script behaviour: exit 0, no pull, no node dir).
+- [weak, low] "Check-mode run on proxmox1" didn't pin `changed:` → fixed in 2ee056f (five would-install tasks pinned; red under `changed_when: false`).
+- [note] `.meta` renamed before `.db` could orphan a `.meta` if the second same-directory rename failed → not fixed: not realistically triggerable.
+
+### Round 3 (at 2ee056f) — round limit reached, open for Gate 2
+- [weak] `scripts/tests/sqlite-snapshot.sh:190-201` — THEN "(a genuine snapshot failure still exits non-zero)" is not tested for `pre-restore`; a mutation making pre-restore always exit 0 stayed green. Open.
+- [spec mismatch] `homelab-sqlite-backup:143-146` (`cmd_locate`) — a name without `.db` or with a `/` (e.g. `daily/<name>.db` as printed by locate's own listing) returns `not found` without listing the available snapshots. Open.
+- [design note] A corrupt live database fails the pre-restore integrity check, so the restore playbook stops before "Stop the service" — restore is blocked exactly when the DB is broken; only a missing DB is exempt. A corrupt pre-deploy snapshot in a guest marks that host FAILED nightly until it rotates out. Open — decision for Rue.
