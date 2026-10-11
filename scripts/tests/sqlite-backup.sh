@@ -393,6 +393,40 @@ locate_not_found() {
 }
 check "Snapshot name not found" locate_not_found
 
+locate_not_found_any_form() {
+  local input fails=0
+  for input in app-20261001T030000Z daily/app-20261009T030000Z.db a/b/app-20261001T030000Z.db pre-deploy/app-20261001T030000Z.db; do
+    new_case
+    std_conf
+    node_snap rues-arcade01 daily app 20261001T030000Z
+    node_snap rues-arcade01 pre-restore app 20261002T030000Z-corrupt
+    node locate rues-arcade01 "$input"
+    a test $? -eq 1
+    a has "$FX/stderr" "not found: $input"
+    a has "$FX/stderr" "daily/app-20261001T030000Z.db"
+    a has "$FX/stderr" "pre-restore/app-20261002T030000Z-corrupt.db"
+    a test ! -s "$FX/stdout"
+    [ "$bad" -eq 0 ] || fails=1
+  done
+  return "$fails"
+}
+check "Snapshot name not found in any form" locate_not_found_any_form
+
+locate_kind_and_name() {
+  new_case
+  std_conf
+  node_snap rues-arcade01 daily app 20261001T030000Z
+  node locate rues-arcade01 daily/app-20261001T030000Z.db
+  a test $? -eq 0
+  a test "$(head -1 "$FX/stdout")" = "$FX/root/rues-arcade01/daily/app-20261001T030000Z.db"
+  a test "$(sed -n '2,$p' "$FX/stdout")" = "node meta 20261001T030000Z"
+  node locate rues-arcade01 pre-deploy/app-20261001T030000Z.db
+  a test $? -eq 1
+  a has "$FX/stderr" "not found: pre-deploy/app-20261001T030000Z.db"
+  return "$bad"
+}
+check "Snapshot given as kind and name" locate_kind_and_name
+
 pre_restore_saves() {
   new_case
   std_conf

@@ -139,20 +139,24 @@ cmd_pre_restore() {
 }
 
 cmd_locate() {
-  local host=${1:?usage: locate <host> <snapshot>} snap=${2:?usage: locate <host> <snapshot>} kind f
-  if [[ $snap != *.db || $snap == */* ]]; then
-    echo "not found: $snap" >&2
-    return 1
+  local host=${1:?usage: locate <host> <snapshot>} want=${2:?usage: locate <host> <snapshot>} snap kind f
+  local -a kinds=(daily pre-deploy pre-restore)
+  snap=$want
+  if [[ $snap =~ ^(daily|pre-deploy|pre-restore)/([^/]+)$ ]]; then
+    kinds=("${BASH_REMATCH[1]}")
+    snap=${BASH_REMATCH[2]}
   fi
-  for kind in daily pre-deploy pre-restore; do
-    f=$BACKUP_ROOT/$host/$kind/$snap
-    if [ -f "$f" ]; then
-      echo "$f"
-      cat "${f%.db}.meta" 2>/dev/null
-      return 0
-    fi
-  done
-  echo "not found: $snap" >&2
+  if [[ $snap == *.db && $snap != */* ]]; then
+    for kind in "${kinds[@]}"; do
+      f=$BACKUP_ROOT/$host/$kind/$snap
+      if [ -f "$f" ]; then
+        echo "$f"
+        cat "${f%.db}.meta" 2>/dev/null
+        return 0
+      fi
+    done
+  fi
+  echo "not found: $want" >&2
   for kind in daily pre-deploy pre-restore; do
     for f in "$BACKUP_ROOT/$host/$kind"/*.db; do
       [ -e "$f" ] && echo "$kind/${f##*/}" >&2
