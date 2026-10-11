@@ -258,6 +258,11 @@ A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service h
 - **THEN** its own `pre-restore` call does not rotate that snapshot away before it is pushed
 - **proof:** unit
 
+#### Scenario: Restore accepts the name as printed by the listing
+- **WHEN** the restore playbook is given `<kind>/<name>.db` (`daily`, `pre-deploy` or `pre-restore`) as printed by the not-found listing
+- **THEN** it looks the snapshot up under that kind, checks the stem of `<name>.db` against the registry, and passes the bare `<name>.db` to `pre-restore`, so restoring the oldest `pre-restore/` snapshot still keeps it; any other prefix, or more than one `/`, fails before the lookup
+- **proof:** unit
+
 #### Scenario: Failed restore brings the unit back
 - **WHEN** a step after "Stop the service" fails
 - **THEN** the playbook starts the unit again, and its failure message names the pre-restore snapshot of the restored database (not another registered database's)

@@ -688,8 +688,9 @@ restore_inv() {
 #!/usr/bin/env bash
 case $1 in
   locate)
+    echo "locate $*" >>"$FX/locate.log"
     case $3 in
-      a-*|b-*) echo "$FX/located.db"; echo meta ;;
+      a-*|b-*|daily/a-*|pre-restore/a-*) echo "$FX/located.db"; echo meta ;;
       *) echo "not found: $3" >&2; echo "daily/a-20261001T030000Z.db" >&2; exit 1 ;;
     esac ;;
   pre-restore) echo "$*" >>"$FX/node.log"; echo "a-20261009T030000Z.db"; echo "b-20261009T030000Z.db" ;;
@@ -741,6 +742,43 @@ restore_oldest_pre_restore() {
   restore_passes_chosen_snapshot
 }
 check "Restore of the oldest pre-restore snapshot" restore_oldest_pre_restore
+
+restore_accepts_listed_name() {
+  new_case
+  restore_inv /var/lib/x/a.db
+  restore_play pre-restore/a-20261001T030000Z.db
+  a not_has "$FX/play.out" "must be"
+  a has "$FX/locate.log" "locate guest_a pre-restore/a-20261001T030000Z.db"
+  a has "$FX/node.log" "pre-restore guest_a 101 a-20261001T030000Z.db"
+  a not_has "$FX/node.log" "101 pre-restore/"
+  restore_play daily/a-20261001T030000Z.db
+  a not_has "$FX/play.out" "must be"
+  a has "$FX/locate.log" "locate guest_a daily/a-20261001T030000Z.db"
+  restore_play daily/a-20261001T030000Z-corrupt.db
+  a test $? -ne 0
+  a not_has "$FX/play.out" "Save the current database"
+  return "$bad"
+}
+
+restore_listed_oldest_pre_restore() {
+  pre_restore_keeps_chosen || return 1
+  restore_accepts_listed_name
+}
+check "Restore accepts the name as printed by the listing" restore_listed_oldest_pre_restore
+
+restore_rejects_other_prefix() {
+  new_case
+  restore_inv /var/lib/x/a.db
+  local n
+  for n in weekly/a-20261001T030000Z.db daily/pre-restore/a-20261001T030000Z.db /a-20261001T030000Z.db; do
+    restore_play "$n"
+    a test $? -ne 0
+    a has "$FX/play.out" "daily, pre-deploy or pre-restore"
+    a not_has "$FX/play.out" "Save the current database"
+  done
+  return "$bad"
+}
+extra "Restore rejects a kind prefix other than daily, pre-deploy or pre-restore" restore_rejects_other_prefix
 
 restore_unknown_snapshot_lists() {
   new_case

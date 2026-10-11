@@ -101,8 +101,9 @@ From the workstation (same inventory and node key as above):
    saving the pre-restore snapshot aborts before the unit is stopped.
 
 An unknown snapshot name fails before anything is touched, listing what is
-available (`<kind>/<name>.db` from that listing is accepted by `locate` too).
-The playbook needs the plain `<stem>-<stamp>.db` name and refuses corrupt-marked ones. The playbook refuses `--check`: saving the pre-restore snapshot writes.
+available. The playbook accepts both `<name>.db` and the `<kind>/<name>.db` form that
+listing prints (`daily`, `pre-deploy` or `pre-restore`; any other prefix is
+refused), and refuses corrupt-marked ones. The playbook refuses `--check`: saving the pre-restore snapshot writes.
 
 **Rolling back a restore:** if `/healthz` never answers 200, the playbook fails
 and prints the pre-restore snapshot name and the exact command (the unit is started again first). It is the same

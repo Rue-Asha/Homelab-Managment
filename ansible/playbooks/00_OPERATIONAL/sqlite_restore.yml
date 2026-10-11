@@ -5,6 +5,8 @@
 #   ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml \
 #     -l <host> -e sqlite_restore_snapshot=<name>.db
 #
+# <name>.db may also be written <kind>/<name>.db, as the not-found listing prints it.
+#
 # Snapshots live under /var/backups/homelab/<host>/{daily,pre-deploy,pre-restore}/.
 # See docs/backups.md.
 - name: Restore a SQLite database from a snapshot
@@ -13,7 +15,9 @@
   gather_facts: true
   vars:
     sqlite_restore_node_cmd: /usr/local/sbin/homelab-sqlite-backup
-    sqlite_restore_stem: "{{ (sqlite_restore_snapshot | default('')) | regex_replace('-[0-9]{8}T[0-9]{6}Z\\.db$', '') }}"
+    sqlite_restore_parts: "{{ (sqlite_restore_snapshot | default('')).split('/') }}"
+    sqlite_restore_name: "{{ sqlite_restore_parts | last }}"
+    sqlite_restore_stem: "{{ sqlite_restore_name | regex_replace('-[0-9]{8}T[0-9]{6}Z\\.db$', '') }}"
     sqlite_restore_db: >-
       {{ sqlite_backups.databases
          | select('match', '^.*/' ~ (sqlite_restore_stem | regex_escape) ~ '\.db$')
@@ -40,6 +44,17 @@
           lxc_ctid, and -e sqlite_restore_snapshot=<stem>-<UTC stamp>.db.
       tags: always
 
+    - name: Check the snapshot name has no unknown prefix
+      ansible.builtin.assert:
+        that:
+          - sqlite_restore_parts | length == 1 or (sqlite_restore_parts | length == 2 and sqlite_restore_parts[0] in ['daily', 'pre-deploy', 'pre-restore'])
+        quiet: true
+        fail_msg: >-
+          {{ sqlite_restore_snapshot }}: a prefix must be exactly one of
+          daily, pre-deploy or pre-restore, as <kind>/<name>.db; otherwise give
+          just <name>.db.
+      tags: always
+
     - name: Look up the snapshot on the node
       ansible.builtin.command:
         argv: ["{{ sqlite_restore_node_cmd }}", locate, "{{ inventory_hostname }}", "{{ sqlite_restore_snapshot }}"]
@@ -52,11 +67,11 @@
     - name: Check the snapshot belongs to a registered database
       ansible.builtin.assert:
         that:
-          - sqlite_restore_snapshot is match('^.+-[0-9]{8}T[0-9]{6}Z\.db$')
+          - sqlite_restore_name is match('^.+-[0-9]{8}T[0-9]{6}Z\.db$')
           - sqlite_restore_db | length > 0
         quiet: true
         fail_msg: >-
-          {{ sqlite_restore_snapshot }} must be <stem>-<UTC stamp>.db whose
+          {{ sqlite_restore_name }} must be <stem>-<UTC stamp>.db whose
           stem is one of the registered databases
           ({{ sqlite_backups.databases | join(', ') }}).
 
@@ -66,7 +81,7 @@
 
     - name: Save the current database as a pre-restore snapshot
       ansible.builtin.command:
-        argv: ["{{ sqlite_restore_node_cmd }}", pre-restore, "{{ inventory_hostname }}", "{{ lxc_ctid }}", "{{ sqlite_restore_snapshot }}"]
+        argv: ["{{ sqlite_restore_node_cmd }}", pre-restore, "{{ inventory_hostname }}", "{{ lxc_ctid }}", "{{ sqlite_restore_name }}"]
       delegate_to: "{{ proxmox_node_ip }}"
       become: false
       register: sqlite_restore_pre
@@ -133,7 +148,7 @@
         - name: Fail naming the way back
           ansible.builtin.fail:
             msg: >-
-              Restore of {{ sqlite_restore_snapshot }} on {{ inventory_hostname }}
+              Restore of {{ sqlite_restore_name }} on {{ inventory_hostname }}
               did not end healthy.
               {% if sqlite_restore_pre_name | length > 0 -%}
               The database as it was before is saved as
