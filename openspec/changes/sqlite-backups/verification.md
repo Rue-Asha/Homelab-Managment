@@ -1,119 +1,89 @@
-verified-at: dbb34f9
+verified-at: f56e552
 
 ## Layer 1 (scripts/proof.sh --all, green)
 
 ```
+PASS: Regression: arcade shares IP with check container
+PASS: unique-hosts fixtures
 PASS: sqlite-snapshot fixtures
 PASS: sqlite-backup fixtures
 PASS: check runner role has no deploy credentials
 PASS: retired key path
-proof: 24 sensor(s), 0 failed
+proof: 25 sensor(s), 0 failed
 ```
 
 ## Layer 2 coverage
 
-Evidence: `ok: Scenario: <title>` lines from scripts/tests/sqlite-snapshot.sh (S) and scripts/tests/sqlite-backup.sh (B), each run directly 3 times at dbb34f9, 6/6 rc 0, no non-ok lines, no flake. Every `Scenario:` name in the tests exists in the spec; every unit scenario has its test.
+Scope as of 2026-10-11 (S6 alerting removed). Evidence: `ok: Scenario: <title>` lines from `scripts/tests/sqlite-snapshot.sh` (14 ok) and `scripts/tests/sqlite-backup.sh` (27 ok), each run directly at f56e552, rc 0, no non-ok lines. All 45 scenarios in the delta spec accounted for.
 
 | Scenario | proof | Evidence |
 |---|---|---|
-| Life-Manager and Rues-Arcade are registered | unit | S ok |
-| Guest role skips a host without a registry entry | unit | S ok |
-| Node playbook ignores a host without a registry entry | unit | B ok |
-| Registered host without a container ID | unit | B ok |
-| Registered database path without .db suffix | unit | B ok |
-| Role rejects a database path without .db suffix | unit | S ok |
-| Pre-deploy snapshot is written | unit | S ok |
-| Service playbooks run the snapshot role before the service role | unit | S ok |
-| First deploy without a database | unit | S ok |
-| Failed snapshot fails the run | unit | S ok |
-| Guest keeps the newest 10 pre-deploy snapshots | unit | S ok |
-| Re-run without a version change still snapshots | manual | manual (Gate 2 / post-merge checklist) |
-| Metadata of a migrated database | unit | S ok |
-| Database without schema_migrations | unit | S ok |
-| Release version unknown | unit | S ok |
-| Metadata travels with the snapshot to the node | unit | B ok |
-| Nightly run collects every registered guest | unit | B ok |
-| New pre-deploy snapshots are copied once | unit | B ok |
-| One guest fails, the others still run | unit | B ok |
-| Registered database missing in the guest | unit | S ok + B ok |
-| Node disk full | unit | B ok |
-| Timer runs the job daily on proxmox1 | manual | manual (Gate 2 / post-merge checklist) |
-| Intact snapshot is kept | unit | B ok |
-| Corrupt snapshot is discarded | unit | B ok |
-| Daily rotation keeps the newest 14 | unit | B ok |
-| Pre-deploy rotation keeps the newest 10 | unit | B ok |
-| Pre-restore rotation keeps the newest 10 | unit | B ok |
-| Fewer than 14 present | unit | B ok |
-| Failed run deletes nothing | unit | B ok |
-| All services succeeded | unit | B ok |
-| A service failed | unit | B ok |
-| healthchecks.io unreachable | unit | B ok |
-| Ping URL unset | unit | B ok |
-| Success ping arrives | manual | manual (Gate 2 / post-merge checklist) |
-| Job never runs | manual | manual (Gate 2 / post-merge checklist) |
-| Snapshot metadata is shown first | unit | B ok |
-| Snapshot name not found | unit | B ok |
-| Current database is saved before the restore | unit | B ok |
-| pre-restore without a container ID fails | unit | B ok |
-| Restore playbook refuses --check | unit | B ok |
-| Restore of the oldest pre-restore snapshot | unit | B ok |
-| Failed restore brings the unit back | unit | B ok |
-| Restore ends with a healthy service | manual | manual (Gate 2 / post-merge checklist) |
-| Restore leaves an unhealthy service | manual | manual (Gate 2 / post-merge checklist) |
-| The deploy never runs the node playbook | unit | B ok |
-| Check-mode run on proxmox1 | unit | B ok |
-| Check-mode run of the service playbooks | manual | manual (Gate 2 / post-merge checklist) |
-| Onboarding a new service from the docs | manual | manual (Gate 2 / post-merge checklist) |
-| CLAUDE.md requires registration | manual | manual (Gate 2 / post-merge checklist) |
-| Script change runs its fixture tests | unit | proof.sh --all prints PASS: sqlite-snapshot fixtures and PASS: sqlite-backup fixtures |
+| Life-Manager and Rues-Arcade are registered | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| Guest role skips a host without a registry entry | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| Node playbook ignores a host without a registry entry | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Registered host without a container ID | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Registered database path without .db suffix | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Role rejects a database path without .db suffix | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| Pre-deploy snapshot is written | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| Service playbooks run the snapshot role before the service role | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| First deploy without a database | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| Failed snapshot fails the run | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| Guest keeps the newest 10 pre-deploy snapshots | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| Re-run without a version change still snapshots | manual | post-merge 6.2 |
+| Metadata of a migrated database | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| Database without schema_migrations | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| Release version unknown | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
+| Metadata travels with the snapshot to the node | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Nightly run collects every registered guest | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| New pre-deploy snapshots are copied once | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| One guest fails, the others still run | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Registered database missing in the guest | unit | `scripts/tests/sqlite-snapshot.sh` ok + `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Node disk full | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| The job reports only through its log and exit status | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Timer runs the job daily on proxmox1 | manual | post-merge 6.3 |
+| Intact snapshot is kept | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Corrupt snapshot is discarded | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Daily rotation keeps the newest 14 | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Pre-deploy rotation keeps the newest 10 | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Pre-restore rotation keeps the newest 10 | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Fewer than 14 present | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Failed run deletes nothing | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Snapshot metadata is shown first | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Snapshot name not found | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Current database is saved before the restore | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| pre-restore without a container ID fails | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Restore playbook refuses --check | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Restore of the oldest pre-restore snapshot | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Failed restore brings the unit back | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Restore ends with a healthy service | manual | post-merge 6.4 restore drill |
+| Restore leaves an unhealthy service | manual | not drilled (needs deliberately broken restore) |
+| The deploy never runs the node playbook | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Check-mode run on proxmox1 | unit + manual | B ok (fixture); live: check log `sqlite_backup_check.log` (exit 0): preflight asserts ok for life-manager01 and rues-arcade01, "Show the guests the nightly job will cover" lists `life-manager01 223`, `rues-arcade01 100`; would-change: backup root, script, config, service unit, timer unit (`changed`, 5); `sqlite3` already installed (ok); recap `proxmox1 ok=14 changed=5 unreachable=0 failed=0` |
+| Check-mode run of the service playbooks | manual | 5.3 evidence from a02644d, run at 3c993f1 (sqlite_snapshot role and 02_SERVICES playbooks unchanged since): both playbooks exit 0, `ok=36 changed=4 failed=0`; would-change = apt sqlite3, snapshot script, config, snapshot dir; snapshot task skipped in check mode |
+| Onboarding a new service from the docs | manual | Gate 2 read of docs/backups.md |
+| CLAUDE.md requires registration | manual | Gate 2 read of .claude/CLAUDE.md |
+| Script change runs its fixture tests | unit | `scripts/proof.sh --all` prints `PASS: sqlite-snapshot fixtures` and `PASS: sqlite-backup fixtures` |
 
 Gaps: none
 
 Notes:
-- "Check-mode run on proxmox1" has a unit part (B ok, local fixture run) and a manual part (real node, Gate 2, unit 5).
-- Extra tests outside the spec (not counted): daily keeps only the newest snapshot (S), list pre-deploy prints basenames (S), Restore with an unknown snapshot name lists the available snapshots (B).
-- The sqlite-backup fixtures depend on the environment: ansible-playbook needs a vault password file (see ansible.cfg); a clean HOME makes 10 scenarios fail, including "The deploy never runs the node playbook". CI provides a dummy file (ci.yml), so it is not affected.
+- "Check-mode run on proxmox1": the live run shows `sqlite3` as already installed on the node (ok, not would-change); the other planned installs show as changed. Check mode skips command tasks, so only the planned file/unit changes are proven live.
+- The sqlite-backup fixtures need `~/.config/homelab/vault_pass` (ansible.cfg `vault_password_file`); CI writes a dummy file.
 
 ## Manual checklist
 
-- Check-mode run of the node playbook against proxmox1 (task 5.x)
-- Check-mode run of life-manager.yml and rues-arcade.yml (task 5.x)
-- Read docs/backups.md onboarding section and the .claude/CLAUDE.md registration rule
-- Post-merge (6.x): timer enabled on proxmox1, manual start lands both snapshots, success ping on healthchecks.io, restore drill on rues-arcade01, re-run deploy writes a new pre-deploy snapshot
-- healthchecks.io missing-ping alert configured by Rue; unhealthy-restore message not drilled
+- Read docs/backups.md onboarding section (Scenario: Onboarding a new service from the docs)
+- Read the service-delivery section of .claude/CLAUDE.md for the registration rule (Scenario: CLAUDE.md requires registration)
+- Post-merge 6.1: run `sqlite_backup.yml` for real on proxmox1
+- Post-merge 6.2: CI deploy of both services; each guest has a pre-deploy snapshot although no version changed (Scenario: Re-run without a version change still snapshots)
+- Post-merge 6.3: `systemctl start homelab-sqlite-backup.service`; timer listed, both guests have daily `.db` + `.meta`, journal shows `<host>: ok` (Scenario: Timer runs the job daily on proxmox1)
+- Post-merge 6.4: restore drill on rues-arcade01 (Scenario: Restore ends with a healthy service)
+- Not drilled: Scenario: Restore leaves an unhealthy service
 
 ## Diffstat
 
- 41 files changed, 2899 insertions(+), 1 deletion(-)
+ 41 files changed, 2851 insertions(+), 1 deletion(-)
 
 ## Screenshots
 
 none
-
-## Review
-
-Four fresh-context review rounds (Layer 3) plus three fixer rounds and one cleanup round. Correctness bugs found by review: 5 (all fixed with red-first tests); no weakened tests in any round.
-
-| Round | Finding | Resolution |
-|---|---|---|
-| 1 | 5 weak tests (guest role skip relied on check-mode semantics; FAILED reason; restore call order; preflight-before-install; deploy-targets never exercised) | Strengthened, each reviewer mutant red (9480623) |
-| 2 | 3 weak tests (partial file on failed snapshot; newest migration; node play `hosts:`) | Strengthened (2df3e08) |
-| 2 | proof trigger missed sqlite_restore.yml / deploy-targets.sh | Trigger extended (2df3e08) |
-| 2 | Restore crashed under --check | Restore refuses --check with a clear message; scenario added (2df3e08) |
-| 2 | Two sources for the container ID | `pre-restore <host> <ctid>` takes the live inventory ctid (2df3e08) |
-| 2 | Registry paths not ending in .db broke restore | Preflight asserts in both roles, documented (2df3e08) |
-| 3 | Node playbook --check failed on a fresh proxmox1 (timer unit missing) | Check-mode tolerance for "unit not found" only (a6daff9, narrowed in dbb34f9) |
-| 3 | Typo'd snapshot name didn't list available snapshots | `locate` runs before the name assert (a6daff9) |
-| 3 | Pre-restore rotation could delete the snapshot being restored | `pre-restore` protects the chosen snapshot (a6daff9) |
-| 3 | Rescue left the service stopped | Rescue starts the unit again (a6daff9) |
-| 3 | Multi-DB host: rollback message could name the wrong DB's snapshot | Name matched by stem (a6daff9) |
-| 4 | 2 weak tests (playbook passes protect arg; rescue really starts unit), naming gaps, broad check-mode ignore | Strengthened, renamed, narrowed to "Could not find the requested service" (dbb34f9) |
-
-Accepted, not changed:
-- Fixture suites need `~/.config/homelab/vault_pass` (ansible.cfg `vault_password_file`); in a clean HOME 10 scenarios fail with a bare `test 1 -eq 0`. CI writes a dummy vault file, so CI is unaffected. Same precondition as the repo's other ansible-based tests.
-- `write_meta` reading the snapshot vs the live DB is not distinguishable with the stub (byte-identical copy); outside every scenario's THEN.
-
-## Live dry runs (Gate 2 evidence, unit 5)
-
-- 5.3 `ansible-playbook --check --diff` of `02_SERVICES/life-manager.yml` and `rues-arcade.yml` from the workstation at 3c993f1 (rendered inventory via `scripts/fetch-inventory.sh`): both exit 0, `ok=36 changed=4 unreachable=0 failed=0 skipped=12`. The 4 would-change tasks are exactly the sqlite_snapshot ones: apt `sqlite3` (only new package), snapshot script, config (SERVICE / RELEASE_LINK / SNAPSHOT_DIR=/var/backups/sqlite-snapshot / KEEP_PRE_DEPLOY=10 / DATABASE=/var/lib/<svc>/<svc>.db), snapshot dir. `.db` assert ok; the pre-deploy snapshot task is skipped in check mode (command task), so the snapshot itself is only proven after merge (6.2).
-- 5.2 node playbook `--check` on proxmox1: pending (needs 5.1, the vaulted ping URL).
