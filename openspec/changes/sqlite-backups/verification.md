@@ -132,3 +132,7 @@ Fresh-context reviewer (opus), three rounds against `origin/main...flow/sqlite-b
 ### Round 4 (at 5775ac8) — extra round approved by Rue at Gate 2
 - Round 3 items resolved: pre-restore failure tested (ea7d84c); locate lists on every not-found path and accepts `<kind>/<name>.db` (f06e24c); corrupt live DB kept as `-corrupt` at pre-restore and restore proceeds, corrupt pre-deploy kept marked once without failing the host (5775ac8; decision recorded in 506c1ce).
 - [spec mismatch] `sqlite_restore.yml:16-20,55-56` — the restore playbook rejects `<kind>/<name>.db` (stem keeps the `daily/` prefix, registry match fails with a misleading "stem not registered"), while the requirement says that form SHALL be accepted; also `protect` for `pre-restore` would get the raw name. Open — decision for Rue at Gate 2.
+
+### Round 5 (at 69fe333) — approved by Rue at Gate 2 (option 1)
+- Round 4 spec mismatch resolved in 69fe333: the restore playbook normalises `<kind>/<name>.db` to the basename for the registry check, `-corrupt` refusal, `pre-restore` protect argument and rescue message; `locate` keeps the prefixed name; scenario "Restore accepts the name as printed by the listing".
+- Reviewer: no findings. Theoretical edges, not findings (do not apply to the current one-DB-per-host registry): two registered DBs with the same file name in different directories would collide in one snapshot dir; a stem with regex metacharacters (e.g. `c++.db`) breaks the guest-side rotation match.
