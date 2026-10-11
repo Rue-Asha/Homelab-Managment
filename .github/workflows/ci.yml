@@ -53,4 +53,4 @@ jobs:
         run: scripts/proof.sh --all
 
   security-baseline:
-    uses: Rue-Asha/ci/.github/workflows/security-baseline.yml@aab9824cdb27d4d86203a5d7b4785d95f8549cbc # v1.0.0
+    uses: Rue-Asha/ci/.github/workflows/security-baseline.yml@7b49f3dcf37c61aea3722e68917bc06db507f386 # v1.1.0
