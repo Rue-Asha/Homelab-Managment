@@ -1,6 +1,8 @@
-verified-at: f56e552
+verified-at: 5f92228
 
 ## Layer 1 (scripts/proof.sh --all, green)
+
+Run at 5f92228 with the ignored `.terraform` cache cleared (25 sensors). With the cache present the run prints 24: `terraform init` is a conditional sensor that only runs when `terraform/environments/homelab/.terraform` is missing. Both runs green, no sensor lost.
 
 ```
 PASS: Regression: arcade shares IP with check container
@@ -14,15 +16,17 @@ proof: 25 sensor(s), 0 failed
 
 ## Layer 2 coverage
 
-Scope as of 2026-10-11 (S6 alerting removed). Evidence: `ok: Scenario: <title>` lines from `scripts/tests/sqlite-snapshot.sh` (14 ok) and `scripts/tests/sqlite-backup.sh` (27 ok), each run directly at f56e552, rc 0, no non-ok lines. All 45 scenarios in the delta spec accounted for.
+Scope as of 2026-10-11 (S6 alerting removed). Evidence: `ok: Scenario: <title>` lines from `scripts/tests/sqlite-snapshot.sh` (13 ok) and `scripts/tests/sqlite-backup.sh` (28 ok), each run directly at 5f92228, rc 0, no non-ok lines. All 47 scenarios in the delta spec accounted for (39 distinct ok titles, 1 via proof.sh sensor, 7 manual).
+
+Round 2: fd240d6 pins the preflight `fail_msg` wording in "Registered host without a container ID" and "Registered database path without .db suffix" (asserts now match the full message); 5f92228 adds the two scenarios "Restore when the live database is missing" and "Restore proceeds when the live database is gone".
 
 | Scenario | proof | Evidence |
 |---|---|---|
 | Life-Manager and Rues-Arcade are registered | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
 | Guest role skips a host without a registry entry | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
 | Node playbook ignores a host without a registry entry | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
-| Registered host without a container ID | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
-| Registered database path without .db suffix | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Registered host without a container ID | unit | `scripts/tests/sqlite-backup.sh` ok ✓ (asserts full fail_msg "guest_c has sqlite_backups but no lxc_ctid") |
+| Registered database path without .db suffix | unit | `scripts/tests/sqlite-backup.sh` ok ✓ (asserts full fail_msg "guest_d registers a database path that does not end in .db") |
 | Role rejects a database path without .db suffix | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
 | Pre-deploy snapshot is written | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
 | Service playbooks run the snapshot role before the service role | unit | `scripts/tests/sqlite-snapshot.sh` ok ✓ |
@@ -51,6 +55,8 @@ Scope as of 2026-10-11 (S6 alerting removed). Evidence: `ok: Scenario: <title>` 
 | Snapshot metadata is shown first | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
 | Snapshot name not found | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
 | Current database is saved before the restore | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Restore when the live database is missing | unit | `scripts/tests/sqlite-snapshot.sh` ok + `scripts/tests/sqlite-backup.sh` ok ✓ |
+| Restore proceeds when the live database is gone | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
 | pre-restore without a container ID fails | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
 | Restore playbook refuses --check | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
 | Restore of the oldest pre-restore snapshot | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
@@ -58,8 +64,8 @@ Scope as of 2026-10-11 (S6 alerting removed). Evidence: `ok: Scenario: <title>` 
 | Restore ends with a healthy service | manual | post-merge 6.4 restore drill |
 | Restore leaves an unhealthy service | manual | not drilled (needs deliberately broken restore) |
 | The deploy never runs the node playbook | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
-| Check-mode run on proxmox1 | unit + manual | B ok (fixture); live: check log `sqlite_backup_check.log` (exit 0): preflight asserts ok for life-manager01 and rues-arcade01, "Show the guests the nightly job will cover" lists `life-manager01 223`, `rues-arcade01 100`; would-change: backup root, script, config, service unit, timer unit (`changed`, 5); `sqlite3` already installed (ok); recap `proxmox1 ok=14 changed=5 unreachable=0 failed=0` |
-| Check-mode run of the service playbooks | manual | 5.3 evidence from a02644d, run at 3c993f1 (sqlite_snapshot role and 02_SERVICES playbooks unchanged since): both playbooks exit 0, `ok=36 changed=4 failed=0`; would-change = apt sqlite3, snapshot script, config, snapshot dir; snapshot task skipped in check mode |
+| Check-mode run on proxmox1 | unit + manual | B ok (fixture); live (round 1 evidence, still valid: fd240d6/5f92228 did not touch the node role's tasks/templates or the sqlite_snapshot role's tasks/config; only the scripts, restore playbook, docs and tests changed): check log `sqlite_backup_check.log` (exit 0): preflight asserts ok for life-manager01 and rues-arcade01, "Show the guests the nightly job will cover" lists `life-manager01 223`, `rues-arcade01 100`; would-change: backup root, script, config, service unit, timer unit (`changed`, 5); `sqlite3` already installed (ok); recap `proxmox1 ok=14 changed=5 unreachable=0 failed=0` |
+| Check-mode run of the service playbooks | manual | 5.3 evidence from a02644d, run at 3c993f1 (sqlite_snapshot role tasks/config and 02_SERVICES playbooks unchanged since, also through 5f92228; only the snapshot script gained a pre-restore skip branch): both playbooks exit 0, `ok=36 changed=4 failed=0`; would-change = apt sqlite3, snapshot script, config, snapshot dir; snapshot task skipped in check mode |
 | Onboarding a new service from the docs | manual | Gate 2 read of docs/backups.md |
 | CLAUDE.md requires registration | manual | Gate 2 read of .claude/CLAUDE.md |
 | Script change runs its fixture tests | unit | `scripts/proof.sh --all` prints `PASS: sqlite-snapshot fixtures` and `PASS: sqlite-backup fixtures` |
@@ -82,7 +88,7 @@ Notes:
 
 ## Diffstat
 
- 41 files changed, 2851 insertions(+), 1 deletion(-)
+origin/main...flow/sqlite-backups: 41 files changed, 2883 insertions(+), 1 deletion(-)
 
 ## Screenshots
 
