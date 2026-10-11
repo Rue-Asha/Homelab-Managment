@@ -48,7 +48,7 @@ Rue removed alerting after Gate 1; this unit takes the already-built ping out ag
 
 Nothing in this group changes a real host; every task here is evidence for Gate 2.
 
-- [ ] 5.2 ⚠ live (read-only) — from the workstation on this branch, after unit 7 is merged (`scripts/fetch-inventory.sh` first): `ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml --check` against proxmox1; preflight passes and lists both registered guests, nothing changes, output lists the planned installs (`sqlite3`, script, config, unit, timer), no vault or ping variable is needed (Scenario: Check-mode run on proxmox1) — Gate 2 evidence
+- [x] 5.2 ⚠ live (read-only) — from the workstation on this branch, after unit 7 is merged (`scripts/fetch-inventory.sh` first): `ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml --check` against proxmox1; preflight passes and lists both registered guests, nothing changes, output lists the planned installs (`sqlite3`, script, config, unit, timer), no vault or ping variable is needed (Scenario: Check-mode run on proxmox1) — Gate 2 evidence
 - [x] 5.3 ⚠ live (read-only) — from the workstation on this branch: `ansible-playbook ansible/playbooks/02_SERVICES/life-manager.yml --check` and `… rues-arcade.yml --check`; nothing changes, `sqlite_snapshot` shows `sqlite3`, the script and its config as would-change (Scenario: Check-mode run of the service playbooks) — Gate 2 evidence
 
 ## 6. Live apply after merge (Ship, in this order)
