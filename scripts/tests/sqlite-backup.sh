@@ -427,7 +427,7 @@ pre_restore_db_gone() {
   a test $? -eq 0
   a test ! -s "$FX/stdout"
   a absent "$FX/pull.log"
-  a has "$FX/stderr" "does not exist"
+  a absent "$FX/root/rues-arcade01"
   return "$bad"
 }
 check "Restore when the live database is missing" pre_restore_db_gone
