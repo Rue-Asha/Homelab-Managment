@@ -133,6 +133,8 @@ exists() { [ -e "$1" ]; }
 absent() { [ ! -e "$1" ]; }
 count() { [ "$(find "$1" -maxdepth 1 -type f -name "$2" | wc -l)" -eq "$3" ]; }
 has() { grep -qF -- "$2" "$1"; }
+# task_changed <play output> <task>   the task's result line is "changed:"
+task_changed() { grep -A1 -F "TASK [sqlite_backup : $2]" "$1" | grep -q '^changed:'; }
 
 # node_snap <host> <kind> <stem> <stamp>   a snapshot already on the node
 node_snap() {
@@ -680,7 +682,11 @@ check_mode_node_play() {
   printf -- '---\n' >"$FX/roles/sqlite_backup/tasks/install.yml"
   ANSIBLE_ROLES_PATH=$FX/roles play
   a test $? -eq 0
-  a has "$FX/play.out" "Install the backup timer unit"
+  local t
+  for t in "Ensure the backup root exists" "Install the backup script" "Write the backup config" \
+    "Install the backup service unit" "Install the backup timer unit"; do
+    a task_changed "$FX/play.out" "$t"
+  done
   return "$bad"
 }
 check "Check-mode run on proxmox1" check_mode_node_play
