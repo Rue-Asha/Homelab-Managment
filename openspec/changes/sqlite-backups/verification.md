@@ -1,8 +1,8 @@
-verified-at: 5f92228
+verified-at: 2ee056f
 
 ## Layer 1 (scripts/proof.sh --all, green)
 
-Run at 5f92228 with the ignored `.terraform` cache cleared (25 sensors). With the cache present the run prints 24: `terraform init` is a conditional sensor that only runs when `terraform/environments/homelab/.terraform` is missing. Both runs green, no sensor lost.
+Run at 2ee056f with the ignored `.terraform` cache cleared (25 sensors). With the cache present the run prints 24: `terraform init` is a conditional sensor that only runs when `terraform/environments/homelab/.terraform` is missing. Both runs green, no sensor lost.
 
 ```
 PASS: Regression: arcade shares IP with check container
@@ -16,7 +16,9 @@ proof: 25 sensor(s), 0 failed
 
 ## Layer 2 coverage
 
-Scope as of 2026-10-11 (S6 alerting removed). Evidence: `ok: Scenario: <title>` lines from `scripts/tests/sqlite-snapshot.sh` (13 ok) and `scripts/tests/sqlite-backup.sh` (28 ok), each run directly at 5f92228, rc 0, no non-ok lines. All 47 scenarios in the delta spec accounted for (39 distinct ok titles, 1 via proof.sh sensor, 7 manual).
+Scope as of 2026-10-11 (S6 alerting removed). Evidence: `ok: Scenario: <title>` lines from `scripts/tests/sqlite-snapshot.sh` (13 ok) and `scripts/tests/sqlite-backup.sh` (28 ok), each run directly at 2ee056f, rc 0, no non-ok lines. All 47 scenarios in the delta spec accounted for (39 distinct ok titles, 1 via proof.sh sensor, 7 manual).
+
+Round 3: e547c8a, 1e736ce, 2ee056f are test-only (scripts/tests/sqlite-backup.sh): "Restore proceeds when the live database is gone" now reaches the health check and pins the push; node-side "Restore when the live database is missing" asserts node-script behaviour instead of stub text; "Check-mode run on proxmox1" pins `changed:` on the five would-install tasks. No role, playbook or script code changed since 5f92228, so the live evidence below stays valid.
 
 Round 2: fd240d6 pins the preflight `fail_msg` wording in "Registered host without a container ID" and "Registered database path without .db suffix" (asserts now match the full message); 5f92228 adds the two scenarios "Restore when the live database is missing" and "Restore proceeds when the live database is gone".
 
@@ -64,7 +66,7 @@ Round 2: fd240d6 pins the preflight `fail_msg` wording in "Registered host witho
 | Restore ends with a healthy service | manual | post-merge 6.4 restore drill |
 | Restore leaves an unhealthy service | manual | not drilled (needs deliberately broken restore) |
 | The deploy never runs the node playbook | unit | `scripts/tests/sqlite-backup.sh` ok ✓ |
-| Check-mode run on proxmox1 | unit + manual | B ok (fixture); live (round 1 evidence, still valid: fd240d6/5f92228 did not touch the node role's tasks/templates or the sqlite_snapshot role's tasks/config; only the scripts, restore playbook, docs and tests changed): check log `sqlite_backup_check.log` (exit 0): preflight asserts ok for life-manager01 and rues-arcade01, "Show the guests the nightly job will cover" lists `life-manager01 223`, `rues-arcade01 100`; would-change: backup root, script, config, service unit, timer unit (`changed`, 5); `sqlite3` already installed (ok); recap `proxmox1 ok=14 changed=5 unreachable=0 failed=0` |
+| Check-mode run on proxmox1 | unit + manual | B ok (fixture, pins `changed:` on the five would-install tasks); live (round 1 evidence, still valid: fd240d6/5f92228 and the round-3 test-only commits did not touch the node role's tasks/templates or the sqlite_snapshot role's tasks/config; only the scripts, restore playbook, docs and tests changed): check log `sqlite_backup_check.log` (exit 0): preflight asserts ok for life-manager01 and rues-arcade01, "Show the guests the nightly job will cover" lists `life-manager01 223`, `rues-arcade01 100`; would-change: backup root, script, config, service unit, timer unit (`changed`, 5); `sqlite3` already installed (ok); recap `proxmox1 ok=14 changed=5 unreachable=0 failed=0` |
 | Check-mode run of the service playbooks | manual | 5.3 evidence from a02644d, run at 3c993f1 (sqlite_snapshot role tasks/config and 02_SERVICES playbooks unchanged since, also through 5f92228; only the snapshot script gained a pre-restore skip branch): both playbooks exit 0, `ok=36 changed=4 failed=0`; would-change = apt sqlite3, snapshot script, config, snapshot dir; snapshot task skipped in check mode |
 | Onboarding a new service from the docs | manual | Gate 2 read of docs/backups.md |
 | CLAUDE.md requires registration | manual | Gate 2 read of .claude/CLAUDE.md |
@@ -88,7 +90,7 @@ Notes:
 
 ## Diffstat
 
-origin/main...flow/sqlite-backups: 41 files changed, 2883 insertions(+), 1 deletion(-)
+origin/main...flow/sqlite-backups: 41 files changed, 2909 insertions(+), 1 deletion(-)
 
 ## Screenshots
 
