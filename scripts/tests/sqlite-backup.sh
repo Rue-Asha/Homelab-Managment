@@ -87,7 +87,6 @@ body=
 args=("$@")
 for i in "${!args[@]}"; do [ "${args[$i]}" = --data-raw ] && body=${args[$((i + 1))]}; done
 echo "${args[-1]} | $body" >>"$FX/curl.log"
-[ -e "$FX/curl_fail" ] && { echo "curl: (6) Could not resolve host" >&2; exit 6; }
 exit 0
 STUB
 chmod +x "$dir/bin/pct" "$dir/bin/sqlite3" "$dir/bin/curl"
@@ -100,7 +99,6 @@ new_case() {
   mkdir -p "$FX/guest" "$FX/root"
   export FX
   echo "$stamp_new" >"$FX/stamp"
-  ping=https://hc-ping.test/uuid-1234
   bad=0
 }
 
@@ -111,7 +109,6 @@ write_conf() {
     echo KEEP_DAILY=14
     echo KEEP_PRE_DEPLOY=10
     echo KEEP_PRE_RESTORE=10
-    echo "PING_URL=$ping"
     echo "SNAPSHOT_CMD=/usr/local/sbin/sqlite-snapshot"
     echo GUEST_TIMEOUT=30
     local g
@@ -254,7 +251,7 @@ corrupt_discarded() {
 }
 check "Corrupt snapshot is discarded" corrupt_discarded
 
-# --- 3.2 rotation and ping -------------------------------------------------
+# --- 3.2 rotation and reporting -------------------------------------------------
 
 daily_rotation_14() {
   new_case
@@ -319,47 +316,28 @@ failed_run_deletes_nothing() {
 }
 check "Failed run deletes nothing" failed_run_deletes_nothing
 
-ping_success() {
+reports_only_via_log_and_exit() {
   new_case
   std_conf
   node run
   a test $? -eq 0
-  a test "$(wc -l <"$FX/curl.log")" -eq 1
-  a test "$(cut -d' ' -f1 "$FX/curl.log")" = "$ping"
-  return "$bad"
-}
-check "All services succeeded" ping_success
-
-ping_failure() {
-  new_case
-  std_conf
+  a absent "$FX/curl.log"
+  a has "$FX/stderr" "life-manager01: ok"
+  a has "$FX/stderr" "rues-arcade01: ok"
   touch "$FX/fail_exec_102"
   node run
   a test $? -ne 0
-  a test "$(wc -l <"$FX/curl.log")" -eq 1
-  a test "$(cut -d' ' -f1 "$FX/curl.log")" = "$ping/fail"
-  a has "$FX/curl.log" "rues-arcade01"
-  a has "$FX/curl.log" "snapshot in guest 102 failed"
-  a not_has "$FX/curl.log" "life-manager01"
+  a absent "$FX/curl.log"
+  a has "$FX/stderr" "rues-arcade01: FAILED"
+  local r=ansible/roles/sqlite_backup f
+  for f in files/homelab-sqlite-backup templates/homelab-sqlite-backup.conf.j2 defaults/main.yml tasks/preflight.yml; do
+    a not_has "$r/$f" PING_URL
+    a not_has "$r/$f" sqlite_backup_ping_url
+  done
   return "$bad"
 }
 not_has() { ! grep -qF -- "$2" "$1"; }
-check "A service failed" ping_failure
-
-ping_unreachable() {
-  new_case
-  std_conf
-  touch "$FX/curl_fail"
-  node run
-  a test $? -eq 0
-  a has "$FX/stderr" "ping"
-  touch "$FX/fail_exec_101"
-  node run
-  a test $? -ne 0
-  a has "$FX/stderr" "ping"
-  return "$bad"
-}
-check "healthchecks.io unreachable" ping_unreachable
+check "The job reports only through its log and exit status" reports_only_via_log_and_exit
 
 # --- 3.3 locate and pre-restore --------------------------------------------
 

@@ -14,7 +14,6 @@ BACKUP_ROOT=/var/backups/homelab
 KEEP_DAILY=14
 KEEP_PRE_DEPLOY=10
 KEEP_PRE_RESTORE=10
-PING_URL=
 SNAPSHOT_CMD=/usr/local/sbin/sqlite-snapshot
 GUEST_TIMEOUT=300
 GUESTS=()
@@ -23,7 +22,7 @@ load_conf() {
   local key value
   while IFS='=' read -r key value; do
     case $key in
-      BACKUP_ROOT|KEEP_DAILY|KEEP_PRE_DEPLOY|KEEP_PRE_RESTORE|PING_URL|SNAPSHOT_CMD|GUEST_TIMEOUT)
+      BACKUP_ROOT|KEEP_DAILY|KEEP_PRE_DEPLOY|KEEP_PRE_RESTORE|SNAPSHOT_CMD|GUEST_TIMEOUT)
         printf -v "$key" '%s' "$value" ;;
       GUEST) GUESTS+=("$value") ;;
     esac
@@ -108,19 +107,8 @@ process_host() {
   rotate "$BACKUP_ROOT/$host/pre-deploy" "$KEEP_PRE_DEPLOY"
 }
 
-# ping <failure report>   empty report means success
-ping() {
-  local report=$1
-  [ -n "$PING_URL" ] || { echo "ping skipped: PING_URL is empty" >&2; return; }
-  if [ -z "$report" ]; then
-    curl -fsS -m 10 --retry 3 -o /dev/null "$PING_URL"
-  else
-    curl -fsS -m 10 --retry 3 -o /dev/null --data-raw "$report" "${PING_URL%/}/fail"
-  fi || echo "ping to healthchecks.io failed" >&2
-}
-
 cmd_run() {
-  local entry host ctid failures=0 report=
+  local entry host ctid failures=0
   for entry in "${GUESTS[@]}"; do
     read -r host ctid <<<"$entry"
     reason=
@@ -129,10 +117,8 @@ cmd_run() {
     else
       echo "$host: FAILED ($reason)" >&2
       failures=$((failures + 1))
-      report+="$host: $reason"$'\n'
     fi
   done
-  ping "${report%$'\n'}"
   [ "$failures" -eq 0 ]
 }
 
