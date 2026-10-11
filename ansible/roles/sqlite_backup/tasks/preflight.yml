@@ -1,14 +1,5 @@
 # SPDX-License-Identifier: MIT-0
 ---
-- name: Assert the healthchecks.io ping URL is set
-  ansible.builtin.assert:
-    that:
-      - sqlite_backup_ping_url | default('') | length > 0
-    quiet: true
-    fail_msg: >-
-      sqlite_backup_ping_url is empty. Put the healthchecks.io ping URL into
-      ansible/inventory/host_vars/proxmox1/vault.yml (ansible-vault) first.
-
 - name: Collect every inventory host that has a backup registry entry
   ansible.builtin.set_fact:
     sqlite_backup_registered: >-

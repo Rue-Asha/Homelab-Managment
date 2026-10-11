@@ -7,9 +7,6 @@ sqlite_backup_keep_daily: 14
 sqlite_backup_keep_pre_deploy: 10
 sqlite_backup_keep_pre_restore: 10
 
-# Real value lives in host_vars/proxmox1/vault.yml; the preflight fails while empty.
-sqlite_backup_ping_url: ""
-
 # Must equal the guest role's sqlite_snapshot_script.
 sqlite_backup_snapshot_cmd: /usr/local/sbin/sqlite-snapshot
 

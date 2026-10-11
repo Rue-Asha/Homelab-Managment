@@ -470,10 +470,8 @@ pre_restore_keeps_chosen() {
 playbook=ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml
 export ANSIBLE_CONFIG="${ANSIBLE_CONFIG:-$PWD/ansible/ansible.cfg}"
 
-# fixture_inv <ping url> <extra guest lines...>   inventory of local hosts
+# fixture_inv <extra guest lines...>   inventory of local hosts
 fixture_inv() {
-  local ping_url=$1
-  shift
   mkdir -p "$FX/inv"
   {
     cat <<YML
@@ -485,7 +483,6 @@ all:
     proxmox_node:
       hosts:
         node1:
-          sqlite_backup_ping_url: "$ping_url"
     proxmox_guest:
       hosts:
 YML
@@ -509,21 +506,9 @@ play() {
   ansible-playbook -i "$FX/inv/hosts.yml" "$playbook" --check "$@" >"$FX/play.out" 2>&1
 }
 
-ping_unset() {
-  new_case
-  fixture_inv "" "$GUEST_A"
-  play
-  a test $? -ne 0
-  a has "$FX/play.out" "sqlite_backup_ping_url"
-  a has "$FX/play.out" "host_vars/proxmox1/vault.yml"
-  a not_has "$FX/play.out" "sqlite_backup : Ensure"
-  return "$bad"
-}
-check "Ping URL unset" ping_unset
-
 preflight_ignores_unregistered() {
   new_case
-  fixture_inv "https://hc-ping.test/x" "$GUEST_A" "$GUEST_B"
+  fixture_inv "$GUEST_A" "$GUEST_B"
   play --tags preflight
   a test $? -eq 0
   a has "$FX/play.out" "guest_a 101"
@@ -534,7 +519,7 @@ check "Node playbook ignores a host without a registry entry" preflight_ignores_
 
 registered_without_ctid() {
   new_case
-  fixture_inv "https://hc-ping.test/x" "$GUEST_A" "$GUEST_C"
+  fixture_inv "$GUEST_A" "$GUEST_C"
   play
   a test $? -ne 0
   a has "$FX/play.out" "guest_c"
@@ -547,7 +532,7 @@ check "Registered host without a container ID" registered_without_ctid
 
 registered_without_db_suffix() {
   new_case
-  fixture_inv "https://hc-ping.test/x" "$GUEST_A" "$GUEST_D"
+  fixture_inv "$GUEST_A" "$GUEST_D"
   play
   a test $? -ne 0
   a has "$FX/play.out" "guest_d"
@@ -670,7 +655,7 @@ check "Failed restore brings the unit back" restore_failure_recovers
 
 check_mode_node_play() {
   new_case
-  fixture_inv "https://hc-ping.test/x" "$GUEST_A"
+  fixture_inv "$GUEST_A"
   mkdir -p "$FX/roles"
   command cp -r ansible/roles/sqlite_backup "$FX/roles/sqlite_backup"
   # apt needs python3-apt even for --check, which a workstation lacks
