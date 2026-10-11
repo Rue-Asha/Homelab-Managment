@@ -1,0 +1,156 @@
+# SQLite backups
+
+Life-Manager and Rues-Arcade each keep their data in one SQLite file inside
+their own LXC. Three kinds of snapshot protect it. Everything is driven by one
+registry variable per service host, `sqlite_backups`.
+
+## What is backed up, and where
+
+Only the application databases of registered service hosts. Nothing else.
+
+| Kind | Taken | Written to (guest) | Copied to (proxmox1) |
+|---|---|---|---|
+| `daily` | nightly by the node job | `/var/backups/sqlite-snapshot/daily/` (newest only) | `/var/backups/homelab/<host>/daily/` |
+| `pre-deploy` | every run of the service's `02_SERVICES` playbook, before the service role | `/var/backups/sqlite-snapshot/pre-deploy/` | `/var/backups/homelab/<host>/pre-deploy/` (copied by the next nightly run) |
+| `pre-restore` | by the restore playbook, before it overwrites the DB | `/var/backups/sqlite-snapshot/pre-restore/` (newest only) | `/var/backups/homelab/<host>/pre-restore/` |
+
+Snapshots are named `<db stem>-<YYYYmmddTHHMMSSZ>.db` with a `.meta` next to
+them. They are made with `sqlite3 .backup`, so they are consistent while the
+service runs. The node checks every pulled snapshot with `PRAGMA
+integrity_check` before it keeps it. A daily snapshot that fails the check is
+deleted and the guest is reported `FAILED`. A pre-deploy snapshot or the
+pre-restore snapshot of a live database that fails it is kept instead as
+`<db stem>-<stamp>-corrupt.db` (+ `.meta`) with a warning in the journal or the
+restore output, and does not fail the guest or block a restore. Corrupt-marked
+files are never restored from, never counted or deleted by rotation (delete them
+by hand), and are listed under their marked name when a snapshot is not found.
+A corrupt pre-deploy snapshot is copied once, not every night.
+
+The nightly job is `homelab-sqlite-backup.timer` on proxmox1. A guest that
+fails does not stop the others.
+
+## Retention
+
+On the node, per database: newest **14 daily**, newest **10 pre-deploy**,
+newest **10 pre-restore**. A service whose run failed keeps all its old
+snapshots. On the guest, pre-deploy keeps the newest 10; daily and pre-restore
+keep only the newest (history lives on the node).
+
+A Terraform recreate of a guest wipes its guest-local pre-deploy snapshots that
+the node has not copied yet. The node copies them within a day.
+
+## Metadata
+
+`<snapshot>.meta`, `key=value` per line, read from the snapshot itself:
+
+```
+timestamp=2026-10-11T03:30:12Z
+host=life-manager01
+service=life-manager
+database=/var/lib/life-manager/life-manager.db
+kind=daily
+release=v0.2.2            # unknown when the release link has no .deployed_version
+user_version=4
+schema_migration=0003_wavelength.sql   # only when a schema_migrations table exists
+```
+
+## Checking the job
+
+Nothing alerts; check by hand on proxmox1:
+
+- `journalctl -u homelab-sqlite-backup.service` shows one `<host>: ok` or
+  `<host>: FAILED (<reason>)` line per guest.
+- `systemctl --failed` lists the unit after a failed night.
+- `systemctl list-timers homelab-sqlite-backup.timer` shows the last and next run.
+- The newest file in `/var/backups/homelab/<host>/daily/` should be from last night.
+
+## Applying the node role
+
+CI cannot reach proxmox1 (`docs/deploy-runner.md`), so the node playbook runs by
+hand from the workstation with the node key:
+
+```
+scripts/fetch-inventory.sh
+ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml --check   # dry run
+ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml
+```
+
+Re-run it whenever a service is registered or removed; its preflight lists the
+hosts the nightly job will cover. To run the job once by hand, on proxmox1:
+`systemctl start homelab-sqlite-backup.service`.
+
+## Restore
+
+From the workstation (same inventory and node key as above):
+
+1. Pick a snapshot: `ls /var/backups/homelab/<host>/{daily,pre-deploy,pre-restore}/` on proxmox1.
+2. Run:
+   ```
+   ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml \
+     -l <host> -e sqlite_restore_snapshot=<name>.db
+   ```
+3. The playbook prints the snapshot's metadata first, saves the current DB as a
+   `pre-restore` snapshot on the node, stops the unit, pushes the snapshot in,
+   removes `-wal`/`-shm`, sets owner and mode from the registry, starts the
+   unit and waits for `/healthz` to answer 200. If the live database file is
+   gone (accidental delete) there is nothing to save: that file is skipped with
+   a message and the restore proceeds, so there is no pre-restore snapshot to
+   roll back to. If the live database is corrupt, its pre-restore snapshot is
+   kept as `...-corrupt.db`, the playbook shows a warning, and the restore
+   proceeds the same way (nothing to roll back to). Any other failure while
+   saving the pre-restore snapshot aborts before the unit is stopped.
+
+An unknown snapshot name fails before anything is touched, listing what is
+available. The playbook accepts both `<name>.db` and the `<kind>/<name>.db` form that
+listing prints (`daily`, `pre-deploy` or `pre-restore`; any other prefix is
+refused), and refuses corrupt-marked ones. The playbook refuses `--check`: saving the pre-restore snapshot writes.
+
+**Rolling back a restore:** if `/healthz` never answers 200, the playbook fails
+and prints the pre-restore snapshot name and the exact command (the unit is started again first). It is the same
+playbook with that name:
+
+```
+ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml \
+  -l <host> -e sqlite_restore_snapshot=<pre-restore name>.db
+```
+
+Check the printed metadata before restoring: if the snapshot's `user_version` or
+`schema_migration` is newer than the release that is running, the restore is not
+stopped automatically. `/healthz` is the only guard.
+
+## Onboarding a new service
+
+1. In `ansible/inventory/host_vars/<host>/vars.yml` add the registry entry with
+   literal paths:
+   ```yaml
+   sqlite_backups:
+     service: my-service
+     unit: my-service.service
+     owner: my-service
+     group: my-service
+     mode: "0640"                           # optional, default 0640
+     release_link: /opt/my-service/current  # optional, for the release in .meta
+     healthz_url: http://127.0.0.1/healthz  # optional, default as shown
+     databases:
+       - /var/lib/my-service/my-service.db  # must end in .db; stems unique per host
+   ```
+2. In the service's `02_SERVICES` playbook list `sqlite_snapshot` directly
+   before the service role.
+3. Make sure the host has an `lxc_ctid` (it does if Terraform provisions it).
+4. Merge; the deploy installs the guest script and takes the first pre-deploy
+   snapshot.
+5. Re-run the node playbook by hand (see above) so the nightly job includes the
+   host. Check the preflight output lists it.
+
+## Not covered
+
+- **Disk failure of proxmox1.** Backups sit on the same disk as the guests.
+  A copy to the workstation or a second disk is a possible later change.
+- Anything but the registered app databases: `pihole01`, `runner01` (Terraform
+  state, vault password), the workstation.
+- Encryption of snapshots.
+- A snapshot whose schema is newer than the running release (not detected on restore).
+- Alerting on missing or failed backups (no healthchecks.io or heartbeat; check
+  by hand as above).
+- Automatic restore drills; the nightly integrity check and the restore
+  playbook's healthz check are the only verification.

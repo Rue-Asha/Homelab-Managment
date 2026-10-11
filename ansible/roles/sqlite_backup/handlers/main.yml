@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: sqlite_backup_reload_systemd
+
+- name: Restart the backup timer
+  ansible.builtin.systemd:
+    name: homelab-sqlite-backup.timer
+    state: restarted
+  register: sqlite_backup_timer_restart
+  failed_when:
+    - sqlite_backup_timer_restart is failed
+    - not (ansible_check_mode and 'Could not find the requested service' in (sqlite_backup_timer_restart.msg | default('')))
+  listen: sqlite_backup_restart_timer

@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT-0
+---
+# A failing snapshot fails the play here, before the service role touches the release.
+- name: Write a pre-deploy snapshot of every registered database
+  ansible.builtin.command: "{{ sqlite_snapshot_script }} pre-deploy"
+  register: sqlite_snapshot_result
+  changed_when: sqlite_snapshot_result.stdout | length > 0

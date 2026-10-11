@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the backup root exists
+  ansible.builtin.file:
+    path: "{{ sqlite_backup_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Install the backup script
+  ansible.builtin.copy:
+    src: homelab-sqlite-backup
+    dest: "{{ sqlite_backup_script }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Write the backup config
+  ansible.builtin.template:
+    src: homelab-sqlite-backup.conf.j2
+    dest: "{{ sqlite_backup_conf }}"
+    owner: root
+    group: root
+    mode: "0600"
+  diff: false
+  no_log: true

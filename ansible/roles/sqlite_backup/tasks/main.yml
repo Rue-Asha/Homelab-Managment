@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: MIT-0
+---
+# always: the other files read sqlite_backup_guests, which preflight collects.
+- name: Check inputs and collect the registered guests
+  ansible.builtin.import_tasks: preflight.yml
+  tags: [preflight, always]
+
+- name: Install the packages the script needs
+  ansible.builtin.import_tasks: install.yml
+
+- name: Install the script and its config
+  ansible.builtin.import_tasks: configure.yml
+
+- name: Install and enable the nightly timer
+  ansible.builtin.import_tasks: service.yml

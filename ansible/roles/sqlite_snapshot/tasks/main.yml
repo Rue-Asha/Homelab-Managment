@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MIT-0
+---
+# A host without a registry entry is ignored: every task below is skipped.
+- name: Check every registered database path ends in .db
+  ansible.builtin.assert:
+    that: sqlite_backups.databases | select('match', '^.*\.db$') | list | length == sqlite_backups.databases | length
+    quiet: true
+    fail_msg: >-
+      Every sqlite_backups.databases path must end in .db (the snapshot stem
+      and the restore lookup are derived from it): {{ sqlite_backups.databases | join(', ') }}
+  when: sqlite_backups is defined
+
+- name: Install the sqlite3 CLI
+  ansible.builtin.import_tasks: install.yml
+  when: sqlite_backups is defined
+
+- name: Install the snapshot script and its configuration
+  ansible.builtin.import_tasks: configure.yml
+  when: sqlite_backups is defined
+
+- name: Snapshot the registered databases before the service role runs
+  ansible.builtin.import_tasks: snapshot.yml
+  when: sqlite_backups is defined

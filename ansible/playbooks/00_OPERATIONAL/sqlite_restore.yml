@@ -1,0 +1,161 @@
+---
+# Restore a service's SQLite database from a snapshot on proxmox1. Run by hand
+# from the workstation (needs the node key; CI cannot reach the node):
+#
+#   ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml \
+#     -l <host> -e sqlite_restore_snapshot=<name>.db
+#
+# <name>.db may also be written <kind>/<name>.db, as the not-found listing prints it.
+#
+# Snapshots live under /var/backups/homelab/<host>/{daily,pre-deploy,pre-restore}/.
+# See docs/backups.md.
+- name: Restore a SQLite database from a snapshot
+  hosts: proxmox_guest
+  become: true
+  gather_facts: true
+  vars:
+    sqlite_restore_node_cmd: /usr/local/sbin/homelab-sqlite-backup
+    sqlite_restore_parts: "{{ (sqlite_restore_snapshot | default('')).split('/') }}"
+    sqlite_restore_name: "{{ sqlite_restore_parts | last }}"
+    sqlite_restore_stem: "{{ sqlite_restore_name | regex_replace('-[0-9]{8}T[0-9]{6}Z\\.db$', '') }}"
+    sqlite_restore_db: >-
+      {{ sqlite_backups.databases
+         | select('match', '^.*/' ~ (sqlite_restore_stem | regex_escape) ~ '\.db$')
+         | first | default('') }}
+  tasks:
+    - name: Refuse check mode
+      ansible.builtin.assert:
+        that: not ansible_check_mode
+        quiet: true
+        fail_msg: >-
+          The restore has no dry run: saving the pre-restore snapshot writes
+          on the node. Run it without --check.
+      tags: always
+
+    - name: Check the request is well formed
+      ansible.builtin.assert:
+        that:
+          - ansible_play_hosts_all | length == 1
+          - sqlite_backups is defined
+          - sqlite_restore_snapshot is defined
+          - lxc_ctid is defined
+        fail_msg: >-
+          Run with exactly one host (-l <host>) that has sqlite_backups and
+          lxc_ctid, and -e sqlite_restore_snapshot=<stem>-<UTC stamp>.db.
+      tags: always
+
+    - name: Check the snapshot name has no unknown prefix
+      ansible.builtin.assert:
+        that:
+          - sqlite_restore_parts | length == 1 or (sqlite_restore_parts | length == 2 and sqlite_restore_parts[0] in ['daily', 'pre-deploy', 'pre-restore'])
+        quiet: true
+        fail_msg: >-
+          {{ sqlite_restore_snapshot }}: a prefix must be exactly one of
+          daily, pre-deploy or pre-restore, as <kind>/<name>.db; otherwise give
+          just <name>.db.
+      tags: always
+
+    - name: Look up the snapshot on the node
+      ansible.builtin.command:
+        argv: ["{{ sqlite_restore_node_cmd }}", locate, "{{ inventory_hostname }}", "{{ sqlite_restore_snapshot }}"]
+      delegate_to: "{{ proxmox_node_ip }}"
+      become: false
+      register: sqlite_restore_located
+      changed_when: false
+      check_mode: false
+
+    - name: Check the snapshot belongs to a registered database
+      ansible.builtin.assert:
+        that:
+          - sqlite_restore_name is match('^.+-[0-9]{8}T[0-9]{6}Z\.db$')
+          - sqlite_restore_db | length > 0
+        quiet: true
+        fail_msg: >-
+          {{ sqlite_restore_name }} must be <stem>-<UTC stamp>.db whose
+          stem is one of the registered databases
+          ({{ sqlite_backups.databases | join(', ') }}).
+
+    - name: Show the snapshot's metadata
+      ansible.builtin.debug:
+        msg: "{{ sqlite_restore_located.stdout_lines }}"
+
+    - name: Save the current database as a pre-restore snapshot
+      ansible.builtin.command:
+        argv: ["{{ sqlite_restore_node_cmd }}", pre-restore, "{{ inventory_hostname }}", "{{ lxc_ctid }}", "{{ sqlite_restore_name }}"]
+      delegate_to: "{{ proxmox_node_ip }}"
+      become: false
+      register: sqlite_restore_pre
+      changed_when: true
+
+    - name: Show the pre-restore warnings
+      ansible.builtin.debug:
+        msg: "{{ sqlite_restore_pre.stderr_lines }}"
+      when: sqlite_restore_pre.stderr_lines | length > 0
+
+    - name: Record the pre-restore snapshot name
+      ansible.builtin.set_fact:
+        sqlite_restore_pre_name: "{{ sqlite_restore_pre.stdout_lines | select('match', '^' ~ (sqlite_restore_stem | regex_escape) ~ '-[0-9]{8}T') | first | default('') }}"
+
+    - name: Restore and restart
+      block:
+        - name: Stop the service
+          ansible.builtin.systemd:
+            name: "{{ sqlite_backups.unit }}"
+            state: stopped
+
+        - name: Push the snapshot into the guest
+          ansible.builtin.command:
+            argv: [pct, push, "{{ lxc_ctid }}", "{{ sqlite_restore_located.stdout_lines | first }}", "{{ sqlite_restore_db }}"]
+          delegate_to: "{{ proxmox_node_ip }}"
+          become: false
+          changed_when: true
+
+        - name: Remove stale WAL and shared-memory files
+          ansible.builtin.file:
+            path: "{{ sqlite_restore_db }}{{ item }}"
+            state: absent
+          loop: [-wal, -shm]
+
+        - name: Set owner and mode on the restored database
+          ansible.builtin.file:
+            path: "{{ sqlite_restore_db }}"
+            owner: "{{ sqlite_backups.owner }}"
+            group: "{{ sqlite_backups.group }}"
+            mode: "{{ sqlite_backups.mode | default('0640') }}"
+
+        - name: Start the service
+          ansible.builtin.systemd:
+            name: "{{ sqlite_backups.unit }}"
+            state: started
+
+        - name: Wait for /healthz through nginx
+          ansible.builtin.uri:
+            url: "{{ sqlite_backups.healthz_url | default('http://127.0.0.1/healthz') }}"
+            headers:
+              Host: "{{ nginx_server_name | default(ansible_default_ipv4.address) }}"
+            status_code: 200
+          register: sqlite_restore_health
+          retries: 10
+          delay: 3
+          until: sqlite_restore_health.status == 200
+      rescue:
+        - name: Start the service again
+          ansible.builtin.systemd:
+            name: "{{ sqlite_backups.unit }}"
+            state: started
+          failed_when: false
+
+        - name: Fail naming the way back
+          ansible.builtin.fail:
+            msg: >-
+              Restore of {{ sqlite_restore_name }} on {{ inventory_hostname }}
+              did not end healthy.
+              {% if sqlite_restore_pre_name | length > 0 -%}
+              The database as it was before is saved as
+              {{ sqlite_restore_pre_name }}. Roll back with:
+              ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml
+              -l {{ inventory_hostname }} -e sqlite_restore_snapshot={{ sqlite_restore_pre_name }}
+              {%- else -%}
+              There is no pre-restore snapshot to roll back to: the live database did not
+              exist, or it was corrupt and was kept as a -corrupt file on the node.
+              {%- endif %}

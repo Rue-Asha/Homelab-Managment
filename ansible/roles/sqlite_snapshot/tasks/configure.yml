@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install the snapshot script
+  ansible.builtin.copy:
+    src: sqlite-snapshot
+    dest: "{{ sqlite_snapshot_script }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Render the snapshot configuration
+  ansible.builtin.template:
+    src: sqlite-snapshot.conf.j2
+    dest: "{{ sqlite_snapshot_conf }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+# Snapshots hold the full user data.
+- name: Ensure the snapshot directory exists
+  ansible.builtin.file:
+    path: "{{ sqlite_snapshot_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"

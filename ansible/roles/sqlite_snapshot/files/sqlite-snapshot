@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT-0
+# Consistent snapshots of the SQLite databases registered in the config.
+#   sqlite-snapshot <daily|pre-deploy|pre-restore>
+#   sqlite-snapshot list pre-deploy
+
+set -uo pipefail
+
+conf=${SQLITE_SNAPSHOT_CONF:-/etc/sqlite-snapshot.conf}
+
+SERVICE=
+RELEASE_LINK=
+SNAPSHOT_DIR=/var/backups/sqlite-snapshot
+KEEP_PRE_DEPLOY=10
+databases=()
+while IFS='=' read -r key value; do
+  case $key in
+    SERVICE) SERVICE=$value ;;
+    RELEASE_LINK) RELEASE_LINK=$value ;;
+    SNAPSHOT_DIR) SNAPSHOT_DIR=$value ;;
+    KEEP_PRE_DEPLOY) KEEP_PRE_DEPLOY=$value ;;
+    DATABASE) databases+=("$value") ;;
+  esac
+done <"$conf"
+
+# Newest $2 snapshots of stem $3 stay in $1; names carry a UTC stamp, so lexical order is chronological.
+rotate() {
+  local dir=$1 keep=$2 stem=$3 f
+  local -a found=()
+  for f in "$dir/$stem"-*.db; do
+    [[ ${f##*/} =~ ^${stem}-[0-9]{8}T[0-9]{6}Z\.db$ ]] && found+=("$f")
+  done
+  local excess=$((${#found[@]} - keep))
+  for ((i = 0; i < excess; i++)); do
+    command rm -f "${found[i]}" "${found[i]%.db}.meta"
+  done
+}
+
+release() {
+  local marker=$RELEASE_LINK/.deployed_version version=
+  [ -n "$RELEASE_LINK" ] && [ -r "$marker" ] && read -r version <"$marker"
+  echo "${version:-unknown}"
+}
+
+# write_meta <snapshot.db> <database> <kind> <meta file>
+write_meta() {
+  local snap=$1 db=$2 kind=$3 out=$4 version migration
+  version=$(sqlite3 "$snap" 'PRAGMA user_version;') || return 1
+  {
+    echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "host=$(hostname)"
+    echo "service=$SERVICE"
+    echo "database=$db"
+    echo "kind=$kind"
+    echo "release=$(release)"
+    echo "user_version=$version"
+    if [ -n "$(sqlite3 "$snap" "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations';")" ]; then
+      migration=$(sqlite3 "$snap" 'SELECT name FROM schema_migrations ORDER BY name DESC LIMIT 1;') || return 1
+      echo "schema_migration=$migration"
+    fi
+  } >"$out"
+}
+
+snapshot() {
+  local kind=$1 db stem dir base tmp rc=0 keep
+  dir=$SNAPSHOT_DIR/$kind
+  mkdir -p "$dir" || return 1
+  for db in "${databases[@]}"; do
+    if [ ! -e "$db" ]; then
+      if [ "$kind" = pre-deploy ]; then
+        echo "skip: $db does not exist yet" >&2
+      elif [ "$kind" = pre-restore ]; then
+        echo "skip: $db does not exist" >&2
+      else
+        echo "error: $db does not exist" >&2
+        rc=1
+      fi
+      continue
+    fi
+    stem=$(basename "$db" .db)
+    base=$stem-$(date -u +%Y%m%dT%H%M%SZ)
+    tmp=$dir/.$base.tmp
+    if ! sqlite3 -cmd '.timeout 10000' "$db" ".backup '$tmp'" ||
+      ! write_meta "$tmp" "$db" "$kind" "$dir/$base.meta"; then
+      echo "error: snapshot of $db failed" >&2
+      command rm -f "$tmp" "$dir/$base.meta"
+      rc=1
+      continue
+    fi
+    mv "$tmp" "$dir/$base.db"
+    echo "$dir/$base.db"
+    keep=1
+    [ "$kind" = pre-deploy ] && keep=$KEEP_PRE_DEPLOY
+    rotate "$dir" "$keep" "$stem"
+  done
+  return $rc
+}
+
+case ${1:-}${2:+ $2} in
+  daily | pre-deploy | pre-restore) snapshot "$1" ;;
+  "list pre-deploy")
+    for f in "$SNAPSHOT_DIR/pre-deploy/"*.db; do
+      [ -e "$f" ] && basename "$f"
+    done
+    exit 0
+    ;;
+  *)
+    echo "usage: sqlite-snapshot <daily|pre-deploy|pre-restore> | list pre-deploy" >&2
+    exit 64
+    ;;
+esac
