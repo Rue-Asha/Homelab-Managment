@@ -133,6 +133,7 @@ exists() { [ -e "$1" ]; }
 absent() { [ ! -e "$1" ]; }
 count() { [ "$(find "$1" -maxdepth 1 -type f -name "$2" | wc -l)" -eq "$3" ]; }
 has() { grep -qF -- "$2" "$1"; }
+not_has() { ! grep -qF -- "$2" "$1"; }
 # task_changed <play output> <task>   the task's result line is "changed:"
 task_changed() { grep -A1 -F "TASK [sqlite_backup : $2]" "$1" | grep -q '^changed:'; }
 
@@ -281,6 +282,50 @@ daily_rotation_14() {
 }
 check "Daily rotation keeps the newest 14" daily_rotation_14
 
+pre_deploy_corrupt_once() {
+  new_case
+  write_conf "life-manager01 101"
+  guest_snap 101 pre-deploy app 20261001T010000Z
+  echo "GUEST CORRUPT" >"$FX/guest/101$snapdir/pre-deploy/app-20261001T010000Z.db"
+  node run
+  a test $? -eq 0
+  local d=$FX/root/life-manager01/pre-deploy
+  a exists "$d/app-20261001T010000Z-corrupt.db"
+  a exists "$d/app-20261001T010000Z-corrupt.meta"
+  a absent "$d/app-20261001T010000Z.db"
+  a has "$FX/stderr" "warning"
+  a has "$FX/stderr" "app-20261001T010000Z-corrupt.db"
+  a has "$FX/stderr" "life-manager01: ok"
+  a exists "$FX/root/life-manager01/daily/app-$stamp_new.db"
+  : >"$FX/pull.log"
+  node run
+  a test $? -eq 0
+  a not_has "$FX/pull.log" "pre-deploy"
+  a not_has "$FX/stderr" "warning"
+  a has "$FX/stderr" "life-manager01: ok"
+  return "$bad"
+}
+check "Corrupt pre-deploy snapshot is kept marked once" pre_deploy_corrupt_once
+
+rotation_ignores_corrupt() {
+  new_case
+  write_conf "life-manager01 101"
+  local s d=$FX/root/life-manager01/daily
+  for s in $(stamps 1 14); do node_snap life-manager01 daily app "$s"; done
+  node_snap life-manager01 daily app 20260801T030000Z-corrupt
+  node_snap life-manager01 daily app 20260915T030000Z-corrupt
+  node run
+  a test $? -eq 0
+  a count "$d" '*-corrupt.db' 2
+  a count "$d" '*-corrupt.meta' 2
+  a count "$d" '*.db' 16
+  a absent "$d/app-20260901T030000Z.db"
+  a exists "$d/app-20260902T030000Z.db"
+  a exists "$d/app-$stamp_new.db"
+  return "$bad"
+}
+check "Rotation ignores corrupt-marked snapshots" rotation_ignores_corrupt
+
 pre_deploy_rotation_10() {
   new_case
   write_conf "life-manager01 101"
@@ -346,7 +391,6 @@ reports_only_via_log_and_exit() {
   done
   return "$bad"
 }
-not_has() { ! grep -qF -- "$2" "$1"; }
 check "The job reports only through its log and exit status" reports_only_via_log_and_exit
 
 # --- 3.3 locate and pre-restore --------------------------------------------
@@ -468,6 +512,28 @@ pre_restore_snapshot_fails() {
   return "$bad"
 }
 check "Failed pre-restore snapshot aborts" pre_restore_snapshot_fails
+
+pre_restore_corrupt_live() {
+  new_case
+  std_conf
+  touch "$FX/corrupt_102"
+  node_snap rues-arcade01 pre-restore app 20260901T030000Z
+  node pre-restore rues-arcade01 102
+  a test $? -eq 0
+  local d=$FX/root/rues-arcade01/pre-restore
+  a has "$FX/pull.log" "102 "
+  a has "$FX/sqlite.log" "PRAGMA integrity_check;"
+  a exists "$d/app-$stamp_new-corrupt.db"
+  a exists "$d/app-$stamp_new-corrupt.meta"
+  a absent "$d/app-$stamp_new.db"
+  a has "$d/app-$stamp_new-corrupt.db" CORRUPT
+  a has "$FX/stderr" "warning"
+  a has "$FX/stderr" "app-$stamp_new-corrupt.db"
+  a test ! -s "$FX/stdout"
+  a absent "$d/.app-$stamp_new.db.tmp"
+  return "$bad"
+}
+check "Corrupt live database is kept marked at pre-restore" pre_restore_corrupt_live
 
 pre_restore_db_gone() {
   new_case
@@ -721,6 +787,40 @@ restore_pre_restore_fails() {
   return "$bad"
 }
 extra "Failed pre-restore snapshot aborts the restore before the stop" restore_pre_restore_fails
+
+restore_live_db_corrupt() {
+  new_case
+  local db=$FX/live/a.db
+  restore_inv "$db"
+  touch "$FX/push_ok"
+  sed -i 's/^  pre-restore) .*/  pre-restore) echo "$*" >>"$FX\/node.log"; echo "warning: live database is corrupt, kept as a-20261009T030000Z-corrupt.db" >\&2 ;;/' "$FX/node-cmd"
+  sed -i "s/owner: a, group: a,/owner: $(id -un), group: $(id -gn), healthz_url: 'http:\/\/127.0.0.1:9\/healthz',/" "$FX/inv/hosts.yml"
+  sed 's/delay: 3/delay: 0/' ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml >"$FX/restore.yml"
+  PATH=$FX/sysbin:$PATH ansible-playbook -i "$FX/inv/hosts.yml" "$FX/restore.yml" \
+    -e "sqlite_restore_node_cmd=$FX/node-cmd" -e sqlite_restore_snapshot=a-20261001T030000Z.db >"$FX/play.out" 2>&1
+  a test $? -ne 0
+  a has "$FX/node.log" "pre-restore guest_a 101 a-20261001T030000Z.db"
+  a has "$FX/play.out" "a-20261009T030000Z-corrupt.db"
+  a grep -q "stop homelab-fixture-none.service" "$FX/systemctl.log"
+  a has "$FX/push.log" "push 101 $FX/located.db $db"
+  a has "$FX/play.out" "Wait for /healthz through nginx"
+  a has "$FX/play.out" "There is no pre-restore snapshot"
+  return "$bad"
+}
+check "Restore proceeds when the live database is corrupt" restore_live_db_corrupt
+
+restore_refuses_corrupt_marked() {
+  new_case
+  restore_inv /var/lib/x/a.db
+  restore_play a-20261001T030000Z-corrupt.db
+  a test $? -ne 0
+  a has "$FX/play.out" "Check the snapshot belongs to a registered database"
+  a not_has "$FX/play.out" "Save the current database"
+  a absent "$FX/node.log"
+  a not_has "$FX/systemctl.log" "stop "
+  return "$bad"
+}
+check "Restore refuses a corrupt-marked snapshot" restore_refuses_corrupt_marked
 
 restore_failure_recovers() {
   new_case

@@ -72,6 +72,11 @@
       register: sqlite_restore_pre
       changed_when: true
 
+    - name: Show the pre-restore warnings
+      ansible.builtin.debug:
+        msg: "{{ sqlite_restore_pre.stderr_lines }}"
+      when: sqlite_restore_pre.stderr_lines | length > 0
+
     - name: Record the pre-restore snapshot name
       ansible.builtin.set_fact:
         sqlite_restore_pre_name: "{{ sqlite_restore_pre.stdout_lines | select('match', '^' ~ (sqlite_restore_stem | regex_escape) ~ '-[0-9]{8}T') | first | default('') }}"
@@ -136,5 +141,6 @@
               ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml
               -l {{ inventory_hostname }} -e sqlite_restore_snapshot={{ sqlite_restore_pre_name }}
               {%- else -%}
-              There is no pre-restore snapshot: the live database did not exist.
+              There is no pre-restore snapshot to roll back to: the live database did not
+              exist, or it was corrupt and was kept as a -corrupt file on the node.
               {%- endif %}

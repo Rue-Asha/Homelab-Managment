@@ -30,12 +30,17 @@ load_conf() {
 }
 
 reason=
+corrupt_kept=
 
-# pull_snapshot <host> <ctid> <kind> <guest path of the .db>
+# pull_snapshot <host> <ctid> <kind> <guest path of the .db> [keep_corrupt]
 # Pulls .db and .meta under temp names, keeps them only if the db passes the
-# integrity check. Sets $reason on failure and leaves nothing behind.
+# integrity check. Sets $reason on failure and leaves nothing behind. With
+# keep_corrupt a failing check is not a failure: the pair is kept as
+# <stem>-<stamp>-corrupt.{db,meta} (a name rotation and restore never match),
+# $corrupt_kept names it and a warning goes to stderr.
 pull_snapshot() {
-  local host=$1 ctid=$2 kind=$3 src=$4
+  local host=$1 ctid=$2 kind=$3 src=$4 keep_corrupt=${5:-}
+  corrupt_kept=
   local dest=$BACKUP_ROOT/$host/$kind name=${4##*/}
   local tmp_db=$dest/.$name.tmp tmp_meta=$dest/.${name%.db}.meta.tmp
   mkdir -p "$dest" || { reason="cannot create $dest"; return 1; }
@@ -47,6 +52,17 @@ pull_snapshot() {
   fi
   local result
   result=$(timeout "$GUEST_TIMEOUT" sqlite3 "$tmp_db" 'PRAGMA integrity_check;' 2>&1)
+  if [ "$result" != ok ] && [ -n "$keep_corrupt" ]; then
+    local cname=${name%.db}-corrupt
+    mv -f "$tmp_meta" "$dest/$cname.meta" && mv -f "$tmp_db" "$dest/$cname.db" || {
+      command rm -f "$tmp_db" "$tmp_meta"
+      reason="cannot write $cname.db under $dest"
+      return 1
+    }
+    corrupt_kept=$cname.db
+    echo "warning: $host: $name failed the integrity check, kept as $kind/$corrupt_kept" >&2
+    return 0
+  fi
   if [ "$result" != ok ]; then
     command rm -f "$tmp_db" "$tmp_meta"
     reason="integrity_check failed for $name"
@@ -100,7 +116,8 @@ process_host() {
   while IFS= read -r name; do
     [ -n "$name" ] || continue
     [ -e "$BACKUP_ROOT/$host/pre-deploy/$name" ] && continue
-    pull_snapshot "$host" "$ctid" pre-deploy "$snap_dir/pre-deploy/$name" || return 1
+    [ -e "$BACKUP_ROOT/$host/pre-deploy/${name%.db}-corrupt.db" ] && continue
+    pull_snapshot "$host" "$ctid" pre-deploy "$snap_dir/pre-deploy/$name" keep_corrupt || return 1
   done <<<"$names"
 
   rotate "$BACKUP_ROOT/$host/daily" "$KEEP_DAILY"
@@ -131,8 +148,8 @@ cmd_pre_restore() {
   }
   while IFS= read -r path; do
     [ -n "$path" ] || continue
-    pull_snapshot "$host" "$ctid" pre-restore "$path" || { echo "$host: FAILED ($reason)" >&2; return 1; }
-    written+=("${path##*/}")
+    pull_snapshot "$host" "$ctid" pre-restore "$path" keep_corrupt || { echo "$host: FAILED ($reason)" >&2; return 1; }
+    [ -n "$corrupt_kept" ] || written+=("${path##*/}")
   done <<<"$paths"
   rotate "$BACKUP_ROOT/$host/pre-restore" "$KEEP_PRE_RESTORE" "$protect"
   [ "${#written[@]}" -eq 0 ] || printf '%s\n' "${written[@]}"
