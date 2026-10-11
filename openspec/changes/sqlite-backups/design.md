@@ -92,7 +92,8 @@ ignored by both roles. Every database path ends in `.db` (both roles assert it) 
   complete, plus `<same>.meta`. Prints each written `.db` path, one per line, on
   stdout; messages on stderr.
   - `pre-deploy`: missing DB → stderr `skip: <db> does not exist yet`, exit 0 for that DB. Keeps the newest `KEEP_PRE_DEPLOY` per stem.
-  - `daily`, `pre-restore`: missing DB → error, exit non-zero. Keeps only the newest snapshot of that kind per stem (history lives on the node).
+  - `pre-restore`: missing DB → stderr `skip: <db> does not exist`, exit 0 for that DB (so a restore can recover an accidentally deleted DB); a failed `.backup` still exits non-zero.
+  - `daily`: missing DB → error, exit non-zero. Keeps only the newest snapshot of that kind per stem (history lives on the node).
   - Any `.backup` failure → exit non-zero, no file left under a snapshot name.
 - `sqlite-snapshot list pre-deploy`: prints basenames of existing pre-deploy `.db` snapshots, one per line.
 - `.meta` (key=value, one per line, this order; `schema_migration` omitted when the table does not exist):
@@ -128,7 +129,7 @@ ignored by both roles. Every database path ends in `.db` (both roles assert it) 
   3. Host succeeded → rotate `daily/` to `KEEP_DAILY` and `pre-deploy/` to `KEEP_PRE_DEPLOY` newest per stem (`.db` and `.meta` together). Host failed → delete nothing for it.
   4. Logs `<host>: ok` or `<host>: FAILED (<reason>)` to stderr; any non-zero `pct`, `sqlite3` or write is a failure of that host only.
   - After all hosts: exit 0 iff every host succeeded. No network request of any kind (no ping, no `curl`).
-- `homelab-sqlite-backup pre-restore <host> <ctid> [<snapshot.db>]`: runs `$SNAPSHOT_CMD pre-restore` in that guest, pulls + checks into `$BACKUP_ROOT/<host>/pre-restore/`, then rotates `pre-restore/` to `KEEP_PRE_RESTORE` newest per stem (never deleting the optional `<snapshot.db>`, the one about to be restored), prints one kept `.db` basename per registered database. Non-zero on any failure, and then deletes nothing.
+- `homelab-sqlite-backup pre-restore <host> <ctid> [<snapshot.db>]`: runs `$SNAPSHOT_CMD pre-restore` in that guest, pulls + checks into `$BACKUP_ROOT/<host>/pre-restore/`, then rotates `pre-restore/` to `KEEP_PRE_RESTORE` newest per stem (never deleting the optional `<snapshot.db>`, the one about to be restored), prints one kept `.db` basename per database the guest snapshotted (none when every registered database was missing; exit 0). Non-zero on any failure, and then deletes nothing.
 - `homelab-sqlite-backup locate <host> <snapshot>`: finds `<snapshot>` (a `.db` basename) under `$BACKUP_ROOT/<host>/{daily,pre-deploy,pre-restore}/`. Found → first line is the absolute path, then the `.meta` content; exit 0. Not found → stderr `not found: <snapshot>` followed by every available `<kind>/<name>`; exit 1.
 - systemd: `homelab-sqlite-backup.service` (oneshot, `ExecStart=/usr/local/sbin/homelab-sqlite-backup run`), `homelab-sqlite-backup.timer` (`OnCalendar=` from `sqlite_backup_on_calendar`, `Persistent=true`), timer enabled.
 - Role vars: `sqlite_backup_root`, `sqlite_backup_keep_daily` (14), `sqlite_backup_keep_pre_deploy` (10), `sqlite_backup_keep_pre_restore` (10), `sqlite_backup_on_calendar`, `sqlite_backup_snapshot_cmd` (must equal `sqlite_snapshot_script`). Tasks: `preflight.yml` (tag `preflight`: collect every inventory host with `sqlite_backups`, assert each has `lxc_ctid` and only `.db` database paths, failing with a message naming the host; print the collected list), `install.yml` (apt `sqlite3`), `configure.yml`, `service.yml`.

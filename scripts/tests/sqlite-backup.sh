@@ -59,6 +59,9 @@ case $1 in
       echo "$snap/$1/${f##*/}"
     }
     case $sub in
+      pre-restore)
+        [ -e "$FX/live_db_gone_$ctid" ] && { echo "skip: /var/lib/app/app.db does not exist" >&2; exit 0; }
+        ;&
       daily|pre-restore)
         [ -e "$FX/missing_db_$ctid" ] && { echo "error: database does not exist" >&2; exit 1; }
         [ -e "$FX/corrupt_$ctid" ] && CORRUPT=1
@@ -411,6 +414,19 @@ pre_restore_needs_ctid() {
 }
 check "pre-restore without a container ID fails" pre_restore_needs_ctid
 
+pre_restore_db_gone() {
+  new_case
+  std_conf
+  touch "$FX/live_db_gone_102"
+  node pre-restore rues-arcade01 102 app-20260901T030000Z.db
+  a test $? -eq 0
+  a test ! -s "$FX/stdout"
+  a absent "$FX/pull.log"
+  a has "$FX/stderr" "does not exist"
+  return "$bad"
+}
+check "Restore when the live database is missing" pre_restore_db_gone
+
 pre_restore_rotation_10() {
   new_case
   std_conf
@@ -615,6 +631,18 @@ restore_unknown_snapshot_lists() {
   return "$bad"
 }
 extra "Restore with an unknown snapshot name lists the available snapshots" restore_unknown_snapshot_lists
+
+restore_live_db_missing() {
+  new_case
+  restore_inv /var/lib/x/a.db
+  sed -i 's/^  pre-restore) .*/  pre-restore) echo "$*" >>"$FX\/node.log" ;;/' "$FX/node-cmd"
+  restore_play a-20261001T030000Z.db
+  a has "$FX/node.log" "pre-restore guest_a 101 a-20261001T030000Z.db"
+  a grep -q "stop homelab-fixture-none.service" "$FX/systemctl.log"
+  a has "$FX/play.out" "no pre-restore snapshot"
+  return "$bad"
+}
+check "Restore proceeds when the live database is gone" restore_live_db_missing
 
 restore_failure_recovers() {
   new_case

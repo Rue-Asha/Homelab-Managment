@@ -57,9 +57,11 @@ stderr.
   is skipped with `skip: <db> does not exist yet` (first deploy). Keeps the
   newest `sqlite_snapshot_keep_pre_deploy` per database. The task is changed
   when it printed a path.
-- `daily`, `pre-restore` (called by the node via `pct exec`): a missing
-  database is an error. Keeps only the newest snapshot of that kind; history
-  lives on the node.
+- `pre-restore` (called by the node via `pct exec`): a missing database is
+  skipped with `skip: <db> does not exist` so a restore can recover a deleted
+  one. Keeps only the newest snapshot of that kind; history lives on the node.
+- `daily` (called by the node via `pct exec`): a missing database is an error. Keeps only the newest snapshot of that kind; history lives on
+  the node.
 - Any `.backup` failure exits non-zero and leaves no file under a snapshot
   name. In a play that fails the deploy before the release changes.
 - `sqlite-snapshot list pre-deploy` prints the basenames of the existing

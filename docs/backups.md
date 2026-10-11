@@ -85,7 +85,10 @@ From the workstation (same inventory and node key as above):
 3. The playbook prints the snapshot's metadata first, saves the current DB as a
    `pre-restore` snapshot on the node, stops the unit, pushes the snapshot in,
    removes `-wal`/`-shm`, sets owner and mode from the registry, starts the
-   unit and waits for `/healthz` to answer 200.
+   unit and waits for `/healthz` to answer 200. If the live database file is
+   gone (accidental delete) there is nothing to save: that file is skipped with
+   a message and the restore proceeds, so there is no pre-restore snapshot to
+   roll back to.
 
 An unknown snapshot name fails before anything is touched, listing what is
 available. The playbook refuses `--check`: saving the pre-restore snapshot writes.

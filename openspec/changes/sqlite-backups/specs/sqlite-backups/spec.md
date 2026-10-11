@@ -176,7 +176,7 @@ After a service's run succeeded, the node SHALL keep the newest 14 daily, the ne
 
 ### Requirement: A snapshot can be restored from the workstation
 
-A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service host and a snapshot name, print the snapshot's metadata, save the current database as a `pre-restore` snapshot on the node, stop the unit, push the snapshot into the guest, remove stale `-wal`/`-shm` files, set owner and mode, start the unit and wait for `/healthz` to answer 200. A snapshot name that is not found (including a typo in the database stem) SHALL fail the run listing the available snapshots; a failure after the unit was stopped SHALL start the unit again before the run fails; a `/healthz` that does not answer 200 SHALL fail the run naming the pre-restore snapshot to roll back with. A snapshot whose schema is newer than the running release is not detected automatically; the metadata is shown first and `/healthz` is the guard.
+A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service host and a snapshot name, print the snapshot's metadata, save the current database as a `pre-restore` snapshot on the node, stop the unit, push the snapshot into the guest, remove stale `-wal`/`-shm` files, set owner and mode, start the unit and wait for `/healthz` to answer 200. A snapshot name that is not found (including a typo in the database stem) SHALL fail the run listing the available snapshots; a failure after the unit was stopped SHALL start the unit again before the run fails; a `/healthz` that does not answer 200 SHALL fail the run naming the pre-restore snapshot to roll back with. A registered database that no longer exists in the guest (an accidental delete) SHALL NOT block the restore: it is skipped with a message when saving the pre-restore snapshot, and the restore proceeds. A snapshot whose schema is newer than the running release is not detected automatically; the metadata is shown first and `/healthz` is the guard.
 
 #### Scenario: Snapshot metadata is shown first
 - **WHEN** `homelab-sqlite-backup locate <host> <name>` is called for an existing snapshot
@@ -191,6 +191,16 @@ A restore playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL take a service h
 #### Scenario: Current database is saved before the restore
 - **WHEN** `homelab-sqlite-backup pre-restore <host> <ctid>` runs
 - **THEN** a snapshot of the live database, with `.meta`, lands in `/var/backups/homelab/<host>/pre-restore/` after passing the integrity check, and its name is printed
+- **proof:** unit
+
+#### Scenario: Restore when the live database is missing
+- **WHEN** `sqlite-snapshot pre-restore` runs in a guest where a registered database file does not exist
+- **THEN** it prints `skip: <db> does not exist` to stderr, snapshots the other registered databases and exits 0 (a genuine snapshot failure still exits non-zero)
+- **proof:** unit
+
+#### Scenario: Restore proceeds when the live database is gone
+- **WHEN** the restore playbook runs and `homelab-sqlite-backup pre-restore` exits 0 without naming a snapshot of the chosen database
+- **THEN** the playbook still stops the unit and pushes the snapshot, and a failed health check names that there is no pre-restore snapshot to roll back to
 - **proof:** unit
 
 #### Scenario: pre-restore without a container ID fails

@@ -69,6 +69,8 @@ snapshot() {
     if [ ! -e "$db" ]; then
       if [ "$kind" = pre-deploy ]; then
         echo "skip: $db does not exist yet" >&2
+      elif [ "$kind" = pre-restore ]; then
+        echo "skip: $db does not exist" >&2
       else
         echo "error: $db does not exist" >&2
         rc=1

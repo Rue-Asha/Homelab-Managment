@@ -134,9 +134,8 @@ cmd_pre_restore() {
     pull_snapshot "$host" "$ctid" pre-restore "$path" || { echo "$host: FAILED ($reason)" >&2; return 1; }
     written+=("${path##*/}")
   done <<<"$paths"
-  [ "${#written[@]}" -gt 0 ] || { echo "$host: FAILED (pre-restore snapshot wrote nothing)" >&2; return 1; }
   rotate "$BACKUP_ROOT/$host/pre-restore" "$KEEP_PRE_RESTORE" "$protect"
-  printf '%s\n' "${written[@]}"
+  [ "${#written[@]}" -eq 0 ] || printf '%s\n' "${written[@]}"
 }
 
 cmd_locate() {

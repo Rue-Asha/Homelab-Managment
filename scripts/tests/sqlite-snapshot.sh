@@ -180,11 +180,24 @@ t_db_missing() (
   fixture missing
   local k
   [ -x "$script" ] || return 1
-  for k in daily pre-restore; do
+  for k in daily; do
     if "$script" "$k" >/dev/null 2>"$dir/missing/err"; then echo "$k exited 0"; return 1; fi
     [ -s "$dir/missing/err" ] || { echo "$k: no message"; return 1; }
   done
   [ -z "$(find "$snap" -type f 2>/dev/null)" ] || { echo "files written"; return 1; }
+)
+
+t_restore_db_missing() (
+  fixture restoremissing
+  local other=$dir/restoremissing/other.db out
+  echo "DATABASE=$other" >>"$conf"
+  mkdb "$other" 1
+  out=$("$script" pre-restore 2>"$dir/restoremissing/err") || { echo "exit $?: $(cat "$dir/restoremissing/err")"; return 1; }
+  grep -qx "skip: $db does not exist" "$dir/restoremissing/err" || { echo "stderr: $(cat "$dir/restoremissing/err")"; return 1; }
+  case $out in */other-*.db) [ -f "$out" ] || { echo "no file: $out"; return 1; } ;; *) echo "stdout: $out"; return 1 ;; esac
+  command rm -f "$other"
+  out=$("$script" pre-restore 2>/dev/null) || { echo "all missing: exit $?"; return 1; }
+  [ -z "$out" ] || { echo "stdout: $out"; return 1; }
 )
 
 t_daily_keeps_newest() (
@@ -291,6 +304,7 @@ check "Metadata of a migrated database" t_meta_migrated
 check "Database without schema_migrations" t_meta_no_migrations
 check "Release version unknown" t_release_unknown
 check "Registered database missing in the guest" t_db_missing
+check "Restore when the live database is missing" t_restore_db_missing
 extra "daily keeps only the newest snapshot" t_daily_keeps_newest
 extra "list pre-deploy prints basenames" t_list
 check "Guest role skips a host without a registry entry" t_role_skips

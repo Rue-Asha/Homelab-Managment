@@ -74,7 +74,7 @@
 
     - name: Record the pre-restore snapshot name
       ansible.builtin.set_fact:
-        sqlite_restore_pre_name: "{{ sqlite_restore_pre.stdout_lines | select('match', '^' ~ (sqlite_restore_stem | regex_escape) ~ '-[0-9]{8}T') | first }}"
+        sqlite_restore_pre_name: "{{ sqlite_restore_pre.stdout_lines | select('match', '^' ~ (sqlite_restore_stem | regex_escape) ~ '-[0-9]{8}T') | first | default('') }}"
 
     - name: Restore and restart
       block:
@@ -129,7 +129,12 @@
           ansible.builtin.fail:
             msg: >-
               Restore of {{ sqlite_restore_snapshot }} on {{ inventory_hostname }}
-              did not end healthy. The database as it was before is saved as
+              did not end healthy.
+              {% if sqlite_restore_pre_name | length > 0 -%}
+              The database as it was before is saved as
               {{ sqlite_restore_pre_name }}. Roll back with:
               ansible-playbook ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml
               -l {{ inventory_hostname }} -e sqlite_restore_snapshot={{ sqlite_restore_pre_name }}
+              {%- else -%}
+              There is no pre-restore snapshot: the live database did not exist.
+              {%- endif %}
