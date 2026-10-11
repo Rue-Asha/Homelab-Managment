@@ -4,6 +4,7 @@ track: feature
 live: true
 gate0: 2026-10-10
 gate1: 2026-10-10
+gate1_replan: 2026-10-11
 scope_change: "2026-10-11 — S6 alerting removed (Rue)"
 learnings:
   - "Explore recommending an external service (account, SaaS) for a small homelab → ask Rue whether an extra external account is acceptable before recommending it; offer the no-alerting option explicitly. (weil: healthchecks.io was chosen as the recommended option at explore, then cut during build because Rue found alerting not worth it for few services) [2026-10-11 · sqlite-backups]"
