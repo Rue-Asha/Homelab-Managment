@@ -4,7 +4,9 @@ track: feature
 live: true
 gate0: 2026-10-10
 gate1: 2026-10-10
+scope_change: "2026-10-11 — S6 alerting removed (Rue)"
 learnings:
+  - "Explore recommending an external service (account, SaaS) for a small homelab → ask Rue whether an extra external account is acceptable before recommending it; offer the no-alerting option explicitly. (weil: healthchecks.io was chosen as the recommended option at explore, then cut during build because Rue found alerting not worth it for few services) [2026-10-11 · sqlite-backups]"
   - "Fixer mutation checks → only in a scratch copy outside the worktree, never mutate-in-place with backup/restore via cp, and no background processes left at return (a round-1 fixer's in-place mutation script hung 15 min on an aliased cp -i while restoring a mutant; had it resumed, it would have mutated the tree under the next verifier; orchestrator killed it by PID)"
   - "zsh in agent shells: `git show $rev:path` hits the `:s` history modifier (bad substitution) → write `${rev}:path` (orchestrator)"
   - "proof.sh --all rewrites terraform/.terraform.lock.hcl in every flow worktree, and reverting it with git checkout breaks the next terraform validate (provider not cached) → leave the drift unstaged, or rm the ignored .terraform cache before re-running proof (U2, U3, orchestrator; recurrence of deploy-new-guests)"

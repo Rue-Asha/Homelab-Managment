@@ -94,11 +94,11 @@ Every snapshot (daily, pre-deploy and pre-restore) SHALL have a `.meta` file nex
 
 ### Requirement: A nightly node job collects every registered guest
 
-A node-side role `sqlite_backup` on proxmox1 SHALL install a script and a daily systemd timer that, for each registered guest, takes a snapshot inside the guest via `pct exec`, pulls it with `pct pull` to `/var/backups/homelab/<host>/daily/`, and copies every pre-deploy snapshot the node does not have yet to `/var/backups/homelab/<host>/pre-deploy/`. A failure on one guest (guest stopped, `pct exec` failing, database missing, service restarted mid-run, node disk full) SHALL mark that service failed and SHALL NOT stop the other guests from being processed.
+A node-side role `sqlite_backup` on proxmox1 SHALL install a script and a daily systemd timer that, for each registered guest, takes a snapshot inside the guest via `pct exec`, pulls it with `pct pull` to `/var/backups/homelab/<host>/daily/`, and copies every pre-deploy snapshot the node does not have yet to `/var/backups/homelab/<host>/pre-deploy/`. A failure on one guest (guest stopped, `pct exec` failing, database missing, service restarted mid-run, node disk full) SHALL mark that service failed and SHALL NOT stop the other guests from being processed. The job SHALL log `<host>: ok` or `<host>: FAILED (<reason>)` per guest to stderr, SHALL exit 0 only when every guest succeeded, and SHALL make no network request (no alerting; a failed run is seen in the journal and in `systemctl --failed`).
 
 #### Scenario: Nightly run collects every registered guest
 - **WHEN** `homelab-sqlite-backup run` runs with two registered guests that both answer
-- **THEN** each guest's daily snapshot and `.meta` are under `/var/backups/homelab/<host>/daily/` and the run exits 0
+- **THEN** each guest's daily snapshot and `.meta` are under `/var/backups/homelab/<host>/daily/`, stderr has `<host>: ok` for both, and the run exits 0
 - **proof:** unit
 
 #### Scenario: New pre-deploy snapshots are copied once
@@ -108,7 +108,7 @@ A node-side role `sqlite_backup` on proxmox1 SHALL install a script and a daily 
 
 #### Scenario: One guest fails, the others still run
 - **WHEN** `pct exec` fails for the first registered guest (stopped guest, or the service restarted mid-snapshot)
-- **THEN** the second guest is still collected, the first is reported `FAILED` with a reason, and the run exits non-zero
+- **THEN** the second guest is still collected and logged `<host>: ok`, the first is logged `<host>: FAILED (<reason>)` on stderr, and the run exits non-zero
 - **proof:** unit
 
 #### Scenario: Registered database missing in the guest
@@ -119,6 +119,11 @@ A node-side role `sqlite_backup` on proxmox1 SHALL install a script and a daily 
 #### Scenario: Node disk full
 - **WHEN** writing a pulled snapshot under `/var/backups/homelab/` fails
 - **THEN** that service is marked failed, no partial file keeps a snapshot name, and the other guests are still processed
+- **proof:** unit
+
+#### Scenario: The job reports only through its log and exit status
+- **WHEN** `homelab-sqlite-backup run` finishes once with every guest ok and once with one guest failed
+- **THEN** neither run makes a network request (`curl` is never called), the exit status is 0 resp. non-zero, and none of the node script, its config template, the role defaults or the preflight mentions `PING_URL` or `sqlite_backup_ping_url`
 - **proof:** unit
 
 #### Scenario: Timer runs the job daily on proxmox1
@@ -168,40 +173,6 @@ After a service's run succeeded, the node SHALL keep the newest 14 daily, the ne
 - **WHEN** a service's run fails while it has 20 daily snapshots on the node
 - **THEN** all 20 are still there afterwards
 - **proof:** unit
-
-### Requirement: The node job reports to healthchecks.io
-
-The node job SHALL send a success ping to the healthchecks.io URL when every service succeeded, and a fail ping whose body lists the failed services otherwise. The ping URL SHALL live in ansible-vault in `host_vars/proxmox1/vault.yml`; the node playbook SHALL fail at apply time when it is unset. An unreachable healthchecks.io SHALL be logged and SHALL NOT change the job's exit status, which reflects the backup result.
-
-#### Scenario: All services succeeded
-- **WHEN** a run finishes with every service ok
-- **THEN** exactly one request goes to the ping URL itself, and none to `<url>/fail`
-- **proof:** unit
-
-#### Scenario: A service failed
-- **WHEN** a run finishes with `rues-arcade01` failed
-- **THEN** exactly one request goes to `<url>/fail` with a body naming `rues-arcade01` and its reason
-- **proof:** unit
-
-#### Scenario: healthchecks.io unreachable
-- **WHEN** the ping request fails
-- **THEN** the failure is logged to stderr and the exit status is still 0 for an all-ok run and non-zero for a failed one
-- **proof:** unit
-
-#### Scenario: Ping URL unset
-- **WHEN** the node playbook runs and `sqlite_backup_ping_url` is empty or undefined
-- **THEN** the play fails in preflight, before anything is installed, with a message naming the variable and `host_vars/proxmox1/vault.yml`
-- **proof:** unit
-
-#### Scenario: Success ping arrives
-- **WHEN** the job runs on proxmox1 with both guests healthy
-- **THEN** the healthchecks.io check shows a success ping at that time
-- **proof:** manual (external service; observed by Rue after merge, unit 6)
-
-#### Scenario: Job never runs
-- **WHEN** no ping arrives within the check's period plus grace (timer broken, node down)
-- **THEN** healthchecks.io alerts on the missing ping
-- **proof:** manual (configured and owned on healthchecks.io by Rue)
 
 ### Requirement: A snapshot can be restored from the workstation
 
@@ -287,7 +258,7 @@ Each new role SHALL have a README. `docs/backups.md` SHALL describe what is back
 
 ### Requirement: The backup scripts are proven offline by proof
 
-`scripts/proof.sh` SHALL run fixture tests for the guest and node backup scripts whenever a file they cover changes, and in `--all` mode. The tests SHALL stub `pct`, `sqlite3` and `curl` and SHALL NOT contact proxmox1, a guest or healthchecks.io.
+`scripts/proof.sh` SHALL run fixture tests for the guest and node backup scripts whenever a file they cover changes, and in `--all` mode. The tests SHALL stub `pct` and `sqlite3` and SHALL NOT contact proxmox1, a guest or any external service.
 
 #### Scenario: Script change runs its fixture tests
 - **WHEN** `scripts/proof.sh --all` runs
