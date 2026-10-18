@@ -41,6 +41,7 @@ unique_hosts=0
 sqlite_snapshot=0
 sqlite_backup=0
 tailscale=0
+life_manager_proton=0
 for f in "${files[@]}"; do
   case "$f" in
     *.tfstate|*.tfstate.*) tfstate+=("$f") ;;
@@ -56,6 +57,9 @@ for f in "${files[@]}"; do
   esac
   case "$f" in
     ansible/roles/tailscale/*|ansible/playbooks/01_BASE_CONFIGURATION/tailscale.yml|ansible/inventory/host_vars/tailscale01/*|scripts/tests/tailscale.sh) tailscale=1 ;;
+  esac
+  case "$f" in
+    ansible/roles/life_manager/*|ansible/inventory/host_vars/life-manager01/*|scripts/tests/life-manager-proton.sh) life_manager_proton=1 ;;
   esac
   case "$f" in
     terraform/*) tf_changed=1 ;;
@@ -159,6 +163,10 @@ fi
 
 if [ "$tailscale" -eq 1 ]; then
   sensor "tailscale fixtures" TAILSCALE_FIXTURES_FAILED scripts/tests/tailscale.sh
+fi
+
+if [ "$life_manager_proton" -eq 1 ]; then
+  sensor "life-manager-proton fixtures" LIFE_MANAGER_PROTON_FIXTURES_FAILED scripts/tests/life-manager-proton.sh
 fi
 
 # The check runner runs PR code, so no deploy credential may be wired into it.
