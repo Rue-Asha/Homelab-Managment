@@ -1,0 +1,11 @@
+track: tweak
+live: true
+triage: 'tweak · live — life_manager role installs proton-cli (pinned, checksum), adds the Proton env vars behind a flag, prepares the session dir and reports a missing login; merge deploys to life-manager01. Appetite: one evening'
+base: main
+gate1: 2026-10-18
+gate2: 2026-10-19
+ship_note: 'Rue at the gate: plan approved; optional ⚠ 1.7 dry run not given a go → skipped, evidence says not run; merge only on Rue''s go (merge deploys)'
+learnings:
+  - 'U1 (single-unit serial builder) implemented all 7 tasks, ran one proof --all and left everything staged with no commits; the orchestrator committed it as one commit instead of faking per-task history'
+  - 'proof --all left terraform/environments/homelab/.terraform.lock.hcl modified (22 lines of hashes dropped) in the worktree; not part of the change, left unstaged'
+  - 'Verifier r1 deleted the worktree terraform/.terraform cache to force the init sensor; fixer r1 then hit TERRAFORM_VALIDATE_FAILED (empty providers dir, init needs network) and copied providers from the primary checkout. Sensor count is 28 with a warm cache, 29 without'

@@ -49,3 +49,14 @@ life_manager_smoke_headers: {}
 # Start-up migrations must finish inside retries x delay seconds.
 life_manager_smoke_retries: 10
 life_manager_smoke_delay: 3
+
+# --- Proton Calendar sync (tasks/proton.yml) ---
+# Installs proton-cli for the app's /sync page; the login stays manual, see the
+# README. The sha256 comes from the release's checksums.txt, pinned like the
+# check_runner tools.
+life_manager_proton_enabled: false
+life_manager_proton_version: v5.1.0
+life_manager_proton_url: "https://github.com/roman-16/proton-cli/releases/download/{{ life_manager_proton_version }}/proton-cli_linux_amd64"
+life_manager_proton_sha256: 51ac1dbb4041a6c5607a0853a7ef405737f497bd207d65e0957b9d4b0c0934d7
+life_manager_proton_bin: /usr/local/bin/proton
+life_manager_proton_profile: default

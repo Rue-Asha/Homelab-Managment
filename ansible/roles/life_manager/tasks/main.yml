@@ -6,6 +6,11 @@
 - name: Ensure the on-host directory layout exists
   ansible.builtin.import_tasks: directories.yml
 
+# Before config.yml: a failed download stops the play before the env changes.
+- name: Install proton-cli and report a missing Proton login
+  ansible.builtin.import_tasks: proton.yml
+  when: life_manager_proton_enabled | bool
+
 - name: Fetch the pinned release artifact
   ansible.builtin.import_tasks: fetch.yml
   tags: [deploy]

@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Check the host architecture matches the pinned proton-cli binary
+  ansible.builtin.assert:
+    that: ansible_architecture == 'x86_64'
+    fail_msg: >-
+      proton-cli {{ life_manager_proton_version }} is pinned for x86_64 only,
+      this host is {{ ansible_architecture }}.
+    quiet: true
+
+- name: Install the pinned proton-cli binary
+  ansible.builtin.get_url:
+    url: "{{ life_manager_proton_url }}"
+    dest: "{{ life_manager_proton_bin }}"
+    checksum: "sha256:{{ life_manager_proton_sha256 }}"
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Ensure the Proton session directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ life_manager_user }}"
+    group: "{{ life_manager_group }}"
+    mode: "0700"
+  loop:
+    - "{{ life_manager_data_dir }}/.config"
+    - "{{ life_manager_data_dir }}/.config/proton-cli"
+
+# A file check, not a proton call: no network, and it only reports. The login
+# needs a CAPTCHA, so it is never automated and never fails the play.
+- name: Look for a Proton login session
+  ansible.builtin.stat:
+    path: "{{ life_manager_data_dir }}/.config/proton-cli/sessions/{{ life_manager_proton_profile }}.json"
+  register: life_manager_proton_session
+
+- name: Report a missing Proton login
+  ansible.builtin.debug:
+    msg: >-
+      Proton login needed. Run on {{ inventory_hostname }}:
+      sudo -u {{ life_manager_user }} env XDG_CONFIG_HOME={{ life_manager_data_dir }}/.config
+      {{ life_manager_proton_bin }} account login --profile {{ life_manager_proton_profile }}
+  when: not life_manager_proton_session['stat']['exists']
