@@ -35,7 +35,7 @@ Appetite: two evenings.
 - [ ] A second run of the operator playbook (empty key prompt) reports `changed=0`.
 - [ ] `scripts/proof.sh --all` is green and the PR's CI is green.
 
-The first four can only be checked after merge, because only `runner01` applies Terraform and `tailscale01` does not exist before; they form the post-merge checklist (tasks group 4).
+The first four can only be checked after merge, because only `runner01` applies Terraform and `tailscale01` does not exist before; they form the post-merge checklist. Every `manual (post-merge …)` scenario in the spec belongs to it; the verifier carries the checklist into `verification.md` for Gate 2, and Rue works through it after the merge with the post-merge runbook in `docs/tailscale-subnet-router.md`. No task in `tasks.md` waits for the merge.
 
 ## Capabilities
 

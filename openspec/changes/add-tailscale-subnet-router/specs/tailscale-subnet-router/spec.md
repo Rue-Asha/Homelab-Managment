@@ -108,7 +108,7 @@ No playbook under `ansible/playbooks/02_SERVICES/` SHALL target the `tailscale` 
 
 ### Requirement: The router joins with a prompted, never-logged pre-auth key
 
-On a host that is not logged in, the role SHALL run `tailscale up --auth-key=<key> --advertise-routes=192.168.0.0/24 --advertise-tags=tag:subnet-router --accept-dns=false` with `no_log: true`. The key SHALL come from a hidden `vars_prompt` named `tailscale_authkey` (default empty, overridable with `-e`) and SHALL NOT be stored in any tracked file. A logged-in host SHALL NOT be re-authenticated and SHALL need no key. A not-logged-in host with an empty key SHALL fail before `tailscale up` with a message that says how to create a tagged pre-auth key. A failed `tailscale up` SHALL fail the play with its error text visible and the key hidden. When the advertised routes or the accept-dns setting in vars differ from the running node's, the role SHALL converge them with `tailscale set` without re-authenticating. The role SHALL NOT disable Tailscale's subnet SNAT.
+On a host that is not logged in, the role SHALL run `tailscale up --auth-key=<key> --advertise-routes=192.168.0.0/24 --advertise-tags=tag:subnet-router --accept-dns=false` with `no_log: true`. The key SHALL come from a hidden `vars_prompt` named `tailscale_authkey` (default empty, overridable with `-e`) and SHALL NOT be stored in any tracked file. A logged-in host SHALL NOT be re-authenticated and SHALL need no key; a rerun SHALL converge it to `Running`, so a logged-in but `Stopped` node is brought back with `tailscale up` and the join flags without `--auth-key`. A not-logged-in host with an empty key SHALL fail before `tailscale up` with a message that says how to create a tagged pre-auth key. A failed `tailscale up` SHALL fail the play with its error text visible and the key hidden. When the advertised routes or the accept-dns setting in vars differ from the running node's, the role SHALL converge them with `tailscale set` without re-authenticating. The role SHALL NOT disable Tailscale's subnet SNAT.
 
 #### Scenario: Not logged in and no key fails before tailscale up
 - **WHEN** the backend state is `NeedsLogin` and `tailscale_authkey` is empty
@@ -124,6 +124,11 @@ On a host that is not logged in, the role SHALL run `tailscale up --auth-key=<ke
 - **WHEN** the backend state is `Running`, the node's prefs match the vars and the key is empty
 - **THEN** neither `tailscale up` nor `tailscale set` is called, the play succeeds and the join tasks report no change
 - **proof:** unit ("Scenario: A logged-in node is not re-authenticated" in `scripts/tests/tailscale.sh`)
+
+#### Scenario: A stopped node is brought back up without a key
+- **WHEN** the backend state is `Stopped` (after `tailscale down`) and the key is empty
+- **THEN** `tailscale up --advertise-routes=192.168.0.0/24 --advertise-tags=tag:subnet-router --accept-dns=false` is called once without `--auth-key`, and the play succeeds
+- **proof:** unit ("Scenario: A stopped node is brought back up without a key" in `scripts/tests/tailscale.sh`)
 
 #### Scenario: Changed advertise settings converge without re-auth
 - **WHEN** the backend state is `Running` and the node advertises a route list or accept-dns value different from the vars
@@ -214,7 +219,7 @@ With `tailscale01` up and its route approved, a tailnet client outside the home 
 
 ### Requirement: Tailscale docs match the tree
 
-`docs/tailscale-subnet-router.md` SHALL describe the first-rollout and rebuild flows of this change (policy edit, merge, runner plan and `infrastructure` approval, tagged pre-auth key, operator playbook with the key at the prompt; on rebuild, remove the stale node in the admin console first) and the rerun with an empty prompt. It SHALL NOT mention CT 230, `partygames01`, `03_SERVICES`, `02_SERVICES/tailscale.yml`, a manual bootstrap step, a workstation `terraform apply` or a vaulted key. It SHALL state that the operator playbook is workstation-only and that CD's `tailscale01 has no 02_SERVICES playbook` warning is expected. `README.md`, `terraform/README.md`, `docs/terraform-ansible-split.md` and the comments in `ansible/roles/proxmox_lxc_tun/` SHALL point to `01_BASE_CONFIGURATION/tailscale.yml` where they mention Tailscale.
+`docs/tailscale-subnet-router.md` SHALL describe the first-rollout and rebuild flows of this change (policy edit, merge, runner plan and `infrastructure` approval, tagged pre-auth key, operator playbook with the key at the prompt; on rebuild, remove the stale node in the admin console first) and the rerun with an empty prompt. It SHALL NOT mention CT 230, `partygames01`, `03_SERVICES`, `02_SERVICES/tailscale.yml`, a manual bootstrap step, a workstation `terraform apply` or a vaulted key. It SHALL contain a post-merge runbook that lists the live rollout steps in order, marks each irreversible or live step ⚠ and names the spec scenario each step answers. It SHALL state that the operator playbook is workstation-only and that CD's `tailscale01 has no 02_SERVICES playbook` warning is expected. `README.md`, `terraform/README.md`, `docs/terraform-ansible-split.md` and the comments in `ansible/roles/proxmox_lxc_tun/` SHALL point to `01_BASE_CONFIGURATION/tailscale.yml` where they mention Tailscale.
 
 #### Scenario: No stale reference remains
 - **WHEN** `rg -n 'partygames01|03_SERVICES|02_SERVICES/tailscale|CT 230|tailscale01/vault|bootstrap.yml -l tailscale01|terraform -chdir' docs/tailscale-subnet-router.md README.md terraform/README.md docs/terraform-ansible-split.md ansible/roles/proxmox_lxc_tun` is run
@@ -229,4 +234,9 @@ With `tailscale01` up and its route approved, a tailnet client outside the home 
 #### Scenario: Other docs point to the operator playbook
 - **WHEN** `README.md`, `terraform/README.md`, `docs/terraform-ansible-split.md` and the `proxmox_lxc_tun` comments are read
 - **THEN** every Tailscale mention names `01_BASE_CONFIGURATION/tailscale.yml` as the run that applies TUN and Tailscale, and the key is described as prompted, not vaulted
+- **proof:** manual (doc review at Gate 2; prose)
+
+#### Scenario: The post-merge runbook lists every live step
+- **WHEN** the "Post-merge runbook" section of `docs/tailscale-subnet-router.md` is read
+- **THEN** it lists, in order and marked ⚠ where live: policy paste, merge with plan check and `infrastructure` approval, inventory fetch, tagged key, first operator run with on-box and console checks, second run with `changed=0`, client checks, and the `pct stop`/`pct start` laptop-at-home check, each naming the scenario it answers
 - **proof:** manual (doc review at Gate 2; prose)

@@ -26,7 +26,7 @@ Carried over from scope.md as decided at Gate 0:
 Made while planning:
 
 - **D1 Join logic in its own task file, `tasks/join.yml`.** `main.yml` imports `install`, `configure`, `service`, `join`. `join.yml` touches only the `tailscale` CLI, so `scripts/tests/tailscale.sh` can run it alone (`include_role: tasks_from: join.yml`) against `localhost` with a stub `tailscale` on `PATH`, the pattern `scripts/tests/sqlite-backup.sh` uses for `systemctl`. That turns S4's edges into offline fixtures instead of `--check` runs, which skip `command` tasks (repo learning). Alternative: one `service.yml` as in the old role — rejected, it would drag `systemd` into the fixture.
-- **D2 "Logged in" means `BackendState` is not `NeedsLogin`/`NoState` and `tailscale status --json` succeeded.** Anything else is "not logged in" and needs a key. `Stopped` (after a manual `tailscale down`) counts as logged in and is left down: that was a deliberate act on the box. The empty-key check is an `ansible.builtin.assert` without `no_log` (repo learning: `no_log` censors `fail_msg`).
+- **D2 "Logged in" means `BackendState` is not `NeedsLogin`/`NoState` and `tailscale status --json` succeeded.** Anything else is "not logged in" and needs a key. A rerun converges `tailscale01` to `Running`: a `Stopped` node (after `tailscale down`) is still logged in, so it needs no key and no re-auth, and the role brings it back with `tailscale up --advertise-routes=… --advertise-tags=… --accept-dns=…` (the join flags without `--auth-key`). The empty-key check is an `ansible.builtin.assert` without `no_log` (repo learning: `no_log` censors `fail_msg`).
 - **D3 A failed `tailscale up` is surfaced by a second task.** `tailscale up` runs with `no_log: true`, `failed_when: false`, registered; the next task fails with the registered `stderr` when `rc != 0`. With `no_log` alone the error would be censored; `stderr` never contains the key (it is only in the command line).
 - **D4 Drift is read from `tailscale debug prefs` and fixed with `tailscale set`.** On a logged-in node the role compares `AdvertiseRoutes` and `CorpDNS` with the vars and runs `tailscale set --advertise-routes=… --accept-dns=…` when they differ. Tags are not converged by `set`: changing `tag:subnet-router` needs a fresh key (`tailscale up --force-reauth`), which the docs mention. The builder checks the prefs field names against upstream `ipn/prefs.go` before writing the fixture.
 - **D5 Release from facts.** `tailscale_apt_release: "{{ ansible_facts['distribution_release'] | default('trixie', true) }}"`; the key and list URLs derive from it. `ansible.posix.sysctl` (already pinned) writes `/etc/sysctl.d/99-tailscale.conf`; a separate task reads `/proc/sys/...` and asserts 1.
@@ -52,7 +52,7 @@ Shared by units 1–3 (they run in parallel and must agree on these names):
 ## Risks / Trade-offs
 
 - **R1 Forwarding sysctls in an unprivileged LXC** → accepted: network-namespace scoped and normally writable; the role sets and verifies them and fails loudly otherwise. Proven at the first live run.
-- **R2 Live behaviour (S2, S4–S6) is provable only after merge**, because only the runner applies Terraform and the host doesn't exist before → Gate 2 evidence is lint, syntax-check and the offline fixtures; everything live is the post-merge checklist in tasks group 4, run on Rue's go.
+- **R2 Live behaviour (S2, S4–S6) is provable only after merge**, because only the runner applies Terraform and the host doesn't exist before → Gate 2 evidence is lint, syntax-check and the offline fixtures; everything live is the post-merge checklist: the spec's `manual (post-merge …)` scenarios, which the verifier carries into `verification.md` for Gate 2. Rue runs them after the merge, following the post-merge runbook in `docs/tailscale-subnet-router.md` (written by unit 3); the ⚠ steps run on Rue's go. `tasks.md` holds no post-merge task, because flow enters Verify only when every box is checked.
 - **R3 A LAN host accepting the /24 loses its LAN path** → resolved by S7: laptop default off, documented.
 - **R4 Pre-auth key expires or is single-use** → resolved: prompted at run time, needed only for a join.
 - **R5 Phone/tablet at home lose LAN while `tailscale01` is down and the app is on** → accepted, documented in S7.
@@ -61,6 +61,8 @@ Shared by units 1–3 (they run in parallel and must agree on these names):
 - **The stub proves the role's decisions, not Tailscale's** → real join, approval and SNAT are only in the post-merge checklist.
 
 ## Migration Plan
+
+This order is the post-merge runbook in `docs/tailscale-subnet-router.md` (unit 3), with its ⚠ steps marked there.
 
 1. Merge the PR after Gate 2 (CI green). Rue edits the tailnet policy first.
 2. Runner plans one new LXC; Rue approves `infrastructure`; apply creates `tailscale01`; the deploy job logs the expected warning.
