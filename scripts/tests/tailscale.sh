@@ -307,7 +307,7 @@ if len(prompts) != 1:
     bad.append(f"expected one vars_prompt tailscale_authkey, got {len(prompts)}")
 elif prompts[0].get("private") is not True or prompts[0].get("default") != "":
     bad.append(f"tailscale_authkey prompt must be private with an empty default: {prompts[0]}")
-assign = re.compile(r"""^\s*-?\s*tailscale_authkey\s*[:=]\s*(.*?)\s*$""")
+assign = re.compile(r"""["']?\btailscale_authkey["']?\s*[:=](?!=)\s*(.*?)\s*$""")
 for path in open(sys.argv[2]).read().split("\0"):
     if not path:
         continue
@@ -316,8 +316,10 @@ for path in open(sys.argv[2]).read().split("\0"):
     except (UnicodeDecodeError, IsADirectoryError):
         continue
     for n, line in enumerate(lines, 1):
-        m = assign.match(line)
-        if m and m.group(1) not in ('""', "''"):
+        if line.lstrip().startswith("#"):
+            continue
+        m = assign.search(line)
+        if m and m.group(1).rstrip("},] ") not in ('""', "''"):
             bad.append(f"{path}:{n}: {line.strip()}")
 print("\n".join(bad))
 sys.exit(1 if bad else 0)
