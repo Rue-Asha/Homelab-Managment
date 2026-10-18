@@ -1,0 +1,5 @@
+track: tweak
+live: true
+triage: 'provisional: tweak · live — life_manager role installs proton-cli (pinned, checksum), adds the Proton env vars behind a flag, prepares the session dir and reports a missing login; merge deploys to life-manager01. Appetite: one evening'
+base: main
+learnings:
