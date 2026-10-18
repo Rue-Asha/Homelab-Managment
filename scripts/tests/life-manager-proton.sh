@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Fixture tests for the life_manager role's Proton Calendar support, run by
-# proof.sh. Everything is offline: the download is a file:// artifact, a stub
-# `proton` on PATH logs calls, and the role is a temp copy whose root:root
+# proof.sh. Everything is offline: the download is a file:// artifact that is
+# itself a stub logging its calls (so running the installed bin shows up in
+# calls.log), a stub `proton` on PATH does the same, and the role is a temp copy whose root:root
 # ownership and restart handler are swapped for the current user and a counter.
 
 set -uo pipefail
@@ -114,7 +115,7 @@ setup() {
   new_case
   mkdir -p "$FX/usr" "$FX/etc" "$FX/data"
   : >"$FX/calls.log"
-  printf 'proton-fixture-binary\n' >"$FX/art"
+  printf '#!/usr/bin/env bash\necho "$*" >>"$FX/calls.log"\n' >"$FX/art"
   sha=$(sha256sum "$FX/art" | cut -d' ' -f1)
   write_vars "$1" "$sha"
 }
