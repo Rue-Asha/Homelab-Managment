@@ -40,6 +40,7 @@ workflow_triggers=0
 unique_hosts=0
 sqlite_snapshot=0
 sqlite_backup=0
+tailscale=0
 for f in "${files[@]}"; do
   case "$f" in
     *.tfstate|*.tfstate.*) tfstate+=("$f") ;;
@@ -52,6 +53,9 @@ for f in "${files[@]}"; do
     scripts/checks/workflow-triggers.py|scripts/tests/workflow-triggers.sh) workflow_triggers=1 ;;
     ansible/roles/sqlite_snapshot/*|ansible/playbooks/02_SERVICES/*|ansible/inventory/host_vars/*|scripts/tests/sqlite-snapshot.sh) sqlite_snapshot=1 ;;
     ansible/roles/sqlite_backup/*|ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml|ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml|scripts/tests/sqlite-backup.sh) sqlite_backup=1 ;;
+  esac
+  case "$f" in
+    ansible/roles/tailscale/*|ansible/playbooks/01_BASE_CONFIGURATION/tailscale.yml|ansible/inventory/host_vars/tailscale01/*|scripts/tests/tailscale.sh) tailscale=1 ;;
   esac
   case "$f" in
     terraform/*) tf_changed=1 ;;
@@ -151,6 +155,10 @@ fi
 
 if [ "$sqlite_backup" -eq 1 ]; then
   sensor "sqlite-backup fixtures" SQLITE_BACKUP_FIXTURES_FAILED scripts/tests/sqlite-backup.sh
+fi
+
+if [ "$tailscale" -eq 1 ]; then
+  sensor "tailscale fixtures" TAILSCALE_FIXTURES_FAILED scripts/tests/tailscale.sh
 fi
 
 # The check runner runs PR code, so no deploy credential may be wired into it.
