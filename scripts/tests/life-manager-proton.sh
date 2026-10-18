@@ -455,6 +455,20 @@ PY
 }
 check "life-manager01 enables the flag" host_enables_flag
 
+proof_triggers_fixtures() {
+  local line f miss=0
+  line=$(grep -E 'life_manager_proton=1 ;;$' scripts/proof.sh)
+  [ -n "$line" ] || { echo "proof.sh has no case line setting life_manager_proton=1"; return 1; }
+  for f in ansible/roles/life_manager/tasks/proton.yml ansible/inventory/host_vars/life-manager01/vars.yml scripts/tests/life-manager-proton.sh; do
+    eval "case \$f in $line esac"
+    [ "$life_manager_proton" = 1 ] || { echo "proof.sh case patterns do not match $f"; miss=1; }
+    life_manager_proton=0
+  done
+  return "$miss"
+}
+life_manager_proton=0
+check "Changing the role triggers the fixtures" proof_triggers_fixtures
+
 readme_documents() {
   local r=$role/README.md m=0
   for v in life_manager_proton_enabled life_manager_proton_version life_manager_proton_url life_manager_proton_sha256 life_manager_proton_bin life_manager_proton_profile; do
