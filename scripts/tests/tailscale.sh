@@ -85,14 +85,14 @@ check "The repository URL names trixie when no release fact is known" repo_url_d
 # --- join.yml against a stub CLI ---------------------------------------------
 
 # The stub logs every call and answers from the current case's fixtures. It
-# succeeds by default; a case opts into failure with $FX/up_fail (its content
-# becomes the error text).
+# succeeds by default; a case opts into failure with $FX/up_fail or
+# $FX/status_fail (its content becomes the error text).
 mkdir -p "$dir/bin"
 cat >"$dir/bin/tailscale" <<'STUB'
 #!/usr/bin/env bash
 echo "$*" >>"$FX/calls.log"
 case $1 in
-  status) cat "$FX/status.json" ;;
+  status) [ -e "$FX/status_fail" ] && { cat "$FX/status_fail" >&2; exit 1; }; cat "$FX/status.json" ;;
   debug) [ "$2" = prefs ] || exit 2; cat "$FX/prefs.json" ;;
   up) [ -e "$FX/up_fail" ] && { cat "$FX/up_fail" >&2; exit 1; }; exit 0 ;;
   set) exit 0 ;;
@@ -153,6 +153,32 @@ no_key_not_logged_in() {
   return "$bad"
 }
 check "Not logged in and no key fails before tailscale up" no_key_not_logged_in
+
+unreadable_state_no_key() {
+  local all=0
+  node NoState
+  join
+  a test $? -ne 0
+  a test "$(calls up)" -eq 0
+  a test "$(calls set)" -eq 0
+  a grep -qF 'NoState' "$FX/play.out"
+  a grep -qiE 'tailscaled.*(down|unreachable)|(down|unreachable).*tailscaled' "$FX/play.out"
+  a not_has "$FX/play.out" "join play finished"
+  show
+  all=$((all | bad))
+  node Running
+  echo "failed to connect to local tailscaled" >"$FX/status_fail"
+  join
+  a test $? -ne 0
+  a test "$(calls up)" -eq 0
+  a test "$(calls set)" -eq 0
+  a test "$(calls 'debug prefs')" -eq 0
+  a grep -qiE 'tailscaled.*(down|unreachable)|(down|unreachable).*tailscaled' "$FX/play.out"
+  a not_has "$FX/play.out" "join play finished"
+  show
+  return $((all | bad))
+}
+check "An unreadable backend state counts as not logged in" unreadable_state_no_key
 
 first_join() {
   node NeedsLogin

@@ -9,8 +9,8 @@
   failed_when: false
   check_mode: false
 
-# A failed status query counts as not logged in: a key is then required, and
-# a daemon that is really down fails loudly at `tailscale up`.
+# A failed status query counts as not logged in (NoState): a key is then
+# required, and the assert message says the daemon may be down instead.
 - name: Record the backend state
   ansible.builtin.set_fact:
     tailscale_join_state: >-
@@ -27,6 +27,8 @@
       and the key prompt was left empty. Create a pre-auth key tagged
       {{ tailscale_advertise_tags | join(', ') }} in the admin console
       (Settings -> Keys -> Generate auth key, Tags) and rerun, pasting it at the prompt.
+      NoState also means `tailscale status --json` failed: if the node is already logged in,
+      tailscaled may be down or unreachable; check `systemctl status tailscaled` instead of creating a key.
   when: tailscale_join_state in ['NeedsLogin', 'NoState']
 
 # A Stopped node (after `tailscale down`) is still logged in: same flags, no key.

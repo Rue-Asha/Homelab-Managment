@@ -108,12 +108,17 @@ No playbook under `ansible/playbooks/02_SERVICES/` SHALL target the `tailscale` 
 
 ### Requirement: The router joins with a prompted, never-logged pre-auth key
 
-On a host that is not logged in, the role SHALL run `tailscale up --auth-key=<key> --advertise-routes=192.168.0.0/24 --advertise-tags=tag:subnet-router --accept-dns=false` with `no_log: true`. The key SHALL come from a hidden `vars_prompt` named `tailscale_authkey` (default empty, overridable with `-e`) and SHALL NOT be stored in any tracked file. A logged-in host SHALL NOT be re-authenticated and SHALL need no key; a rerun SHALL converge it to `Running`, so a logged-in but `Stopped` node is brought back with `tailscale up` and the join flags without `--auth-key`. A not-logged-in host with an empty key SHALL fail before `tailscale up` with a message that says how to create a tagged pre-auth key. A failed `tailscale up` SHALL fail the play with its error text visible and the key hidden. When the advertised routes or the accept-dns setting in vars differ from the running node's, the role SHALL converge them with `tailscale set` without re-authenticating. The role SHALL NOT disable Tailscale's subnet SNAT.
+On a host that is not logged in, the role SHALL run `tailscale up --auth-key=<key> --advertise-routes=192.168.0.0/24 --advertise-tags=tag:subnet-router --accept-dns=false` with `no_log: true`. The key SHALL come from a hidden `vars_prompt` named `tailscale_authkey` (default empty, overridable with `-e`) and SHALL NOT be stored in any tracked file. A logged-in host SHALL NOT be re-authenticated and SHALL need no key; a rerun SHALL converge it to `Running`, so a logged-in but `Stopped` node is brought back with `tailscale up` and the join flags without `--auth-key`. A host is not logged in when its `BackendState` is `NeedsLogin` or `NoState`, or when `tailscale status --json` exits non-zero (counted as `NoState`). A not-logged-in host with an empty key SHALL fail before `tailscale up` with a message that says how to create a tagged pre-auth key and, for `NoState`, that `tailscaled` may be down or unreachable on a node that is in fact logged in. A failed `tailscale up` SHALL fail the play with its error text visible and the key hidden. When the advertised routes or the accept-dns setting in vars differ from the running node's, the role SHALL converge them with `tailscale set` without re-authenticating. The role SHALL NOT disable Tailscale's subnet SNAT.
 
 #### Scenario: Not logged in and no key fails before tailscale up
 - **WHEN** the backend state is `NeedsLogin` and `tailscale_authkey` is empty
 - **THEN** the play fails with a message naming `tag:subnet-router` and how to create a pre-auth key, and `tailscale up` is never called
 - **proof:** unit ("Scenario: Not logged in and no key fails before tailscale up" in `scripts/tests/tailscale.sh`)
+
+#### Scenario: An unreadable backend state counts as not logged in
+- **WHEN** `tailscale status --json` reports `NoState` or exits non-zero, and `tailscale_authkey` is empty
+- **THEN** the play fails before any `tailscale up` or `tailscale set` call, and the message names `NoState` and says `tailscaled` may be down or unreachable
+- **proof:** unit ("Scenario: An unreadable backend state counts as not logged in" in `scripts/tests/tailscale.sh`)
 
 #### Scenario: First join advertises the route and tag
 - **WHEN** the backend state is `NeedsLogin` and a key is given
