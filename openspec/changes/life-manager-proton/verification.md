@@ -1,4 +1,4 @@
-verified-at: dfc4a17
+verified-at: 1cc3387
 
 ## Layer 1: scripts/proof.sh --all (green, exit 0)
 
@@ -7,12 +7,12 @@ PASS: life-manager-proton fixtures
 PASS: check runner role has no deploy credentials
 PASS: no Tailscale auth key in the repo
 PASS: retired key path
-proof: 29 sensor(s), 0 failed
+proof: 28 sensor(s), 0 failed
 ```
 
-Sensor count: 29 on a run with the ignored `.terraform` cache removed. The `terraform init` sensor in proof.sh is conditional (`if [ ! -d "$TF_DIR/.terraform" ]`), so a run with a warm cache counts 28. Both are green.
+Sensor count: 28 (warm `.terraform` cache; the conditional `terraform init` sensor does not run).
 
-Per-scenario lines come from running `scripts/tests/life-manager-proton.sh` directly (exit 0, 17 `ok: Scenario: ...` lines, no FAIL).
+Per-scenario lines come from running `scripts/tests/life-manager-proton.sh` directly (exit 0, 18 `ok: Scenario: ...` lines (21 scenarios minus 3 manual), no FAIL).
 
 ## Layer 2: coverage
 
@@ -38,7 +38,7 @@ Per-scenario lines come from running `scripts/tests/life-manager-proton.sh` dire
 | life-manager01 enables the flag | unit | "Scenario: life-manager01 enables the flag" ok |
 | The README holds the variables and the login runbook | unit | "Scenario: The README holds the variables and the login runbook" ok |
 | Login and sync work end to end | manual | post-merge checklist |
-| Changing the role triggers the fixtures | unit | proof --all: `PASS: life-manager-proton fixtures`; proof.sh case patterns hold the three paths |
+| Changing the role triggers the fixtures | unit | life-manager-proton.sh "Scenario: Changing the role triggers the fixtures" ok; proof --all `PASS: life-manager-proton fixtures` |
 
 Gaps: none.
 
@@ -59,8 +59,8 @@ Gaps: none.
  ansible/roles/life_manager/templates/env.j2        |   5 +
  openspec/changes/life-manager-proton/* (6 files)   | 267 +
  scripts/proof.sh                                   |   8 +
- scripts/tests/life-manager-proton.sh               | 469 +++
- 14 files changed, 844 insertions(+), 1 deletion(-)
+ scripts/tests/life-manager-proton.sh               | 486 +++++
+ 15 files changed, 927 insertions(+), 1 deletion(-)
 ```
 
 Screenshots: none
