@@ -4,6 +4,10 @@ triage: "feature + live — new capability (Tailscale subnet router guest, role,
 base: main
 gate0: 2026-10-18
 gate1: 2026-10-18
+gate2: 2026-10-18
 learnings:
   - 'Planner on live infra changes (post-merge rollout) → never put post-merge steps in tasks.md as a unit; write them as a runbook in the docs and as the manual post-merge checklist in verification.md. (weil: a scope=none rollout unit with unchecked tasks would keep flow in build, verify and archive could never start; caught at Gate 1)'
   - 'Idempotent service roles (router, daemon) → a rerun converges the service to running/up, it never preserves a manual stop. (weil: the planner chose to leave a Stopped tailscale node down on rerun; Rue chose always up at Gate 1)'
+  - 'proof.sh --all in a worktree → remove terraform/environments/homelab/.terraform first and restore .terraform.lock.hcl after; run it only with run_in_background. (weil: a stale provider cache failed terraform validate in the verifier run, and foreground runs of the full proof were SIGKILLed with exit 137 in U1, U2 and the first verifier run)'
+  - 'Verifier and reviewer diffs in a repo whose local main lags → diff against origin/main, never main, and pass that in the brief. (weil: local main was ~80 commits behind, so main...HEAD showed 70 files instead of 28 and pulled in an already-merged change)'
+  - 'Scenario evidence from fixture scripts → the verifier runs scripts/tests/*.sh directly for their ok: Scenario: lines, because the proof log does not print them. (weil: proof.sh --all only shows PASS per sensor, so the scenario-to-test lookup needs the direct runs)'
