@@ -75,3 +75,17 @@ Gaps: none.
  29 files changed, 1430 insertions(+), 89 deletions(-)
 
 Screenshots: none
+
+## Review
+
+Round 1 (reviewer, `origin/main...flow/add-tailscale-subnet-router`, no blocking findings):
+
+| Finding | Resolution |
+|---|---|
+| [weak] `scripts/tests/tailscale.sh:797` authkey assignment check missed quoted, flow-mapping and INI shapes | Fixed in `c0a91a5`. Old check printed `ok` for all three shapes, new one prints `FAIL`; `{tailscale_authkey: ""}` and the real tree stay ok. The check also skips `#` comment lines (the playbook's `-e tailscale_authkey=<key>` comment). |
+| [spec] `join.yml` treats `NoState` and a failing `tailscale status --json` as not logged in, spec only said `NeedsLogin` | Fixed in `ca72423`. Spec requirement and design D2 now state it; new "Scenario: An unreadable backend state counts as not logged in" (red before, green after); the empty-key `fail_msg` now says `tailscaled` may be down or unreachable. |
+| Unused `Restart tailscaled` handler (outside the categories) | Not changed: restored as it was, out of scope. |
+
+Round 2 (reviewer, fresh context at `ca72423`): no findings. One soft spot, not a finding: the non-zero-exit sub-case of the new scenario does not grep for `NoState`, but the `fail_msg` always contains it.
+
+Open for Gate 2: the added `fail_msg` sentence is shown for every empty-key failure, including a genuine `NeedsLogin`.
