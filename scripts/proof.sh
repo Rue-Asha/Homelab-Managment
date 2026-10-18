@@ -164,6 +164,10 @@ fi
 # The check runner runs PR code, so no deploy credential may be wired into it.
 sensor "check runner role has no deploy credentials" CHECK_RUNNER_HAS_CREDENTIALS sh -c '! git grep -nE "deploy_ed25519|vault_pass|terraform\.env|github_runner_" -- ansible/roles/check_runner ansible/inventory/group_vars/check_runner'
 
+# The pre-auth key is prompted, never stored. A real key has a body after its
+# id; the docs' `tskey-auth-…` and the fixture's `tskey-auth-fixture` have none.
+sensor "no Tailscale auth key in the repo" TAILSCALE_KEY_COMMITTED sh -c '! git grep -nE "tskey-(auth|client)-[A-Za-z0-9]+-[A-Za-z0-9]{8,}"'
+
 # The retired all-purpose key must not come back; see credential-separation.
 sensor "retired key path" RETIRED_KEY_REFERENCED sh -c '! git grep -n "ssh/Proxmox" -- . ":!openspec" ":!scripts/proof.sh"'
 
