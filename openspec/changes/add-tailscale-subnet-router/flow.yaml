@@ -1,0 +1,5 @@
+track: feature
+live: true
+triage: "provisional: feature — new capability (Tailscale subnet router guest + role), acts on running infra. Appetite: two evenings."
+base: main
+learnings:
