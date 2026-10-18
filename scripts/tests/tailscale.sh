@@ -253,4 +253,76 @@ key_ignored_when_logged_in() {
 }
 extra "A key given to a logged-in node is not used" key_ignored_when_logged_in
 
+# --- operator playbook -------------------------------------------------------
+
+operator=ansible/playbooks/01_BASE_CONFIGURATION/tailscale.yml
+
+tun_before_tailscale() {
+  python3 - "$operator" <<'PY'
+import os, sys, yaml
+plays = yaml.safe_load(open(sys.argv[1]))
+hv = "ansible/inventory/host_vars/tailscale01"
+bad = []
+if len(plays) != 2:
+    bad.append(f"expected 2 plays, got {len(plays)}")
+else:
+    tun, ts = plays
+    if tun.get("roles") != ["proxmox_lxc_tun"] or tun.get("gather_facts") is not False:
+        bad.append(f"play 1 must apply only proxmox_lxc_tun with gather_facts: false: {tun}")
+    if ts.get("roles") != ["common", "tailscale"] or ts.get("become") is not True:
+        bad.append(f"play 2 must apply common then tailscale with become: true: {ts}")
+if (yaml.safe_load(open(f"{hv}/vars.yml")) or {}).get("proxmox_lxc_tun_enabled") is not True:
+    bad.append("proxmox_lxc_tun_enabled is not true in host_vars/tailscale01/vars.yml")
+if os.path.exists(f"{hv}/vault.yml"):
+    bad.append("host_vars/tailscale01/vault.yml exists")
+print("\n".join(bad))
+sys.exit(1 if bad else 0)
+PY
+}
+check "TUN passthrough runs before Tailscale" tun_before_tailscale
+
+only_tailscale_group() {
+  python3 - "$operator" <<'PY'
+import os, sys, yaml
+plays = yaml.safe_load(open(sys.argv[1]))
+bad = [f"play {p.get('name')!r} targets {p.get('hosts')!r}" for p in plays if p.get("hosts") != "tailscale"]
+if not plays:
+    bad.append("no plays")
+if os.path.exists("ansible/playbooks/02_SERVICES/tailscale.yml"):
+    bad.append("ansible/playbooks/02_SERVICES/tailscale.yml exists")
+print("\n".join(bad))
+sys.exit(1 if bad else 0)
+PY
+}
+check "The operator playbook targets only the tailscale group" only_tailscale_group
+
+key_prompted_hidden() {
+  git ls-files -z ansible/ >"$dir/tracked"
+  python3 - "$operator" "$dir/tracked" <<'PY'
+import re, sys, yaml
+plays = yaml.safe_load(open(sys.argv[1]))
+prompts = [v for p in plays for v in p.get("vars_prompt") or [] if v.get("name") == "tailscale_authkey"]
+bad = []
+if len(prompts) != 1:
+    bad.append(f"expected one vars_prompt tailscale_authkey, got {len(prompts)}")
+elif prompts[0].get("private") is not True or prompts[0].get("default") != "":
+    bad.append(f"tailscale_authkey prompt must be private with an empty default: {prompts[0]}")
+assign = re.compile(r"""^\s*-?\s*tailscale_authkey\s*[:=]\s*(.*?)\s*$""")
+for path in open(sys.argv[2]).read().split("\0"):
+    if not path:
+        continue
+    try:
+        lines = open(path, encoding="utf-8").read().splitlines()
+    except (UnicodeDecodeError, IsADirectoryError):
+        continue
+    for n, line in enumerate(lines, 1):
+        m = assign.match(line)
+        if m and m.group(1) not in ('""', "''"):
+            bad.append(f"{path}:{n}: {line.strip()}")
+print("\n".join(bad))
+sys.exit(1 if bad else 0)
+PY
+}
+check "The key is prompted hidden" key_prompted_hidden
+
 exit "$failed"
