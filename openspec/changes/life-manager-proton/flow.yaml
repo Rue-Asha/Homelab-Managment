@@ -5,3 +5,5 @@ base: main
 gate1: 2026-10-18
 ship_note: 'Rue at the gate: plan approved; optional ⚠ 1.7 dry run not given a go → skipped, evidence says not run; merge only on Rue''s go (merge deploys)'
 learnings:
+  - 'U1 (single-unit serial builder) implemented all 7 tasks, ran one proof --all and left everything staged with no commits; the orchestrator committed it as one commit instead of faking per-task history'
+  - 'proof --all left terraform/environments/homelab/.terraform.lock.hcl modified (22 lines of hashes dropped) in the worktree; not part of the change, left unstaged'
