@@ -3,6 +3,7 @@
 # Host-level: edits the container's Proxmox config on the node, then reboots the
 # container so the bind mount takes effect. Runs on the Proxmox host, not inside
 # the guest — this concern deliberately lives outside the tailscale app role.
+# Run by the first play of 01_BASE_CONFIGURATION/tailscale.yml, from the workstation.
 - name: Ensure /dev/net/tun passthrough in the container's Proxmox config
   ansible.builtin.blockinfile:
     path: "/etc/pve/lxc/{{ lxc_ctid }}.conf"

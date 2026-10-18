@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure tailscaled is enabled and running
+  ansible.builtin.systemd:
+    name: "{{ tailscale_service_name }}"
+    enabled: true
+    state: started

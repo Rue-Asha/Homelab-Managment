@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT-0
 ---
 # Defined reboot-first so it runs before the SSH wait (handlers fire in
-# definition order). Both flush at the end of the provisioning play, before the
-# baseline (common) pass connects to the container over SSH.
+# definition order). Both flush at the end of the first play of
+# 01_BASE_CONFIGURATION/tailscale.yml, before the baseline (common) pass
+# connects to the container over SSH.
 - name: Reboot container for TUN passthrough
   ansible.builtin.command: "pct reboot {{ lxc_ctid }}"
   changed_when: true

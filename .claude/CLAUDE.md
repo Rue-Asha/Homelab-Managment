@@ -196,13 +196,14 @@ Terraform (anything under `terraform/`):
 - Before changing release-bump, read openspec/specs/release-bump/spec.md.
 - Before changing check-runner, read openspec/specs/check-runner/spec.md.
 - Before changing sqlite-backups, read openspec/specs/sqlite-backups/spec.md.
+- Before changing tailscale-subnet-router, read openspec/specs/tailscale-subnet-router/spec.md.
 
 ---
 
 ## Learnings
 
 - **Fixture tests that run git** → unset `GIT_DIR`, `GIT_INDEX_FILE`, `GIT_WORK_TREE` first. (weil: the pre-commit hook leaks them, fixture commits landed on the real branch and core.bare flipped to true in the main repo) [2026-10-05 · add-pihole]
-- **`terraform validate` / `tflint` fail in agent shells** → `command rm -rf` the ignored `.terraform` cache before *each* proof run and set `TMPDIR` to a short path (`/tmp/claude-1001/t`), never the long scratchpad path; leave the rewritten `.terraform.lock.hcl` unstaged and don't `git checkout` it. (weil: proof's init rewrites `.terraform.lock.hcl` and `git checkout` leaves the cache out of step, so the next validate fails; a 98-char TMPDIR overflows terraform's go-plugin unix socket and fails with a handshake error) [2026-10-05 · deploy-new-guests, auto-version-bump] [2026-10-11 · sqlite-backups]
+- **`terraform validate` / `tflint` fail in agent shells, or `proof.sh --all` is SIGKILLed (exit 137)** → `command rm -rf` the ignored `.terraform` cache before *each* proof run, set `TMPDIR` to a short path (`/tmp/claude-1001/t`), never the long scratchpad path, and run `--all` only via `run_in_background`; restore the rewritten `.terraform.lock.hcl` with `git checkout --` afterwards and never stage it. (weil: proof's init rewrites `.terraform.lock.hcl` and a stale provider cache fails validate, a 98-char TMPDIR overflows terraform's go-plugin unix socket, and foreground full runs were killed with 137 three times) [2026-10-05 · deploy-new-guests, auto-version-bump] [2026-10-11 · sqlite-backups] [2026-10-18 · add-tailscale-subnet-router]
 - **`ansible-inventory` called from a script in a bash pipe** → run it via python `subprocess` with captured stderr. (weil: Ansible aborts with "requires blocking IO" when the caller's stderr is non-blocking; fixtures that redirect stderr don't catch it) [2026-10-05 · deploy-new-guests]
 - **Inventory fixtures for `deploy-targets`** → mirror the group shape `terraform/environments/homelab/ansible.tf` renders, never a hand-simplified tree. (weil: the simplified fixture hid a real bug review found) [2026-10-05 · deploy-new-guests]
 - **Ansible assert with a user-facing `fail_msg`** → no `no_log` on it. (weil: no_log censors the failed result including fail_msg, so the operator sees "censored" instead of which variable is missing) [2026-10-05 · add-pihole]

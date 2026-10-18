@@ -58,6 +58,7 @@ all:
             github_runner: {hosts: {runner01: {}}}
             check_runner: {hosts: {check01: {}}}
             pihole: {hosts: {pihole01: {}}}
+            tailscale: {hosts: {tailscale01: {}}}
             scratch: {hosts: {bare01: {}}}
     proxmox_node: {hosts: {proxmox1: {}}}'
 put ansible/inventory/group_vars/all.yml '--- {}'
@@ -67,6 +68,7 @@ put ansible/inventory/group_vars/pihole.yml '--- {}'
 put ansible/inventory/group_vars/check_runner.yml '--- {}'
 put ansible/inventory/host_vars/life-manager01/vars.yml 'life_manager_version: v1'
 put ansible/inventory/host_vars/pihole01/vars.yml 'pihole_version: v6'
+put ansible/inventory/host_vars/tailscale01/vars.yml 'proxmox_lxc_tun_enabled: true'
 put ansible/inventory/host_vars/static01.yml '--- {}'
 role common
 role nodejs
@@ -77,12 +79,15 @@ role egress_firewall
 role github_runner
 role check_runner
 role pihole
+role tailscale
+role proxmox_lxc_tun
 play ansible/playbooks/02_SERVICES/life-manager.yml life_manager 'common, nodejs, life_manager, nginx'
 play ansible/playbooks/02_SERVICES/static-site.yml static_site 'common, proxy_site'
 play ansible/playbooks/02_SERVICES/batch-job.yml static_site 'nodejs'
 play ansible/playbooks/02_SERVICES/pihole.yml pihole 'common, pihole'
 play ansible/playbooks/01_BASE_CONFIGURATION/deploy_runner.yml github_runner 'common, egress_firewall, github_runner'
 play ansible/playbooks/01_BASE_CONFIGURATION/check_runner.yml check_runner 'common, egress_firewall, check_runner'
+play ansible/playbooks/01_BASE_CONFIGURATION/tailscale.yml tailscale 'proxmox_lxc_tun, common, tailscale'
 put README.md fixture
 put terraform/main.tf '# fixture'
 
@@ -187,6 +192,7 @@ $PIHOLE" ansible/inventory/host_vars/pihole01/vars.yml ansible/inventory/host_va
 change "runner roles deploy nothing" "" ansible/roles/github_runner/tasks/main.yml ansible/roles/egress_firewall/tasks/main.yml
 change "runner playbook deploys nothing" "" ansible/playbooks/01_BASE_CONFIGURATION/deploy_runner.yml
 change "Scenario: deploy-targets ignores the check runner" "" ansible/roles/check_runner/tasks/main.yml ansible/inventory/group_vars/check_runner.yml ansible/playbooks/01_BASE_CONFIGURATION/check_runner.yml
+change "Scenario: A merge never runs the operator playbook" "" ansible/roles/tailscale/tasks/main.yml ansible/inventory/host_vars/tailscale01/vars.yml ansible/playbooks/01_BASE_CONFIGURATION/tailscale.yml
 
 expect "zero before runs everything" "$ALL" 0000000000000000000000000000000000000000 "$(git rev-parse HEAD)"
 expect "non-ancestor before runs everything" "$ALL" "$(git commit-tree 'HEAD^{tree}' -m unrelated)" "$(git rev-parse HEAD)"
@@ -204,6 +210,8 @@ created "Scenario: A created guest without a service playbook" bare01 0 "$LIFE" 
   "deploy-targets: bare01 has no 02_SERVICES playbook" ansible/inventory/host_vars/life-manager01/vars.yml
 created "Scenario: A created runner is never deployed" runner01 0 "" \
   "deploy-targets: runner01 has no 02_SERVICES playbook" terraform/main.tf
+created "Scenario: A created tailscale01 gets no deploy" tailscale01 0 "" \
+  "deploy-targets: tailscale01 has no 02_SERVICES playbook" terraform/main.tf
 created "Scenario: An unknown created host fails loudly" "pihole01 ghost01" 1 "" \
   "deploy-targets: created host not in inventory: ghost01" terraform/main.tf
 created "unknown created host fails when the diff runs everything" ghost01 1 "" \
