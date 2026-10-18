@@ -72,6 +72,19 @@ lxc_hosts = {
     swap    = 512
     disk_gb = 6
   }
+
+  # Tailscale subnet router for off-LAN access. Needs /dev/net/tun, which only
+  # the operator playbook can pass through. Configured by
+  # 01_BASE_CONFIGURATION/tailscale.yml, never by a deploy.
+  "tailscale01" = {
+    ipv4    = "192.168.0.230/24"
+    groups  = ["tailscale"]
+    tags    = ["vpn", "terraform"]
+    cores   = 1
+    memory  = 512
+    swap    = 512
+    disk_gb = 4
+  }
 }
 
 # retropie01 is deliberately absent: the box is not currently provisioned. Its
