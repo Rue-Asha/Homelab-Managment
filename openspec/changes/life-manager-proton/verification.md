@@ -64,3 +64,15 @@ Gaps: none.
 ```
 
 Screenshots: none
+
+## Review
+
+Round 1 (fresh-context reviewer at dfc4a17): no weakened tests, no spec mismatch, no correctness bugs; three weak tests.
+
+| Finding | Resolution |
+|---|---|
+| [weak test] missing-session scenario: "stub logged zero calls" unpinned, the role calls the downloaded fixture, not the PATH stub | fixed in 36762ff: the fixture artifact now logs calls too; red against a role copy that runs `{{ life_manager_proton_bin }} --version`, green against the real role |
+| [weak test] README scenario: re-login check passed on any "re-login" mention, malformed or-chain, loose "not backed up" regex | fixed in 1bb28bb: checks the body of the re-login heading for the exact sqlite_backups sentence; red against a reworded README, green against the real one |
+| [weak test] "Changing the role triggers the fixtures": case patterns unpinned | fixed in 1cc3387: new fixture scenario evaluates the proof.sh case line against three sample paths; red against a typo'd pattern, green against the real proof.sh |
+
+Round 2 (fresh-context reviewer at 1cc3387): no findings.
