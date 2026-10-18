@@ -1,5 +1,7 @@
 track: tweak
 live: true
-triage: 'provisional: tweak · live — life_manager role installs proton-cli (pinned, checksum), adds the Proton env vars behind a flag, prepares the session dir and reports a missing login; merge deploys to life-manager01. Appetite: one evening'
+triage: 'tweak · live — life_manager role installs proton-cli (pinned, checksum), adds the Proton env vars behind a flag, prepares the session dir and reports a missing login; merge deploys to life-manager01. Appetite: one evening'
 base: main
+gate1: 2026-10-18
+ship_note: 'Rue at the gate: plan approved; optional ⚠ 1.7 dry run not given a go → skipped, evidence says not run; merge only on Rue''s go (merge deploys)'
 learnings:
