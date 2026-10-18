@@ -18,7 +18,8 @@ its own lightweight LXC, and a playbook is the only way in.
 | `rues_arcade` | Deploys [Rues-Arcade](https://github.com/Rue-Asha/Rues-Arcade) |
 | `common` | Base host hardening shared by every guest |
 | `guest_bootstrap` | First run on a fresh guest: `ansible` user + sudo |
-| `proxmox_lxc_tun` | `/dev/net/tun` passthrough on the node (for a future Tailscale guest) |
+| `proxmox_lxc_tun` | `/dev/net/tun` passthrough on the node, play 1 of `01_BASE_CONFIGURATION/tailscale.yml` |
+| `tailscale` | Subnet router on `tailscale01`, play 2 of `01_BASE_CONFIGURATION/tailscale.yml`; operator run from the workstation, never by CD (`docs/tailscale-subnet-router.md`) |
 | `github_runner` | Self-hosted GitHub Actions runner that deploys merges to `main` |
 | `egress_firewall` | Default-drop outbound nftables firewall (on the runner) |
 

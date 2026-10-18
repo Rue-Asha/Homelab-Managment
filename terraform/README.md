@@ -141,7 +141,8 @@ protection is reading the plan.
 ## What Terraform does *not* do here
 
 `ansible/roles/proxmox_lxc_tun` writes raw `lxc.mount.entry` lines into
-`/etc/pve/lxc/<ctid>.conf` for `/dev/net/tun` passthrough on `tailscale01`. The
+`/etc/pve/lxc/<ctid>.conf` for `/dev/net/tun` passthrough on `tailscale01`, run by
+`01_BASE_CONFIGURATION/tailscale.yml` from the workstation. The
 provider models container config as typed attributes with no escape hatch for
 arbitrary `lxc.*` keys, so this stays a host-level Ansible role delegated to the
 node.
@@ -151,8 +152,10 @@ why `modules/proxmox_lxc` ignores changes to `description` after create.
 
 **Consequence:** `terraform plan` will never notice that passthrough is missing,
 and a container recreated by Terraform loses TUN until the role runs again. For
-`tailscale01` the order after any recreate is: `terraform apply` → baseline →
-`proxmox_lxc_tun` → the tailscale service playbook.
+`tailscale01` the order after any recreate is: merge (the runner applies) → remove
+the stale node in the Tailscale admin console → `scripts/fetch-inventory.sh` →
+`ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/tailscale.yml` with a
+fresh tagged pre-auth key at the prompt (TUN, baseline and Tailscale in one run).
 
 ## Before committing
 
