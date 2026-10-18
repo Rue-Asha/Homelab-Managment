@@ -1,0 +1,5 @@
+---
+# --- tailscale subnet router (01_BASE_CONFIGURATION/tailscale.yml) ---
+# The pre-auth key is prompted at run time and never stored, so there is no
+# vault.yml for this host.
+proxmox_lxc_tun_enabled: true

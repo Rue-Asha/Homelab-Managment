@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Forwarding is required for the box to route tailnet traffic into the LAN.
+- name: Enable IPv4 forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    sysctl_set: true
+    sysctl_file: /etc/sysctl.d/99-tailscale.conf
+    state: present
+    reload: true
+
+- name: Enable IPv6 forwarding
+  ansible.posix.sysctl:
+    name: net.ipv6.conf.all.forwarding
+    value: "1"
+    sysctl_set: true
+    sysctl_file: /etc/sysctl.d/99-tailscale.conf
+    state: present
+    reload: true
+
+# An unprivileged container may refuse the write; the router is useless without
+# forwarding, so stop here instead of joining a node that can't route.
+- name: Read the live forwarding values
+  ansible.builtin.slurp:
+    src: "/proc/sys/{{ item | replace('.', '/') }}"
+  loop:
+    - net.ipv4.ip_forward
+    - net.ipv6.conf.all.forwarding
+  register: tailscale_forwarding_live
+
+- name: Ensure forwarding is on
+  ansible.builtin.assert:
+    that:
+      - item['content'] | b64decode | trim is match('^1$')
+    quiet: true
+    fail_msg: >-
+      {{ item['item'] }} is {{ item['content'] | b64decode | trim }} after
+      writing 1 to /etc/sysctl.d/99-tailscale.conf; the container does not let
+      it be set, so the router cannot forward into the LAN.
+  loop: "{{ tailscale_forwarding_live['results'] }}"
+  loop_control:
+    label: "{{ item['item'] }}"

@@ -1,0 +1,36 @@
+---
+# The Tailscale subnet router that gives Rue's devices off-LAN access to
+# 192.168.0.0/24.
+#
+# Human-run from the workstation only. It lives outside 02_SERVICES so
+# scripts/deploy-targets.sh never selects it: a merge must never restart the
+# VPN, and the runner's key has no access to the Proxmox node, which play 1
+# needs. Re-run after recreating tailscale01, so the new container gets TUN
+# passthrough and joins again.
+#
+#   ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/tailscale.yml
+#
+# The key prompt is only needed for a join (a fresh or recreated node): paste a
+# pre-auth key tagged tag:subnet-router, or pass -e tailscale_authkey=<key>.
+# On a node that is already logged in, leave it empty.
+
+# Writes raw lxc.* keys into the node's <ctid>.conf, which Terraform cannot
+# express, and reboots the container once. It must run first: an unprivileged
+# container has no TUN device and tailscaled cannot start without one.
+- name: Ensure /dev/net/tun is passed through to the container
+  hosts: tailscale
+  gather_facts: false
+  roles:
+    - proxmox_lxc_tun
+
+- name: Configure the Tailscale subnet router
+  hosts: tailscale
+  become: true
+  vars_prompt:
+    - name: tailscale_authkey
+      prompt: Tailscale pre-auth key tagged tag:subnet-router (empty if already logged in)
+      private: true
+      default: ""
+  roles:
+    - common
+    - tailscale
