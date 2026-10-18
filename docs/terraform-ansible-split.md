@@ -42,7 +42,7 @@ desired-state model. Three consequences, all visible in the code it removed:
 | `proxmox_lxc_bootstrap` — SSH key via `pct exec` | homelab LXC template (`scripts/build-lxc-template.sh`), converged by `guest_bootstrap` |
 | `proxmox_lxc_bootstrap` — root password | **deleted**, see Secrets |
 | `proxmox_lxc_bootstrap` — `ansible` user + sudo | homelab LXC template; `ansible/roles/guest_bootstrap` converges the keys via `01_BASE_CONFIGURATION/bootstrap.yml` |
-| `ansible/roles/proxmox_lxc_tun` | **unchanged**, still Ansible — see below |
+| `ansible/roles/proxmox_lxc_tun` | **unchanged**, still Ansible, run by `01_BASE_CONFIGURATION/tailscale.yml` — see below |
 | `ansible/roles/common`, all of `02_SERVICES` | **unchanged** |
 
 The app-per-LXC, two-repo, build-on-host service model is untouched. Nothing
@@ -69,7 +69,10 @@ ansible-playbook ansible/playbooks/02_SERVICES/<service>.yml -l <host>
                                                           # the service
 ```
 
-For `tailscale01` there is an extra step between 2 and 3 — see the next section.
+`tailscale01` has no `02_SERVICES` playbook: step 3 is replaced by the operator
+playbook `01_BASE_CONFIGURATION/tailscale.yml` (TUN passthrough, baseline,
+Tailscale), run from the workstation only and never by CD. See the next section
+and `docs/tailscale-subnet-router.md`.
 
 ## The one thing Terraform cannot express
 
@@ -93,12 +96,12 @@ plan wants to strip the markers and the next tailscale run puts them back.
 
 **Consequence to know about:** `terraform plan` will never notice the
 passthrough is missing. If Terraform ever recreates `tailscale01`, it loses TUN
-until the role runs again. Order after any recreate:
+until the role runs again. Order after any recreate: merge (the runner applies),
+remove the stale node in the Tailscale admin console, then
 
 ```sh
-terraform apply
-ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml -l tailscale01
-ansible-playbook ansible/playbooks/02_SERVICES/tailscale.yml -l tailscale01   # includes proxmox_lxc_tun
+scripts/fetch-inventory.sh
+ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/tailscale.yml   # TUN, baseline, Tailscale; key at the prompt
 ```
 
 ## How Ansible learns about hosts
@@ -166,8 +169,9 @@ backed up. `imports.tf` stays
 committed so a lost state file is one `terraform apply` to recover rather than
 archaeology.
 
-Application secrets — Pi-hole password, the Proton ICS URL, the Tailscale
-pre-auth key, both git deploy keys — remain Ansible's, and move to a self-hosted
+Application secrets — Pi-hole password, the Proton ICS URL, both git deploy
+keys — remain Ansible's (the Tailscale pre-auth key is prompted by
+`01_BASE_CONFIGURATION/tailscale.yml` at run time, not vaulted), and move to a self-hosted
 HashiCorp Vault in a follow-up change. Nothing about that changes the boundary
 above: they are guest-side configuration, so they belong to Ansible either way.
 

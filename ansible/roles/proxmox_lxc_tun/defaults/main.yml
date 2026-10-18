@@ -2,7 +2,8 @@
 ---
 # Enable /dev/net/tun passthrough for this container. An unprivileged Proxmox
 # LXC has no TUN device by default; VPN workloads (Tailscale, WireGuard) need it.
-# Off by default — opt in per host (e.g. host_vars/tailscale01/vars.yml).
+# Off by default — opt in per host (e.g. host_vars/tailscale01/vars.yml, applied by
+# 01_BASE_CONFIGURATION/tailscale.yml).
 proxmox_lxc_tun_enabled: false
 
 # Seconds to wait for the container SSH to return after the passthrough reboot.
