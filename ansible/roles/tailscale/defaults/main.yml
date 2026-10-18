@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Pre-auth key for the first join only. The operator playbook prompts for it
+# and it is never stored; a host that is already logged in needs none.
+tailscale_authkey: ""
+
+# Subnet(s) advertised into the tailnet so remote devices can reach the LAN.
+tailscale_advertise_routes:
+  - 192.168.0.0/24
+
+# The tailnet policy auto-approves routes advertised under this tag. Changing
+# it needs a fresh key and `tailscale up --force-reauth`; the role won't.
+tailscale_advertise_tags:
+  - tag:subnet-router
+
+# IP-only remote access: do not accept DNS pushed by the tailnet.
+tailscale_accept_dns: false
+
+# Official APT repository for the guest's Debian release.
+tailscale_apt_release: "{{ ansible_facts['distribution_release'] | default('trixie', true) }}"
+tailscale_apt_keyring: /usr/share/keyrings/tailscale-archive-keyring.gpg
+tailscale_apt_key_url: >-
+  https://pkgs.tailscale.com/stable/debian/{{ tailscale_apt_release }}.noarmor.gpg
+tailscale_apt_list_url: >-
+  https://pkgs.tailscale.com/stable/debian/{{ tailscale_apt_release }}.tailscale-keyring.list
+
+# systemd unit that supervises the daemon.
+tailscale_service_name: tailscaled
