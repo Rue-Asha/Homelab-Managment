@@ -3,4 +3,7 @@ live: true
 triage: "feature + live — new capability (Tailscale subnet router guest, role, operator playbook), rollout acts on the running Proxmox node and tailnet. Appetite: two evenings."
 base: main
 gate0: 2026-10-18
+gate1: 2026-10-18
 learnings:
+  - 'Planner on live infra changes (post-merge rollout) → never put post-merge steps in tasks.md as a unit; write them as a runbook in the docs and as the manual post-merge checklist in verification.md. (weil: a scope=none rollout unit with unchecked tasks would keep flow in build, verify and archive could never start; caught at Gate 1)'
+  - 'Idempotent service roles (router, daemon) → a rerun converges the service to running/up, it never preserves a manual stop. (weil: the planner chose to leave a Stopped tailscale node down on rerun; Rue chose always up at Gate 1)'
