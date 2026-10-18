@@ -1,5 +1,6 @@
 track: feature
 live: true
-triage: "provisional: feature — new capability (Tailscale subnet router guest + role), acts on running infra. Appetite: two evenings."
+triage: "feature + live — new capability (Tailscale subnet router guest, role, operator playbook), rollout acts on the running Proxmox node and tailnet. Appetite: two evenings."
 base: main
+gate0: 2026-10-18
 learnings:
