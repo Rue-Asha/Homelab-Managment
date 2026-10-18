@@ -461,8 +461,10 @@ readme_documents() {
     grep -qF "$v" "$r" || { echo "README lacks $v"; m=1; }
   done
   grep -qF "sudo -u life-manager env XDG_CONFIG_HOME=/var/lib/life-manager/.config /usr/local/bin/proton account login --profile default" "$r" || { echo "README lacks the login command"; m=1; }
-  grep -qiE '^#+ .*re-?login|^re-?login' "$r" || grep -qiE -B1 '^[-=]{3,}$' "$r" | grep -qi 're-login' || grep -qiE 're-login' "$r" || { echo "README lacks a re-login section"; m=1; }
-  grep -qiE 'not (covered|backed up)|not in .?sqlite_backups|not backed up' "$r" || { echo "README lacks the not-backed-up statement"; m=1; }
+  local section
+  section=$(awk '/^#+ /{on = tolower($0) ~ /^#+ .*re-?login/; next} on' "$r")
+  [ -n "$section" ] || { echo "README lacks a re-login section"; m=1; }
+  grep -qE 'not covered by `sqlite_backups`' <<<"$section" || { echo "README's re-login section lacks the sqlite_backups statement"; m=1; }
   return "$m"
 }
 check "The README holds the variables and the login runbook" readme_documents
