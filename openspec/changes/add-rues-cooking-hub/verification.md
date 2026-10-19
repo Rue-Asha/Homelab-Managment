@@ -130,3 +130,15 @@ No gaps: every scenario has a proof line and its sensor, fixture or command ran.
 Outside the change dir: `.github/workflows/deploy.yml` (+1), `README.md` (+2), `docs/backups.md`, `docs/release-bump.md`, `ansible/inventory/host_vars/rues-cooking-hub01/vars.yml`, `ansible/playbooks/02_SERVICES/rues-cooking-hub.yml`, `ansible/roles/rues_cooking_hub/**` (17 files), `terraform/environments/homelab/hosts.auto.tfvars` (+13).
 
 Screenshots: none.
+
+## Review
+
+Fresh-context reviewer (opus, round 1, diff `origin/main...flow/add-rues-cooking-hub`): **no findings** in all four categories.
+
+- Weakened tests: none; the test-only diff (`scripts/`, `*test*`) is empty.
+- Weak tests: no new `Scenario:` tests were added; the service scenarios are `manual (one-shot …)` or `manual (post-merge)` by design (D2).
+- Spec mismatch: none; the role is a clean rename of `rues_arcade`, URLs, paths, IP and sizing match the spec.
+- Correctness: none; handler names, variables, smoke `Host` header, nginx 16m vs app 16M and the single-line pin all hold.
+- Known gap, declared in the spec (R7) and chosen by Rue as a Non-Goal: nothing guards that `sqlite_snapshot` runs before `rues_cooking_hub` in the new playbook (the sqlite fixtures hardcode the two existing hosts). Checked once by hand above.
+
+Fixer rounds: 0. Verifier deviation worth knowing: `scripts/deploy-targets.sh` range mode needs the gitignored rendered inventory, which a fresh worktree lacks; the verifier used a throwaway fixture inventory and removed it.
