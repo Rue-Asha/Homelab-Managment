@@ -19,3 +19,4 @@ check_runner_repos:
   - repo: Rue-Asha/Homelab-Managment
   - repo: Rue-Asha/Life-Manager
   - repo: Rue-Asha/Rues-Arcade
+  - repo: Rue-Asha/Rues-Cooking-Hub
