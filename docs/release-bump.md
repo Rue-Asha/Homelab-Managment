@@ -83,6 +83,14 @@ other repos can call its workflows without any access setting.
 Rotating the key: generate a new one in the App settings, update
 `HOMELAB_BUMP_APP_KEY` in each app repo, then delete the old key.
 
+## Wired-up apps
+
+| App | Variable | host_vars file |
+|---|---|---|
+| `life-manager` | `life_manager_version` | `ansible/inventory/host_vars/life-manager01/vars.yml` |
+| `rues-arcade` | `rues_arcade_version` | `ansible/inventory/host_vars/rues-arcade01/vars.yml` |
+| `rues-cooking-hub` | `rues_cooking_hub_version` | `ansible/inventory/host_vars/rues-cooking-hub01/vars.yml` |
+
 ## Repo setting
 
 Enable auto-merge on this repo (Settings > General > Pull Requests > Allow
