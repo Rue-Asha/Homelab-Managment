@@ -2,8 +2,8 @@
 
 `check01` is the shared check host: self-hosted GitHub Actions runners that run
 the PR checks of every repo that deploys to the homelab (`Homelab-Managment`,
-`Life-Manager`, `Rues-Arcade`; the list is `check_runner_repos` in
-`group_vars/check_runner`). For this repo that is `proof`
+`Life-Manager`, `Rues-Arcade`, `Rues-Cooking-Hub`; the list is
+`check_runner_repos` in `group_vars/check_runner`). For this repo that is `proof`
 (`scripts/proof.sh --all`, from `.github/workflows/ci.yml`). It is the PR-facing
 counterpart to `runner01`, the deploy runner (`docs/deploy-runner.md`), and is
 built the other way round: `runner01` holds the credentials and never sees PR
@@ -123,5 +123,5 @@ so branch protection needs no change. Revert when `check01` is back.
 - **`Homelab-Managment`:** `runs-on` of `proof` in `ci.yml` back to
   `ubuntu-24.04`, and restore the tool setup steps from before the flip
   (`git log -p -- .github/workflows/ci.yml`).
-- **`Life-Manager`, `Rues-Arcade`:** in `ci.yml`, change the caller's `runner`
+- **`Life-Manager`, `Rues-Arcade`, `Rues-Cooking-Hub`:** in `ci.yml`, change the caller's `runner`
   input from `["self-hosted","homelab-check"]` to `["ubuntu-24.04"]`.
