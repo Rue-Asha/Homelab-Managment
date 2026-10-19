@@ -73,6 +73,19 @@ lxc_hosts = {
     disk_gb = 6
   }
 
+  # Photos are stored as SQLite BLOBs and Sharp downscales each upload in
+  # memory, so it gets more RAM and disk than rues-arcade01. Configured by
+  # 02_SERVICES/rues-cooking-hub.yml.
+  "rues-cooking-hub01" = {
+    ipv4    = "192.168.0.228/24"
+    groups  = ["rues_cooking_hub"]
+    tags    = ["web", "terraform"]
+    cores   = 2
+    memory  = 4096
+    swap    = 512
+    disk_gb = 16
+  }
+
   # Tailscale subnet router for off-LAN access. Needs /dev/net/tun, which only
   # the operator playbook can pass through. Configured by
   # 01_BASE_CONFIGURATION/tailscale.yml, never by a deploy.
