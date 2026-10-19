@@ -1,0 +1,5 @@
+triage: "feature — new LXC guest, new role and playbook, live apply on merge. Appetite: one evening."
+track: feature
+live: true
+base: main
+gate0: 2026-10-19
