@@ -16,6 +16,7 @@ its own lightweight LXC, and a playbook is the only way in.
 | `nodejs` | Runtime for the SvelteKit services below |
 | `life_manager` | Deploys [Life-Manager](https://github.com/Rue-Asha/Life-Manager) |
 | `rues_arcade` | Deploys [Rues-Arcade](https://github.com/Rue-Asha/Rues-Arcade) |
+| `rues_cooking_hub` | Deploys [Rues-Cooking-Hub](https://github.com/Rue-Asha/Rues-Cooking-Hub) |
 | `common` | Base host hardening shared by every guest |
 | `guest_bootstrap` | First run on a fresh guest: `ansible` user + sudo |
 | `proxmox_lxc_tun` | `/dev/net/tun` passthrough on the node, play 1 of `01_BASE_CONFIGURATION/tailscale.yml` |
@@ -73,6 +74,7 @@ terraform -chdir=terraform/environments/homelab apply
 ansible-playbook ansible/playbooks/01_BASE_CONFIGURATION/bootstrap.yml -l life-manager01  # fresh guests only
 ansible-playbook ansible/playbooks/02_SERVICES/life-manager.yml -l life-manager01
 ansible-playbook ansible/playbooks/02_SERVICES/rues-arcade.yml -l rues-arcade01
+ansible-playbook ansible/playbooks/02_SERVICES/rues-cooking-hub.yml -l rues-cooking-hub01
 ```
 
 Normally you don't run that last line yourself: **merging to `main` deploys.**
