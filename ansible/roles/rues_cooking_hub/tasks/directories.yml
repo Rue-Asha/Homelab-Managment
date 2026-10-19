@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the release and data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ rues_cooking_hub_user }}"
+    group: "{{ rues_cooking_hub_group }}"
+    mode: "0755"
+  loop:
+    - "{{ rues_cooking_hub_base_dir }}"
+    - "{{ rues_cooking_hub_releases_dir }}"
+    - "{{ rues_cooking_hub_data_dir }}"
+
+- name: Ensure the config directory exists
+  ansible.builtin.file:
+    path: "{{ rues_cooking_hub_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ rues_cooking_hub_group }}"
+    mode: "0750"

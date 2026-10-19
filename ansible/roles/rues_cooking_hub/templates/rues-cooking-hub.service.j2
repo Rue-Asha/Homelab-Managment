@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Rues Cooking Hub web service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ rues_cooking_hub_user }}
+Group={{ rues_cooking_hub_group }}
+WorkingDirectory={{ rues_cooking_hub_current_link }}
+EnvironmentFile={{ rues_cooking_hub_env_file }}
+ExecStart={{ rues_cooking_hub_node_bin }} {{ rues_cooking_hub_current_link }}/build
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths={{ rues_cooking_hub_data_dir }}
+
+[Install]
+WantedBy=multi-user.target

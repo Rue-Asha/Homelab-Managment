@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Render the service environment file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ rues_cooking_hub_env_file }}"
+    owner: root
+    group: "{{ rues_cooking_hub_group }}"
+    mode: "0640"
+  notify: Restart rues-cooking-hub

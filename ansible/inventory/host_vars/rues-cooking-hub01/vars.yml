@@ -1,0 +1,27 @@
+---
+# --- rues_cooking_hub service (02_SERVICES) ---
+rues_cooking_hub_version: v0.1.0
+rues_cooking_hub_smoke_headers:
+  Host: "{{ nginx_server_name }}"
+
+common_timezone: Europe/Berlin
+
+# --- nginx reverse proxy in front of the service ---
+nginx_reverse_proxy_enabled: true
+nginx_backend_host: 127.0.0.1
+nginx_backend_port: "{{ rues_cooking_hub_port }}"
+nginx_service_description: "the Rues Cooking Hub web service"
+# Photos go up to 15 MB; nginx's default 10m would answer 413 before the app (BODY_SIZE_LIMIT 16M) decides.
+nginx_client_max_body_size: 16m
+
+# --- sqlite backups (roles/sqlite_snapshot, roles/sqlite_backup, 00_OPERATIONAL/sqlite_restore.yml) ---
+sqlite_backups:
+  service: rues-cooking-hub
+  unit: rues-cooking-hub.service
+  owner: rues-cooking-hub
+  group: rues-cooking-hub
+  mode: "0640"
+  release_link: /opt/rues-cooking-hub/current
+  healthz_url: http://127.0.0.1/healthz
+  databases:
+    - /var/lib/rues-cooking-hub/rues-cooking-hub.db
