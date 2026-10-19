@@ -33,6 +33,9 @@ rues_cooking_hub_node_env: production
 # plain http every form post then fails SvelteKit's origin check with a 403.
 # The nginx role sends X-Forwarded-Proto.
 rues_cooking_hub_protocol_header: x-forwarded-proto
+# adapter-node's default request body limit is 512K; recipe photos go up to 15 MB.
+# Keep this <= the host's nginx_client_max_body_size so nginx never answers 413 first.
+rues_cooking_hub_body_size_limit: 16M
 
 # --- Deploy ---
 # No migrate step: the app applies its migrations on start and exits non-zero
