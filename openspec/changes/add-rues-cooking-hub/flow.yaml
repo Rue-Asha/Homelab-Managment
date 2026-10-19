@@ -4,6 +4,7 @@ live: true
 base: main
 gate0: 2026-10-19
 gate1: 2026-10-19
+gate2: 2026-10-19
 learnings:
   - 'Explore: a scope edge saying a fixture test enforces a rule → read the test for hardcoded hosts first (weil: scope S4 claimed sqlite-snapshot.sh enforces the playbook order, it hardcodes two hosts; the planner caught it)'
   - 'Planner on a live change whose guest is created by deploy.yml → name where the plan is visible (CI runs no terraform plan; it is the plan job after merge) (weil: scope said the plan comes from CI or the PR)'
