@@ -7,3 +7,4 @@ gate1: 2026-10-19
 learnings:
   - 'Explore: a scope edge saying a fixture test enforces a rule → read the test for hardcoded hosts first (weil: scope S4 claimed sqlite-snapshot.sh enforces the playbook order, it hardcodes two hosts; the planner caught it)'
   - 'Planner on a live change whose guest is created by deploy.yml → name where the plan is visible (CI runs no terraform plan; it is the plan job after merge) (weil: scope said the plan comes from CI or the PR)'
+  - 'Builders/verifiers in a worktree of this repo → export ANSIBLE_CONFIG=$PWD/ansible/ansible.cfg before commit and proof; verifiers needing deploy-targets range mode create a throwaway ansible/inventory/00-terraform.yml and remove it (weil: direnv points ANSIBLE_CONFIG at the primary checkout, so the commit hook syntax-check could not find the new role; a fresh worktree has no rendered inventory)'
