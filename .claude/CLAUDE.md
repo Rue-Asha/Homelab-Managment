@@ -198,6 +198,7 @@ Terraform (anything under `terraform/`):
 - Before changing sqlite-backups, read openspec/specs/sqlite-backups/spec.md.
 - Before changing tailscale-subnet-router, read openspec/specs/tailscale-subnet-router/spec.md.
 - Before changing life-manager-proton, read openspec/specs/life-manager-proton/spec.md.
+- Before changing rues-cooking-hub, read openspec/specs/rues-cooking-hub/spec.md.
 
 ---
 
@@ -214,6 +215,7 @@ Terraform (anything under `terraform/`):
 - **Fixture stubs for external commands (`pct`, `systemctl`, `curl`)** → succeed by default, a test opts into failure; a scenario test must show it reached the step its THEN is about. (weil: a `pct` stub failed every push, so a restore scenario never reached the health check and stayed green with the push task deleted) [2026-10-11 · sqlite-backups]
 - **`ansible --check` on script-driven roles** → don't count it as proof; it skips `command`/`shell` tasks. Put the real proof in offline fixture tests (`scripts/tests/*.sh`) and say at Gate 1 that live behaviour is proven only after merge. (weil: a `--check` dry run on live hosts proved almost nothing) [2026-10-11 · sqlite-backups]
 - **`proof.sh --all`** → `git add` a new playbook/role/script before the run, and run `scripts/tests/*.sh` directly to map scenarios to tests. (weil: it lints only tracked files, so an untracked playbook passed unchecked, and it prints only `PASS: <sensor>`, hiding per-scenario lines) [2026-10-11 · sqlite-backups]
+- **Builders/verifiers in a worktree of this repo** → `export ANSIBLE_CONFIG=$PWD/ansible/ansible.cfg` before commit and proof; a verifier needing deploy-targets range mode creates a throwaway `ansible/inventory/00-terraform.yml` and removes it afterwards. (weil: direnv points ANSIBLE_CONFIG at the primary checkout, so the commit hook's syntax-check could not find the new role; a fresh worktree has no rendered inventory) [2026-10-19 · add-rues-cooking-hub]
 
 ---
 

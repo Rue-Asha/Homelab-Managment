@@ -5,12 +5,17 @@ TBD - created by archiving change sqlite-backups. Update Purpose after archive.
 ## Requirements
 ### Requirement: One registry entry per service host drives every backup step
 
-Each service host whose service keeps a SQLite database SHALL declare one inventory variable, `sqlite_backups`, holding its database path(s), systemd unit and owner, and this variable SHALL be the single source the guest-side role, the node-side role and the restore playbook read. Life-Manager (`life-manager01`) and Rues-Arcade (`rues-arcade01`) SHALL be registered. A host without the variable SHALL be ignored by both roles. A host that has the variable but no `lxc_ctid` SHALL make the node playbook fail with a message naming that host.
+Each service host whose service keeps a SQLite database SHALL declare one inventory variable, `sqlite_backups`, holding its database path(s), systemd unit and owner, and this variable SHALL be the single source the guest-side role, the node-side role and the restore playbook read. Life-Manager (`life-manager01`), Rues-Arcade (`rues-arcade01`) and Rues-Cooking-Hub (`rues-cooking-hub01`) SHALL be registered. A host without the variable SHALL be ignored by both roles. A host that has the variable but no `lxc_ctid` SHALL make the node playbook fail with a message naming that host.
 
 #### Scenario: Life-Manager and Rues-Arcade are registered
 - **WHEN** `host_vars/life-manager01/vars.yml` and `host_vars/rues-arcade01/vars.yml` are read
 - **THEN** each defines `sqlite_backups` with unit, owner and the literal database path `/var/lib/life-manager/life-manager.db` resp. `/var/lib/rues-arcade/rues-arcade.db`
 - **proof:** unit
+
+#### Scenario: Rues-Cooking-Hub is registered
+- **WHEN** `host_vars/rues-cooking-hub01/vars.yml` is read
+- **THEN** it defines `sqlite_backups` with unit `rues-cooking-hub.service`, owner `rues-cooking-hub` and the literal database path `/var/lib/rues-cooking-hub/rues-cooking-hub.db`
+- **proof:** manual (one-shot python check recorded in `verification.md`; Rue chose not to extend the hardcoded hosts in `scripts/tests/sqlite-snapshot.sh`)
 
 #### Scenario: Guest role skips a host without a registry entry
 - **WHEN** `sqlite_snapshot` is applied to a host that has no `sqlite_backups`
@@ -50,6 +55,11 @@ The guest-side role `sqlite_snapshot` SHALL install the `sqlite3` CLI and, on ev
 - **WHEN** `02_SERVICES/life-manager.yml` and `02_SERVICES/rues-arcade.yml` are read
 - **THEN** each lists `sqlite_snapshot` before its service role (`life_manager` resp. `rues_arcade`)
 - **proof:** unit
+
+#### Scenario: The Rues-Cooking-Hub playbook runs the snapshot role before its service role
+- **WHEN** `02_SERVICES/rues-cooking-hub.yml` is read
+- **THEN** it lists `sqlite_snapshot` before `rues_cooking_hub`
+- **proof:** manual (one-shot python check recorded in `verification.md`; Rue chose not to extend the hardcoded playbooks in `scripts/tests/sqlite-snapshot.sh`)
 
 #### Scenario: First deploy without a database
 - **WHEN** `sqlite-snapshot pre-deploy` runs and the registered database file does not exist yet
