@@ -1,0 +1,11 @@
+---
+- name: Deploy the Rues Cooking Hub web service
+  hosts: rues_cooking_hub
+  become: true
+  gather_facts: true
+  roles:
+    - common        # base host config (02 layer)
+    - nodejs        # Node.js runtime
+    - nginx         # reverse proxy (:80 -> 127.0.0.1:{{ rues_cooking_hub_port }})
+    - sqlite_snapshot  # pre-deploy database snapshot; a failure stops the play before the release changes
+    - rues_cooking_hub   # service: fetch release, systemd unit, smoke check through nginx
