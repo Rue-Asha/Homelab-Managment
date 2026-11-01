@@ -94,6 +94,11 @@ fail without rolling back. The check SHALL also run on manual playbook runs.
 - **WHEN** the playbook runs with the release already active
 - **THEN** the smoke check still runs and no rollback is attempted on success
 
+#### Scenario: A rerun after a failed run still serves the new nginx config
+- **WHEN** an earlier run wrote the nginx configuration and failed before the end of the play, and the playbook runs again with every nginx task `ok`
+- **THEN** the `nginx` role reloads nginx before any later role runs, so the smoke check reaches the service and not nginx's default site
+- **proof:** unit ("Regression: nginx is reloaded before later roles run")
+
 ### Requirement: Deploy logs are safe to publish
 
 The deploy SHALL NOT run Ansible with `--diff` or with verbosity above the
