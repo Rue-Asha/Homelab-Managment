@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Creative Archive web service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ creative_archive_user }}
+Group={{ creative_archive_group }}
+WorkingDirectory={{ creative_archive_current_link }}
+EnvironmentFile={{ creative_archive_env_file }}
+ExecStart={{ creative_archive_node_bin }} {{ creative_archive_current_link }}/build
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths={{ creative_archive_data_dir }}
+
+[Install]
+WantedBy=multi-user.target

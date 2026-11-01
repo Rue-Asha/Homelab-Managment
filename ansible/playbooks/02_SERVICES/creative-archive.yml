@@ -1,0 +1,11 @@
+---
+- name: Deploy the Creative Archive web service
+  hosts: creative_archive
+  become: true
+  gather_facts: true
+  roles:
+    - common        # base host config (02 layer)
+    - nodejs        # Node.js runtime
+    - nginx         # reverse proxy (:80 -> 127.0.0.1:{{ creative_archive_port }})
+    - sqlite_snapshot  # pre-deploy database snapshot; a failure stops the play before the release changes
+    - creative_archive   # service: fetch release, systemd unit, smoke check through nginx

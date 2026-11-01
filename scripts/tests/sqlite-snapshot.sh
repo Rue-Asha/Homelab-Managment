@@ -305,6 +305,32 @@ for pb, role in (("life-manager", "life_manager"), ("rues-arcade", "rues_arcade"
 PY
 )
 
+# host_registered <host> <service>
+t_host_registered() (
+  python3 - "$1" "$2" <<'PY'
+import sys, yaml
+host, svc = sys.argv[1:]
+reg = yaml.safe_load(open(f"ansible/inventory/host_vars/{host}/vars.yml")).get("sqlite_backups")
+if not reg:
+    sys.exit(f"{host}: no sqlite_backups")
+if reg.get("unit") != f"{svc}.service" or reg.get("owner") != svc:
+    sys.exit(f"{host}: unit {reg.get('unit')}, owner {reg.get('owner')}")
+if reg.get("databases") != [f"/var/lib/{svc}/{svc}.db"]:
+    sys.exit(f"{host}: databases {reg.get('databases')}")
+PY
+)
+
+# playbook_order <playbook> <role>
+t_playbook_runs_snapshot_first() (
+  python3 - "$1" "$2" <<'PY'
+import sys, yaml
+pb, role = sys.argv[1:]
+roles = [r if isinstance(r, str) else r.get("role") for r in yaml.safe_load(open(f"ansible/playbooks/02_SERVICES/{pb}.yml"))[0]["roles"]]
+if "sqlite_snapshot" not in roles or roles.index("sqlite_snapshot") > roles.index(role):
+    sys.exit(f"{pb}: sqlite_snapshot not before {role}: {roles}")
+PY
+)
+
 check "Pre-deploy snapshot is written" t_pre_deploy_written
 check "First deploy without a database" t_first_deploy
 check "Failed snapshot fails the run" t_failed_snapshot
@@ -321,5 +347,9 @@ check "Guest role skips a host without a registry entry" t_role_skips
 check "Role rejects a database path without .db suffix" t_role_requires_db_suffix
 check "Life-Manager and Rues-Arcade are registered" t_registered
 check "Service playbooks run the snapshot role before the service role" t_playbook_order
+check "Rues-Cooking-Hub is registered" t_host_registered rues-cooking-hub01 rues-cooking-hub
+check "Creative-Archive is registered" t_host_registered creative-archive01 creative-archive
+check "The Rues-Cooking-Hub playbook runs the snapshot role before its service role" t_playbook_runs_snapshot_first rues-cooking-hub rues_cooking_hub
+check "The Creative-Archive playbook runs the snapshot role before its service role" t_playbook_runs_snapshot_first creative-archive creative_archive
 
 exit "$failed"

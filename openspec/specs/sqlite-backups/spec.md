@@ -5,7 +5,7 @@ TBD - created by archiving change sqlite-backups. Update Purpose after archive.
 ## Requirements
 ### Requirement: One registry entry per service host drives every backup step
 
-Each service host whose service keeps a SQLite database SHALL declare one inventory variable, `sqlite_backups`, holding its database path(s), systemd unit and owner, and this variable SHALL be the single source the guest-side role, the node-side role and the restore playbook read. Life-Manager (`life-manager01`), Rues-Arcade (`rues-arcade01`) and Rues-Cooking-Hub (`rues-cooking-hub01`) SHALL be registered. A host without the variable SHALL be ignored by both roles. A host that has the variable but no `lxc_ctid` SHALL make the node playbook fail with a message naming that host.
+Each service host whose service keeps a SQLite database SHALL declare one inventory variable, `sqlite_backups`, holding its database path(s), systemd unit and owner, and this variable SHALL be the single source the guest-side role, the node-side role and the restore playbook read. Life-Manager (`life-manager01`), Rues-Arcade (`rues-arcade01`), Rues-Cooking-Hub (`rues-cooking-hub01`) and Creative-Archive (`creative-archive01`) SHALL be registered, and `scripts/tests/sqlite-snapshot.sh` SHALL check each of their registry entries. A host without the variable SHALL be ignored by both roles. A host that has the variable but no `lxc_ctid` SHALL make the node playbook fail with a message naming that host.
 
 #### Scenario: Life-Manager and Rues-Arcade are registered
 - **WHEN** `host_vars/life-manager01/vars.yml` and `host_vars/rues-arcade01/vars.yml` are read
@@ -15,7 +15,12 @@ Each service host whose service keeps a SQLite database SHALL declare one invent
 #### Scenario: Rues-Cooking-Hub is registered
 - **WHEN** `host_vars/rues-cooking-hub01/vars.yml` is read
 - **THEN** it defines `sqlite_backups` with unit `rues-cooking-hub.service`, owner `rues-cooking-hub` and the literal database path `/var/lib/rues-cooking-hub/rues-cooking-hub.db`
-- **proof:** manual (one-shot python check recorded in `verification.md`; Rue chose not to extend the hardcoded hosts in `scripts/tests/sqlite-snapshot.sh`)
+- **proof:** unit ("Scenario: Rues-Cooking-Hub is registered" in `scripts/tests/sqlite-snapshot.sh`)
+
+#### Scenario: Creative-Archive is registered
+- **WHEN** `host_vars/creative-archive01/vars.yml` is read
+- **THEN** it defines `sqlite_backups` with unit `creative-archive.service`, owner `creative-archive` and the literal database path `/var/lib/creative-archive/creative-archive.db`; while the file is missing the check fails naming that path
+- **proof:** unit ("Scenario: Creative-Archive is registered" in `scripts/tests/sqlite-snapshot.sh`, red before the host_vars file exists)
 
 #### Scenario: Guest role skips a host without a registry entry
 - **WHEN** `sqlite_snapshot` is applied to a host that has no `sqlite_backups`
@@ -44,7 +49,7 @@ Each service host whose service keeps a SQLite database SHALL declare one invent
 
 ### Requirement: Service playbooks snapshot the database before the service role runs
 
-The guest-side role `sqlite_snapshot` SHALL install the `sqlite3` CLI and, on every run of a service playbook, SHALL write a consistent `sqlite3 .backup` (WAL-safe) snapshot of each registered database to a pre-deploy directory on the guest before the service role runs, keeping the newest 10 per database. If a snapshot fails the play SHALL fail before the release changes. A database that does not exist yet SHALL be skipped with a message.
+The guest-side role `sqlite_snapshot` SHALL install the `sqlite3` CLI and, on every run of a service playbook, SHALL write a consistent `sqlite3 .backup` (WAL-safe) snapshot of each registered database to a pre-deploy directory on the guest before the service role runs, keeping the newest 10 per database. If a snapshot fails the play SHALL fail before the release changes. A database that does not exist yet SHALL be skipped with a message. `scripts/tests/sqlite-snapshot.sh` SHALL check the role order of the Life-Manager, Rues-Arcade, Rues-Cooking-Hub and Creative-Archive playbooks.
 
 #### Scenario: Pre-deploy snapshot is written
 - **WHEN** `sqlite-snapshot pre-deploy` runs on a guest whose registered database exists
@@ -59,7 +64,12 @@ The guest-side role `sqlite_snapshot` SHALL install the `sqlite3` CLI and, on ev
 #### Scenario: The Rues-Cooking-Hub playbook runs the snapshot role before its service role
 - **WHEN** `02_SERVICES/rues-cooking-hub.yml` is read
 - **THEN** it lists `sqlite_snapshot` before `rues_cooking_hub`
-- **proof:** manual (one-shot python check recorded in `verification.md`; Rue chose not to extend the hardcoded playbooks in `scripts/tests/sqlite-snapshot.sh`)
+- **proof:** unit ("Scenario: The Rues-Cooking-Hub playbook runs the snapshot role before its service role" in `scripts/tests/sqlite-snapshot.sh`)
+
+#### Scenario: The Creative-Archive playbook runs the snapshot role before its service role
+- **WHEN** `02_SERVICES/creative-archive.yml` is read
+- **THEN** it lists `sqlite_snapshot` before `creative_archive`; while the playbook is missing the check fails naming it
+- **proof:** unit ("Scenario: The Creative-Archive playbook runs the snapshot role before its service role" in `scripts/tests/sqlite-snapshot.sh`, red before the playbook exists)
 
 #### Scenario: First deploy without a database
 - **WHEN** `sqlite-snapshot pre-deploy` runs and the registered database file does not exist yet
@@ -332,4 +342,18 @@ Each new role SHALL have a README. `docs/backups.md` SHALL describe what is back
 - **WHEN** `scripts/proof.sh --all` runs
 - **THEN** its output contains `PASS: sqlite-snapshot fixtures` and `PASS: sqlite-backup fixtures`, or the matching `INVARIANT_VIOLATION` code with the failing scenarios
 - **proof:** unit
+
+### Requirement: The Creative-Archive database joins the nightly backup
+
+After the first rollout's manual `00_OPERATIONAL/sqlite_backup.yml` run, the nightly node job on proxmox1 SHALL collect `creative-archive01`'s database like every other registered guest, and `docs/backups.md` SHALL name Creative-Archive among the backed-up apps.
+
+#### Scenario: docs/backups.md names Creative-Archive
+- **WHEN** `rg -n 'Creative-Archive' docs/backups.md` runs
+- **THEN** the intro names Creative-Archive next to Life-Manager, Rues-Arcade and Rues-Cooking-Hub
+- **proof:** manual (one-shot command recorded in `verification.md`; prose read at Gate 2)
+
+#### Scenario: The Creative-Archive database joins the nightly backup
+- **WHEN** after the first deploy Rue runs `scripts/fetch-inventory.sh` and `00_OPERATIONAL/sqlite_backup.yml` from the workstation
+- **THEN** the next nightly run on proxmox1 logs `creative-archive01: ok` and `/var/backups/homelab/creative-archive01/daily/` holds a `creative-archive-<stamp>.db` with its `.meta`
+- **proof:** manual (post-merge; needs proxmox1 and the live guest)
 

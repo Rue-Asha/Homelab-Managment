@@ -33,6 +33,7 @@ on:
           - life-manager
           - rues-arcade
           - rues-cooking-hub
+          - creative-archive
       terraform:
         description: Plan and apply Terraform even if the diff does not touch terraform/
         type: boolean

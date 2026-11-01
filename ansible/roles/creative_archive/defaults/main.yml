@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: MIT-0
+---
+# --- Service identity ---
+creative_archive_user: creative-archive
+creative_archive_group: creative-archive
+creative_archive_service_name: creative-archive
+
+# --- Source: the app repo's CI-built release tarball; the tag is the "image tag" ---
+# The repo is public, so there is no deploy key. Assets are
+# named without the tag's leading `v`.
+creative_archive_releases_url: https://github.com/Rue-Asha/Creative-Archive/releases/download
+creative_archive_version: v0.1.0              # release tag to deploy
+creative_archive_artifact: "creative-archive-{{ creative_archive_version | regex_replace('^v', '') }}.tgz"
+creative_archive_artifact_url: "{{ creative_archive_releases_url }}/{{ creative_archive_version }}/{{ creative_archive_artifact }}"
+
+# --- On-host layout (see docs/party-games-webservice-architecture.md) ---
+creative_archive_base_dir: /opt/creative-archive
+creative_archive_releases_dir: "{{ creative_archive_base_dir }}/releases"
+creative_archive_current_link: "{{ creative_archive_base_dir }}/current"
+creative_archive_data_dir: /var/lib/creative-archive
+creative_archive_config_dir: /etc/creative-archive
+creative_archive_db_path: "{{ creative_archive_data_dir }}/creative-archive.db"
+creative_archive_env_file: "{{ creative_archive_config_dir }}/env"
+
+# --- Runtime ---
+creative_archive_node_bin: /usr/bin/node
+# Bind address for the adapter-node server. Keep on loopback so the backend is
+# reachable only through the nginx reverse proxy, never directly on the LAN.
+creative_archive_host: 127.0.0.1
+creative_archive_port: 3000
+creative_archive_node_env: production
+# adapter-node assumes https unless told where the original protocol is; over
+# plain http every form post then fails SvelteKit's origin check with a 403.
+# The nginx role sends X-Forwarded-Proto.
+creative_archive_protocol_header: x-forwarded-proto
+# adapter-node's default request body limit is 512K; photo uploads go up to 16 MB.
+# Keep this below the host's nginx_client_max_body_size (18m) so nginx never answers 413 first.
+creative_archive_body_size_limit: 17M
+
+# --- Deploy ---
+# No migrate step: the app applies its migrations on start and exits non-zero
+# if one fails, so a bad migration surfaces as a failed restart.
+creative_archive_keep_releases: 5
+
+# --- Smoke check (tasks/verify.yml) ---
+# Requested through nginx on the host, so proxy and app are checked together.
+# /healthz answers 200 once the app has opened its database.
+creative_archive_smoke_url: http://127.0.0.1/healthz
+# The vhost matches on server_name; without a matching Host the request lands
+# on nginx's default site instead of the app.
+creative_archive_smoke_headers: {}
+# Start-up migrations must finish inside retries x delay seconds.
+creative_archive_smoke_retries: 10
+creative_archive_smoke_delay: 3
