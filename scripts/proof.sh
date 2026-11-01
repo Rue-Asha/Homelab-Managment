@@ -42,6 +42,7 @@ sqlite_snapshot=0
 sqlite_backup=0
 tailscale=0
 life_manager_proton=0
+nginx_reload=0
 for f in "${files[@]}"; do
   case "$f" in
     *.tfstate|*.tfstate.*) tfstate+=("$f") ;;
@@ -60,6 +61,9 @@ for f in "${files[@]}"; do
   esac
   case "$f" in
     ansible/roles/life_manager/*|ansible/inventory/host_vars/life-manager01/*|scripts/tests/life-manager-proton.sh) life_manager_proton=1 ;;
+  esac
+  case "$f" in
+    ansible/roles/nginx/*|scripts/tests/nginx-reload.sh) nginx_reload=1 ;;
   esac
   case "$f" in
     terraform/*) tf_changed=1 ;;
@@ -167,6 +171,10 @@ fi
 
 if [ "$life_manager_proton" -eq 1 ]; then
   sensor "life-manager-proton fixtures" LIFE_MANAGER_PROTON_FIXTURES_FAILED scripts/tests/life-manager-proton.sh
+fi
+
+if [ "$nginx_reload" -eq 1 ]; then
+  sensor "nginx-reload fixtures" NGINX_RELOAD_FIXTURES_FAILED scripts/tests/nginx-reload.sh
 fi
 
 # The check runner runs PR code, so no deploy credential may be wired into it.

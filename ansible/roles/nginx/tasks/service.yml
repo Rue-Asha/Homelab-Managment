@@ -5,3 +5,11 @@
     name: "{{ nginx_service_name }}"
     enabled: true
     state: started
+
+# Not a handler: a play that fails after the config is written never runs its handlers, and the
+# rerun then sees every task ok and would leave nginx serving the config loaded at install.
+- name: Reload nginx to load the current configuration
+  ansible.builtin.systemd:
+    name: "{{ nginx_service_name }}"
+    state: reloaded
+  changed_when: false

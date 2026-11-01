@@ -8,7 +8,6 @@
     group: root
     mode: "0644"
     validate: nginx -t -c %s
-  notify: Reload nginx
 
 - name: Deploy reverse-proxy vhost
   ansible.builtin.template:
@@ -18,7 +17,6 @@
     group: root
     mode: "0644"
   when: nginx_reverse_proxy_enabled | bool
-  notify: Reload nginx
 
 - name: Enable reverse-proxy vhost
   ansible.builtin.file:
@@ -26,14 +24,12 @@
     dest: "/etc/nginx/sites-enabled/{{ nginx_vhost_filename }}"
     state: link
   when: nginx_reverse_proxy_enabled | bool
-  notify: Reload nginx
 
 - name: Remove default site
   ansible.builtin.file:
     path: /etc/nginx/sites-enabled/default
     state: absent
   when: nginx_remove_default_site | bool
-  notify: Reload nginx
 
 - name: Validate full nginx configuration
   ansible.builtin.command: nginx -t
