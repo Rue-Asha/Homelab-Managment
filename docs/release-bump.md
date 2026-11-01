@@ -90,6 +90,7 @@ Rotating the key: generate a new one in the App settings, update
 | `life-manager` | `life_manager_version` | `ansible/inventory/host_vars/life-manager01/vars.yml` |
 | `rues-arcade` | `rues_arcade_version` | `ansible/inventory/host_vars/rues-arcade01/vars.yml` |
 | `rues-cooking-hub` | `rues_cooking_hub_version` | `ansible/inventory/host_vars/rues-cooking-hub01/vars.yml` |
+| `creative-archive` | `creative_archive_version` | `ansible/inventory/host_vars/creative-archive01/vars.yml` |
 
 ## Repo setting
 

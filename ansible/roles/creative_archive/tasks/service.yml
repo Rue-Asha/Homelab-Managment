@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Install the systemd unit for the service
+  ansible.builtin.template:
+    src: creative-archive.service.j2
+    dest: "/etc/systemd/system/{{ creative_archive_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart creative-archive
+
+- name: Ensure the service is enabled and running
+  ansible.builtin.systemd:
+    name: "{{ creative_archive_service_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true

@@ -1,0 +1,8 @@
+triage: "tweak — new guest cloned from the existing cooking-hub pattern, live apply on merge. Appetite: one evening."
+track: tweak
+live: true
+base: main
+gate1: 2026-11-01
+gate2: 2026-11-01
+learnings:
+  - 'Planner on a tweak with an evidence-only task (no commit) → say in tasks.md who ticks its box (weil: task 1.8 stayed unticked after the builder reported done and the reviewer flagged it)'

@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the release and data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ creative_archive_user }}"
+    group: "{{ creative_archive_group }}"
+    mode: "0755"
+  loop:
+    - "{{ creative_archive_base_dir }}"
+    - "{{ creative_archive_releases_dir }}"
+    - "{{ creative_archive_data_dir }}"
+
+- name: Ensure the config directory exists
+  ansible.builtin.file:
+    path: "{{ creative_archive_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ creative_archive_group }}"
+    mode: "0750"

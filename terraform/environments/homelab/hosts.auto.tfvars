@@ -86,6 +86,18 @@ lxc_hosts = {
     disk_gb = 16
   }
 
+  # Sized like rues-cooking-hub01: Sharp plus WebP BLOBs in SQLite. Configured
+  # by 02_SERVICES/creative-archive.yml.
+  "creative-archive01" = {
+    ipv4    = "192.168.0.229/24"
+    groups  = ["creative_archive"]
+    tags    = ["web", "terraform"]
+    cores   = 2
+    memory  = 4096
+    swap    = 512
+    disk_gb = 16
+  }
+
   # Tailscale subnet router for off-LAN access. Needs /dev/net/tun, which only
   # the operator playbook can pass through. Configured by
   # 01_BASE_CONFIGURATION/tailscale.yml, never by a deploy.

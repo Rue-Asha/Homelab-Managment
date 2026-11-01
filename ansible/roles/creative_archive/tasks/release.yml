@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Atomic go-live: repoint `current` at the freshly built release in a single
+# symlink swap. Rollback = repoint `current` at a previous release.
+- name: Read the release that is active before this run
+  ansible.builtin.stat:
+    path: "{{ creative_archive_current_link }}"
+  register: creative_archive_previous_link
+
+# verify.yml rolls back to this if the new release fails its smoke check.
+- name: Remember the release that is active before this run
+  ansible.builtin.set_fact:
+    creative_archive_previous_release: "{{ creative_archive_previous_link['stat']['lnk_target'] | default('', true) }}"
+
+- name: Activate the new release
+  ansible.builtin.file:
+    src: "{{ creative_archive_release_dir }}"
+    dest: "{{ creative_archive_current_link }}"
+    state: link
+    owner: "{{ creative_archive_user }}"
+    group: "{{ creative_archive_group }}"
+    force: true
+  when: creative_archive_redeploy | bool
+  notify: Restart creative-archive
