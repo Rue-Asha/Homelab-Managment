@@ -1,6 +1,6 @@
 ---
 # --- creative_archive service (02_SERVICES) ---
-creative_archive_version: v0.1.0
+creative_archive_version: v0.1.1
 creative_archive_smoke_headers:
   Host: "{{ nginx_server_name }}"
 
