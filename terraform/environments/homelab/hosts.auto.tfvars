@@ -101,7 +101,7 @@ lxc_hosts = {
   # Sized like creative-archive01: Sharp plus images as BLOBs in SQLite.
   # Configured by 02_SERVICES/notes-archive.yml.
   "notes-archive01" = {
-    ipv4    = "192.168.0.231/24"
+    ipv4    = "192.168.0.232/24"
     groups  = ["notes_archive"]
     tags    = ["web", "terraform"]
     cores   = 2
@@ -130,8 +130,8 @@ lxc_hosts = {
 #
 # vm_hosts = {
 #   retropie01 = {
-#     # 192.168.0.231 now belongs to notes-archive01; pick a new address when
-#     # retropie01 returns.
+#     # 192.168.0.231 is answered by an unknown LAN device (it forced notes-archive01
+#     # onto .232); pick a new address when retropie01 returns.
 #     ipv4       = "192.168.0.231/24"
 #     groups     = ["retropie"]
 #     clone_vmid = 1001   # debian-12-template (1000 = debian-13-template)

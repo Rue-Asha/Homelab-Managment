@@ -5,11 +5,11 @@ TBD - created by archiving change notes-archive-deploy. Update Purpose after arc
 ## Requirements
 ### Requirement: notes-archive01 is declared in Terraform
 
-`terraform/environments/homelab/hosts.auto.tfvars` SHALL declare `notes-archive01` in `lxc_hosts` with the literal IPv4 `192.168.0.231/24`, `groups = ["notes_archive"]`, `tags = ["web", "terraform"]`, 2 cores, 4096 MB memory, 512 MB swap, 16 GB disk, a comment stating its sizing reason and the playbook that configures it, and no `vmid`, so Proxmox assigns the container ID. The commented-out `retropie01` block SHALL say that `.231` moved to `notes-archive01` and that retropie01 must pick a new address when revived, and SHALL no longer carry the stale `vmid = 231` line (an IP-derived ID). Applying the change SHALL create exactly one new container and change no existing guest. The generated `ansible/inventory/00-terraform.yml` SHALL NOT be edited by hand.
+`terraform/environments/homelab/hosts.auto.tfvars` SHALL declare `notes-archive01` in `lxc_hosts` with the literal IPv4 `192.168.0.232/24`, `groups = ["notes_archive"]`, `tags = ["web", "terraform"]`, 2 cores, 4096 MB memory, 512 MB swap, 16 GB disk, a comment stating its sizing reason and the playbook that configures it, and no `vmid`, so Proxmox assigns the container ID. The commented-out `retropie01` block SHALL say that `.231` moved to `notes-archive01` and that retropie01 must pick a new address when revived, and SHALL no longer carry the stale `vmid = 231` line (an IP-derived ID). Applying the change SHALL create exactly one new container and change no existing guest. The generated `ansible/inventory/00-terraform.yml` SHALL NOT be edited by hand.
 
 #### Scenario: notes-archive01 is declared with the agreed identity
 - **WHEN** the `notes-archive01` entry in `hosts.auto.tfvars` is read
-- **THEN** it opens on a `"notes-archive01" = {` line and has `ipv4 = "192.168.0.231/24"`, `groups = ["notes_archive"]`, `tags = ["web", "terraform"]`, `cores = 2`, `memory = 4096`, `swap = 512`, `disk_gb = 16`, a comment above it naming the sizing reason and `02_SERVICES/notes-archive.yml`, and no `vmid`
+- **THEN** it opens on a `"notes-archive01" = {` line and has `ipv4 = "192.168.0.232/24"`, `groups = ["notes_archive"]`, `tags = ["web", "terraform"]`, `cores = 2`, `memory = 4096`, `swap = 512`, `disk_gb = 16`, a comment above it naming the sizing reason and `02_SERVICES/notes-archive.yml`, and no `vmid`
 - **proof:** manual (diff review of `terraform/`; no sensor distinguishes the agreed literals from other valid values)
 
 #### Scenario: Terraform sensors stay green with the new guest
@@ -18,7 +18,7 @@ TBD - created by archiving change notes-archive-deploy. Update Purpose after arc
 - **proof:** unit (`scripts/proof.sh --all`: `PASS: terraform fmt`, `PASS: terraform validate`, `PASS: tflint`, `PASS: checkov`, `PASS: Regression: arcade shares IP with check container`)
 
 #### Scenario: The address does not collide
-- **WHEN** another `lxc_hosts` entry declares `192.168.0.231`
+- **WHEN** another `lxc_hosts` entry declares `192.168.0.232`
 - **THEN** `scripts/proof.sh` fails with `DUPLICATE_HOST_ADDRESS`; with the entries on the branch (`.223`–`.231`) it passes, the `.231` inside the retropie01 comment is not counted because `unique-hosts.py` skips comment lines, and a duplicate hostname is impossible because `lxc_hosts` is a map keyed by hostname
 - **proof:** unit (existing fixture "duplicate ipv4 without vmids" in `scripts/tests/unique-hosts.sh`; `PASS: Regression: arcade shares IP with check container` on the branch)
 
@@ -39,7 +39,7 @@ TBD - created by archiving change notes-archive-deploy. Update Purpose after arc
 
 #### Scenario: notes-archive01 chains to proxmox_guest
 - **WHEN** after the apply Rue runs `scripts/fetch-inventory.sh` and `ansible-inventory --graph`
-- **THEN** `notes-archive01` appears under `notes_archive` → `lxc_container_proxmox` → `proxmox_guest` with `ansible_host` `192.168.0.231` and an `lxc_ctid`
+- **THEN** `notes-archive01` appears under `notes_archive` → `lxc_container_proxmox` → `proxmox_guest` with `ansible_host` `192.168.0.232` and an `lxc_ctid`
 - **proof:** manual (post-merge; the inventory is rendered from runner state)
 
 ### Requirement: notes-archive01 host vars pin the release and register the database
@@ -142,7 +142,7 @@ TBD - created by archiving change notes-archive-deploy. Update Purpose after arc
 
 #### Scenario: The first deploy comes up healthy
 - **WHEN** the playbook runs for a published `v0.1.0` (post-merge deploy or the manual dispatch of runbook step 7)
-- **THEN** `http://192.168.0.231/healthz` answers 200, `/opt/notes-archive/current/.deployed_version` reads `v0.1.0`, and `notes-archive.service` is active
+- **THEN** `http://192.168.0.232/healthz` answers 200, `/opt/notes-archive/current/.deployed_version` reads `v0.1.0`, and `notes-archive.service` is active
 - **proof:** manual (post-merge; needs the live guest and the published `v0.1.0` release)
 
 ### Requirement: Uploads up to 16 MiB pass nginx and the app
@@ -160,7 +160,7 @@ The role default `notes_archive_body_size_limit` SHALL be `17M` and SHALL be ren
 - **proof:** manual (diff review of `tasks/config.yml` and `handlers/main.yml`; live restart is post-merge)
 
 #### Scenario: A 16 MiB image uploads
-- **WHEN** after the first healthy deploy Rue uploads an image of about 16 MiB through `http://192.168.0.231`
+- **WHEN** after the first healthy deploy Rue uploads an image of about 16 MiB through `http://192.168.0.232`
 - **THEN** the upload succeeds; neither nginx (413) nor the app rejects it
 - **proof:** manual (post-merge; needs the live service and a browser)
 
@@ -247,7 +247,7 @@ The role default `notes_archive_body_size_limit` SHALL be `17M` and SHALL be ren
 
 ### Requirement: The first rollout is a documented runbook, not a task
 
-`ansible/roles/notes_archive/README.md` SHALL carry a "First rollout" section with the ten steps of `proposal.md` → "First rollout" in that order: host-key check on `runner01` for `192.168.0.231`; the visibility and tag gate (the repo MUST be public before the first tag, checked by anonymous `curl` of the `v0.1.0` assets); merge; read the `plan` job log of `deploy.yml` (one create, nothing else) and approve `infrastructure`; the deploy job runs `02_SERVICES/notes-archive.yml` once (healthy with the tag, failing at fetch without it); `scripts/fetch-inventory.sh` and `ansible-inventory --graph`; the manual dispatch once a late tag exists; `sqlite_backup.yml --check` then without `--check`, only after a healthy deploy; the next nightly run logs `notes-archive01: ok`; check-runner registration with its two preconditions. Each live step SHALL be marked ⚠, each step SHALL name the spec scenario it answers, the section SHALL name the `plan` job as the only place the terraform plan appears, and it SHALL state that the app has no auth and the guest is reachable only on `http://192.168.0.231` in the LAN and through the tailscale subnet router. The README's Requirements SHALL name a public `Rue-Asha/Notes-Archive` as a precondition and say a private repo makes every deploy fail at fetch, since no token auth is added. `tasks.md` SHALL contain none of these steps.
+`ansible/roles/notes_archive/README.md` SHALL carry a "First rollout" section with the ten steps of `proposal.md` → "First rollout" in that order: host-key check on `runner01` for `192.168.0.232`; the visibility and tag gate (the repo MUST be public before the first tag, checked by anonymous `curl` of the `v0.1.0` assets); merge; read the `plan` job log of `deploy.yml` (one create, nothing else) and approve `infrastructure`; the deploy job runs `02_SERVICES/notes-archive.yml` once (healthy with the tag, failing at fetch without it); `scripts/fetch-inventory.sh` and `ansible-inventory --graph`; the manual dispatch once a late tag exists; `sqlite_backup.yml --check` then without `--check`, only after a healthy deploy; the next nightly run logs `notes-archive01: ok`; check-runner registration with its two preconditions. Each live step SHALL be marked ⚠, each step SHALL name the spec scenario it answers, the section SHALL name the `plan` job as the only place the terraform plan appears, and it SHALL state that the app has no auth and the guest is reachable only on `http://192.168.0.232` in the LAN and through the tailscale subnet router. The README's Requirements SHALL name a public `Rue-Asha/Notes-Archive` as a precondition and say a private repo makes every deploy fail at fetch, since no token auth is added. `tasks.md` SHALL contain none of these steps.
 
 #### Scenario: The runbook lists the steps in order
 - **WHEN** the role README's "First rollout" section is read
@@ -255,8 +255,8 @@ The role default `notes_archive_body_size_limit` SHALL be `17M` and SHALL be ren
 - **proof:** manual (doc review at Gate 2; prose)
 
 #### Scenario: A stale host key would block the apply
-- **WHEN** `ssh-keygen -F 192.168.0.231` on `runner01` finds a key before the merge (the address was retropie01's)
-- **THEN** the runbook says to remove that entry with `ssh-keygen -R 192.168.0.231` before merging, because `tf-ci.sh apply` skips the keyscan for an address it already knows
+- **WHEN** `ssh-keygen -F 192.168.0.232` on `runner01` finds a key before the merge (the address was retropie01's)
+- **THEN** the runbook says to remove that entry with `ssh-keygen -R 192.168.0.232` before merging, because `tf-ci.sh apply` skips the keyscan for an address it already knows
 - **proof:** manual (pre-merge step on `runner01`; doc review at Gate 2)
 
 #### Scenario: The runbook states the exposure
