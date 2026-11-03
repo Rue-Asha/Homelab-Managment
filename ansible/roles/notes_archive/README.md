@@ -87,7 +87,7 @@ On-host layout
 Plain HTTP
 ----------
 
-The guest is served as `http://192.168.0.231`: no DNS name, no TLS. The app has
+The guest is served as `http://192.168.0.232`: no DNS name, no TLS. The app has
 **no auth**, so the guest is reachable only on that LAN IP and through the
 tailscale subnet router, nowhere else. The browser treats the plain-HTTP origin
 as not a secure context, so the app cannot use a service worker, Wake Lock or
@@ -102,8 +102,8 @@ change: Rue merges after the tag exists, or accepts a failing first deploy
 appears; CI runs no plan. (spec: "The runbook lists the steps in order", "The
 runbook states the exposure")
 
-1. On `runner01`, `ssh-keygen -F 192.168.0.231` must find nothing. If it
-   prints a key, remove the stale entry first (`ssh-keygen -R 192.168.0.231`):
+1. On `runner01`, `ssh-keygen -F 192.168.0.232` must find nothing. If it
+   prints a key, remove the stale entry first (`ssh-keygen -R 192.168.0.232`):
    `scripts/tf-ci.sh apply` skips the keyscan for an address it already knows,
    and `.231` was retropie01's address, so a stale key is plausible. (spec: "A
    stale host key would block the apply")
@@ -121,7 +121,7 @@ runbook states the exposure")
    `infrastructure` environment. (spec: "The runner plan shows exactly one new
    container")
 5. The `deploy` job lists `02_SERVICES/notes-archive.yml` once. With the tag
-   published its smoke check passes and `curl -i http://192.168.0.231/healthz`
+   published its smoke check passes and `curl -i http://192.168.0.232/healthz`
    answers 200; without it the run fails at the fetch task (accepted).
    (spec: "The first deploy comes up healthy")
 6. From the workstation, `scripts/fetch-inventory.sh`, then
