@@ -5,7 +5,7 @@ TBD - created by archiving change sqlite-backups. Update Purpose after archive.
 ## Requirements
 ### Requirement: One registry entry per service host drives every backup step
 
-Each service host whose service keeps a SQLite database SHALL declare one inventory variable, `sqlite_backups`, holding its database path(s), systemd unit and owner, and this variable SHALL be the single source the guest-side role, the node-side role and the restore playbook read. Life-Manager (`life-manager01`), Rues-Arcade (`rues-arcade01`), Rues-Cooking-Hub (`rues-cooking-hub01`) and Creative-Archive (`creative-archive01`) SHALL be registered, and `scripts/tests/sqlite-snapshot.sh` SHALL check each of their registry entries. A host without the variable SHALL be ignored by both roles. A host that has the variable but no `lxc_ctid` SHALL make the node playbook fail with a message naming that host.
+Each service host whose service keeps a SQLite database SHALL declare one inventory variable, `sqlite_backups`, holding its database path(s), systemd unit and owner, and this variable SHALL be the single source the guest-side role, the node-side role and the restore playbook read. Life-Manager (`life-manager01`), Rues-Arcade (`rues-arcade01`), Rues-Cooking-Hub (`rues-cooking-hub01`), Creative-Archive (`creative-archive01`) and Notes-Archive (`notes-archive01`) SHALL be registered, and `scripts/tests/sqlite-snapshot.sh` SHALL check each of their registry entries. A host without the variable SHALL be ignored by both roles. A host that has the variable but no `lxc_ctid` SHALL make the node playbook fail with a message naming that host.
 
 #### Scenario: Life-Manager and Rues-Arcade are registered
 - **WHEN** `host_vars/life-manager01/vars.yml` and `host_vars/rues-arcade01/vars.yml` are read
@@ -21,6 +21,11 @@ Each service host whose service keeps a SQLite database SHALL declare one invent
 - **WHEN** `host_vars/creative-archive01/vars.yml` is read
 - **THEN** it defines `sqlite_backups` with unit `creative-archive.service`, owner `creative-archive` and the literal database path `/var/lib/creative-archive/creative-archive.db`; while the file is missing the check fails naming that path
 - **proof:** unit ("Scenario: Creative-Archive is registered" in `scripts/tests/sqlite-snapshot.sh`, red before the host_vars file exists)
+
+#### Scenario: Notes-Archive is registered
+- **WHEN** `host_vars/notes-archive01/vars.yml` is read
+- **THEN** it defines `sqlite_backups` with unit `notes-archive.service`, owner `notes-archive` and the literal database path `/var/lib/notes-archive/notes-archive.db` (the database only, never its `-wal`/`-shm` files); while the file is missing the check fails naming that path
+- **proof:** unit ("Scenario: Notes-Archive is registered" in `scripts/tests/sqlite-snapshot.sh`, red before the host_vars file exists)
 
 #### Scenario: Guest role skips a host without a registry entry
 - **WHEN** `sqlite_snapshot` is applied to a host that has no `sqlite_backups`
@@ -49,7 +54,7 @@ Each service host whose service keeps a SQLite database SHALL declare one invent
 
 ### Requirement: Service playbooks snapshot the database before the service role runs
 
-The guest-side role `sqlite_snapshot` SHALL install the `sqlite3` CLI and, on every run of a service playbook, SHALL write a consistent `sqlite3 .backup` (WAL-safe) snapshot of each registered database to a pre-deploy directory on the guest before the service role runs, keeping the newest 10 per database. If a snapshot fails the play SHALL fail before the release changes. A database that does not exist yet SHALL be skipped with a message. `scripts/tests/sqlite-snapshot.sh` SHALL check the role order of the Life-Manager, Rues-Arcade, Rues-Cooking-Hub and Creative-Archive playbooks.
+The guest-side role `sqlite_snapshot` SHALL install the `sqlite3` CLI and, on every run of a service playbook, SHALL write a consistent `sqlite3 .backup` (WAL-safe) snapshot of each registered database to a pre-deploy directory on the guest before the service role runs, keeping the newest 10 per database. If a snapshot fails the play SHALL fail before the release changes. A database that does not exist yet SHALL be skipped with a message. `scripts/tests/sqlite-snapshot.sh` SHALL check the role order of the Life-Manager, Rues-Arcade, Rues-Cooking-Hub, Creative-Archive and Notes-Archive playbooks.
 
 #### Scenario: Pre-deploy snapshot is written
 - **WHEN** `sqlite-snapshot pre-deploy` runs on a guest whose registered database exists
@@ -70,6 +75,16 @@ The guest-side role `sqlite_snapshot` SHALL install the `sqlite3` CLI and, on ev
 - **WHEN** `02_SERVICES/creative-archive.yml` is read
 - **THEN** it lists `sqlite_snapshot` before `creative_archive`; while the playbook is missing the check fails naming it
 - **proof:** unit ("Scenario: The Creative-Archive playbook runs the snapshot role before its service role" in `scripts/tests/sqlite-snapshot.sh`, red before the playbook exists)
+
+#### Scenario: The Notes-Archive playbook runs the snapshot role before its service role
+- **WHEN** `02_SERVICES/notes-archive.yml` is read
+- **THEN** it lists `sqlite_snapshot` before `notes_archive`; while the playbook is missing the check fails naming it
+- **proof:** unit ("Scenario: The Notes-Archive playbook runs the snapshot role before its service role" in `scripts/tests/sqlite-snapshot.sh`, red before the playbook exists)
+
+#### Scenario: A WAL database is copied with the online backup
+- **WHEN** the Notes-Archive database runs in WAL mode with `notes-archive.db-wal` and `-shm` beside it and a snapshot is taken
+- **THEN** the snapshot goes through `sqlite3 .backup` with a busy timeout, never a file copy of the `.db` alone, so committed pages still in the `-wal` file are in the snapshot; no role or registry change is needed for it
+- **proof:** unit ("Scenario: Pre-deploy snapshot is written" in `scripts/tests/sqlite-snapshot.sh` asserts the `.backup` call and the busy timeout)
 
 #### Scenario: First deploy without a database
 - **WHEN** `sqlite-snapshot pre-deploy` runs and the registered database file does not exist yet
@@ -355,5 +370,29 @@ After the first rollout's manual `00_OPERATIONAL/sqlite_backup.yml` run, the nig
 #### Scenario: The Creative-Archive database joins the nightly backup
 - **WHEN** after the first deploy Rue runs `scripts/fetch-inventory.sh` and `00_OPERATIONAL/sqlite_backup.yml` from the workstation
 - **THEN** the next nightly run on proxmox1 logs `creative-archive01: ok` and `/var/backups/homelab/creative-archive01/daily/` holds a `creative-archive-<stamp>.db` with its `.meta`
+- **proof:** manual (post-merge; needs proxmox1 and the live guest)
+
+### Requirement: The Notes-Archive database joins the nightly backup
+
+After the first healthy deploy and the first rollout's manual `00_OPERATIONAL/sqlite_backup.yml` run, the nightly node job on proxmox1 SHALL collect `notes-archive01`'s database like every other registered guest, and `docs/backups.md` SHALL name Notes-Archive among the backed-up apps. The runbook SHALL order `scripts/fetch-inventory.sh` (which brings `lxc_ctid`) before `sqlite_backup.yml`, and `sqlite_backup.yml` after the first healthy deploy.
+
+#### Scenario: docs/backups.md names Notes-Archive
+- **WHEN** `rg -n 'Notes-Archive' docs/backups.md` runs
+- **THEN** the intro names Notes-Archive next to Life-Manager, Rues-Arcade, Rues-Cooking-Hub and Creative-Archive
+- **proof:** manual (one-shot command recorded in `verification.md`; prose read at Gate 2)
+
+#### Scenario: The rendered inventory comes before the backup registration
+- **WHEN** `sqlite_backup.yml` runs from a workstation whose inventory was rendered before the apply
+- **THEN** `notes-archive01` is not in the inventory and is silently not collected, so the runbook runs `scripts/fetch-inventory.sh` and checks `ansible-inventory --graph` for `notes-archive01` with an `lxc_ctid` first; a registered host that is listed without an `lxc_ctid` fails the play naming that host
+- **proof:** unit ("Scenario: Registered host without a container ID" in `scripts/tests/sqlite-backup.sh` for the missing `lxc_ctid`); manual (runbook order, doc review at Gate 2)
+
+#### Scenario: Registering before the first healthy deploy fails the nightly run
+- **WHEN** `sqlite_backup.yml` registers `notes-archive01` while its database does not exist yet (no release deployed)
+- **THEN** every nightly run marks `notes-archive01` failed and exits non-zero; the runbook therefore registers the backup only after `/healthz` answered 200
+- **proof:** unit ("Scenario: Registered database missing in the guest" in `scripts/tests/sqlite-backup.sh`); manual (runbook order, doc review at Gate 2)
+
+#### Scenario: The Notes-Archive database joins the nightly backup
+- **WHEN** after the first healthy deploy Rue runs `scripts/fetch-inventory.sh` and `00_OPERATIONAL/sqlite_backup.yml` from the workstation
+- **THEN** the next nightly run on proxmox1 logs `notes-archive01: ok` and `/var/backups/homelab/notes-archive01/daily/` holds a `notes-archive-<stamp>.db` with its `.meta`
 - **proof:** manual (post-merge; needs proxmox1 and the live guest)
 

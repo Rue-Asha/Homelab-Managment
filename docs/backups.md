@@ -1,8 +1,8 @@
 # SQLite backups
 
-Life-Manager, Rues-Arcade, Rues-Cooking-Hub and Creative-Archive each keep their data in one
-SQLite file inside their own LXC. Three kinds of snapshot protect it. Everything is driven by one
-registry variable per service host, `sqlite_backups`.
+Life-Manager, Rues-Arcade, Rues-Cooking-Hub, Creative-Archive and Notes-Archive each keep their
+data in one SQLite file inside their own LXC. Three kinds of snapshot protect it. Everything is
+driven by one registry variable per service host, `sqlite_backups`.
 
 ## What is backed up, and where
 

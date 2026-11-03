@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: MIT-0
+---
+# Smoke check on every run, deploy or not. The restart notified earlier has to
+# have happened before the request proves anything about the new release.
+- name: Restart the service now if this run changed it
+  ansible.builtin.meta: flush_handlers
+
+- name: Check the service through the reverse proxy, rolling back on failure
+  block:
+    - name: Request the service through the reverse proxy
+      ansible.builtin.uri:
+        url: "{{ notes_archive_smoke_url }}"
+        headers: "{{ notes_archive_smoke_headers }}"
+        status_code: "{{ range(200, 300) | list }}"
+      register: notes_archive_smoke
+      until: notes_archive_smoke is succeeded
+      retries: "{{ notes_archive_smoke_retries }}"
+      delay: "{{ notes_archive_smoke_delay }}"
+
+  rescue:
+    # Only a run that swapped `current` has something to undo.
+    - name: Decide whether there is a release to roll back to
+      ansible.builtin.set_fact:
+        notes_archive_rolling_back: >-
+          {{ (notes_archive_redeploy | bool) and (notes_archive_previous_release | default('') | length > 0) }}
+
+    - name: Roll back to the release that was active before this run
+      when: notes_archive_rolling_back | bool
+      block:
+        - name: Point current back at the previous release
+          ansible.builtin.file:
+            src: "{{ notes_archive_previous_release }}"
+            dest: "{{ notes_archive_current_link }}"
+            state: link
+            owner: "{{ notes_archive_user }}"
+            group: "{{ notes_archive_group }}"
+            force: true
+
+        - name: Restart the service on the previous release
+          ansible.builtin.systemd:
+            name: "{{ notes_archive_service_name }}"
+            state: restarted
+
+    - name: Fail the run
+      ansible.builtin.fail:
+        msg: >-
+          {{ notes_archive_smoke_url }} did not answer 2xx within
+          {{ notes_archive_smoke_retries }} x {{ notes_archive_smoke_delay }}s for
+          {{ notes_archive_version }} ({{ notes_archive_release_dir | default(notes_archive_previous_release | default('no release')) }}).
+          {{ ('Rolled back to ' ~ notes_archive_previous_release ~ '.') if notes_archive_rolling_back | bool
+             else 'Nothing was rolled back: no previous release, or this run did not deploy one.' }}

@@ -349,7 +349,9 @@ check "Life-Manager and Rues-Arcade are registered" t_registered
 check "Service playbooks run the snapshot role before the service role" t_playbook_order
 check "Rues-Cooking-Hub is registered" t_host_registered rues-cooking-hub01 rues-cooking-hub
 check "Creative-Archive is registered" t_host_registered creative-archive01 creative-archive
+check "Notes-Archive is registered" t_host_registered notes-archive01 notes-archive
 check "The Rues-Cooking-Hub playbook runs the snapshot role before its service role" t_playbook_runs_snapshot_first rues-cooking-hub rues_cooking_hub
 check "The Creative-Archive playbook runs the snapshot role before its service role" t_playbook_runs_snapshot_first creative-archive creative_archive
+check "The Notes-Archive playbook runs the snapshot role before its service role" t_playbook_runs_snapshot_first notes-archive notes_archive
 
 exit "$failed"

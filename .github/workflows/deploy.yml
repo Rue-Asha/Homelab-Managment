@@ -34,6 +34,7 @@ on:
           - rues-arcade
           - rues-cooking-hub
           - creative-archive
+          - notes-archive
       terraform:
         description: Plan and apply Terraform even if the diff does not touch terraform/
         type: boolean

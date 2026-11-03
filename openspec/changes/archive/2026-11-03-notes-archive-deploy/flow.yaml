@@ -1,0 +1,8 @@
+triage: "tweak — new guest cloned from the creative-archive pattern, live apply on merge. Appetite: one evening."
+track: tweak
+live: true
+base: main
+gate1: 2026-11-03
+gate2: 2026-11-03
+learnings:
+  - 'Explore on a deploy cloned from a public-repo recipe → check the app repo visibility (gh repo view --json visibility) before writing scope, and name what the role needs for a private repo (weil: Notes-Archive was private, the cloned role downloads release assets anonymously, the planner caught it at Gate 1 and Rue had to decide)'

@@ -1,0 +1,27 @@
+---
+# --- notes_archive service (02_SERVICES) ---
+notes_archive_version: v0.1.0
+notes_archive_smoke_headers:
+  Host: "{{ nginx_server_name }}"
+
+common_timezone: Europe/Berlin
+
+# --- nginx reverse proxy in front of the service ---
+nginx_reverse_proxy_enabled: true
+nginx_backend_host: 127.0.0.1
+nginx_backend_port: "{{ notes_archive_port }}"
+nginx_service_description: "the Notes Archive web service"
+# Image uploads go up to 16 MB; nginx's default 10m would answer 413 before the app (BODY_SIZE_LIMIT 17M) decides.
+nginx_client_max_body_size: 18m
+
+# --- sqlite backups (roles/sqlite_snapshot, roles/sqlite_backup, 00_OPERATIONAL/sqlite_restore.yml) ---
+sqlite_backups:
+  service: notes-archive
+  unit: notes-archive.service
+  owner: notes-archive
+  group: notes-archive
+  mode: "0640"
+  release_link: /opt/notes-archive/current
+  healthz_url: http://127.0.0.1/healthz
+  databases:
+    - /var/lib/notes-archive/notes-archive.db
