@@ -1,6 +1,6 @@
 ---
 # --- notes_archive service (02_SERVICES) ---
-notes_archive_version: v0.1.0
+notes_archive_version: v0.1.1
 notes_archive_smoke_headers:
   Host: "{{ nginx_server_name }}"
 
