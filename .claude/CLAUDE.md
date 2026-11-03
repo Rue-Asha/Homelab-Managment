@@ -200,6 +200,7 @@ Terraform (anything under `terraform/`):
 - Before changing life-manager-proton, read openspec/specs/life-manager-proton/spec.md.
 - Before changing rues-cooking-hub, read openspec/specs/rues-cooking-hub/spec.md.
 - Before changing creative-archive, read openspec/specs/creative-archive/spec.md.
+- Before changing notes-archive, read openspec/specs/notes-archive/spec.md.
 
 ---
 

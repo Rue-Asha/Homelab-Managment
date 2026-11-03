@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MIT-0
+---
+- name: Ensure the release and data directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ notes_archive_user }}"
+    group: "{{ notes_archive_group }}"
+    mode: "0755"
+  loop:
+    - "{{ notes_archive_base_dir }}"
+    - "{{ notes_archive_releases_dir }}"
+    - "{{ notes_archive_data_dir }}"
+
+- name: Ensure the config directory exists
+  ansible.builtin.file:
+    path: "{{ notes_archive_config_dir }}"
+    state: directory
+    owner: root
+    group: "{{ notes_archive_group }}"
+    mode: "0750"

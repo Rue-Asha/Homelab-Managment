@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+[Unit]
+Description=Notes Archive web service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ notes_archive_user }}
+Group={{ notes_archive_group }}
+WorkingDirectory={{ notes_archive_current_link }}
+EnvironmentFile={{ notes_archive_env_file }}
+ExecStart={{ notes_archive_node_bin }} {{ notes_archive_current_link }}/build
+Restart=on-failure
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths={{ notes_archive_data_dir }}
+
+[Install]
+WantedBy=multi-user.target

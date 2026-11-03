@@ -1,0 +1,11 @@
+---
+- name: Deploy the Notes Archive web service
+  hosts: notes_archive
+  become: true
+  gather_facts: true
+  roles:
+    - common        # base host config (02 layer)
+    - nodejs        # Node.js runtime
+    - nginx         # reverse proxy (:80 -> 127.0.0.1:{{ notes_archive_port }})
+    - sqlite_snapshot  # pre-deploy database snapshot; a failure stops the play before the release changes
+    - notes_archive   # service: fetch release, systemd unit, smoke check through nginx

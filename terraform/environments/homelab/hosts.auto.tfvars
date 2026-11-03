@@ -98,6 +98,18 @@ lxc_hosts = {
     disk_gb = 16
   }
 
+  # Sized like creative-archive01: Sharp plus images as BLOBs in SQLite.
+  # Configured by 02_SERVICES/notes-archive.yml.
+  "notes-archive01" = {
+    ipv4    = "192.168.0.231/24"
+    groups  = ["notes_archive"]
+    tags    = ["web", "terraform"]
+    cores   = 2
+    memory  = 4096
+    swap    = 512
+    disk_gb = 16
+  }
+
   # Tailscale subnet router for off-LAN access. Needs /dev/net/tun, which only
   # the operator playbook can pass through. Configured by
   # 01_BASE_CONFIGURATION/tailscale.yml, never by a deploy.
@@ -118,7 +130,8 @@ lxc_hosts = {
 #
 # vm_hosts = {
 #   retropie01 = {
-#     vmid       = 231
+#     # 192.168.0.231 now belongs to notes-archive01; pick a new address when
+#     # retropie01 returns.
 #     ipv4       = "192.168.0.231/24"
 #     groups     = ["retropie"]
 #     clone_vmid = 1001   # debian-12-template (1000 = debian-13-template)
