@@ -1,0 +1,1 @@
+{"session_id":"golden","cwd":"@PROJ@","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"","description":"golden case"}}

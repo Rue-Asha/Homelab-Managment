@@ -2,7 +2,7 @@
 
 > Actionable checklist for deploying the party-games service on the Ansible side.
 > Design rationale: see `party-games-webservice-architecture.md`.
-> Workflow convention: see `.claude/CLAUDE.md` → "Service delivery model".
+> Workflow convention: see `AGENTS.md` → "Service delivery model".
 
 Each implementable feature has its own `feat/*` branch, cut from `main`.
 

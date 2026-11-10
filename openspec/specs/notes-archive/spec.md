@@ -233,7 +233,7 @@ The role default `notes_archive_body_size_limit` SHALL be `17M` and SHALL be ren
 
 ### Requirement: Notes-Archive is documented
 
-`README.md` SHALL list the `notes_archive` role in its roles table and show its playbook command; `ansible/roles/notes_archive/README.md` SHALL describe the role like the `creative_archive` README, including `notes_archive_body_size_limit`, the env line of the on-host layout and that migrations must stay additive; `docs/backups.md` SHALL name Notes-Archive among the backed-up apps; `docs/release-bump.md` SHALL list Notes-Archive under wired-up apps with `notes_archive_version` and its host_vars path; `.claude/CLAUDE.md` SHALL carry the line `- Before changing notes-archive, read openspec/specs/notes-archive/spec.md.` under `## Specs`, written by the closer at archive.
+`README.md` SHALL list the `notes_archive` role in its roles table and show its playbook command; `ansible/roles/notes_archive/README.md` SHALL describe the role like the `creative_archive` README, including `notes_archive_body_size_limit`, the env line of the on-host layout and that migrations must stay additive; `docs/backups.md` SHALL name Notes-Archive among the backed-up apps; `docs/release-bump.md` SHALL list Notes-Archive under wired-up apps with `notes_archive_version` and its host_vars path; `AGENTS.md` SHALL carry the line `- Before changing notes-archive, read openspec/specs/notes-archive/spec.md.` under `## Specs`, written by the closer at archive.
 
 #### Scenario: Every doc names the new service
 - **WHEN** `rg -l 'notes_archive|notes-archive|Notes-Archive' README.md docs/backups.md docs/release-bump.md docs/check-runner.md ansible/roles/notes_archive/README.md` runs
@@ -241,7 +241,7 @@ The role default `notes_archive_body_size_limit` SHALL be `17M` and SHALL be ren
 - **proof:** manual (one-shot command recorded in `verification.md`; prose read at Gate 2)
 
 #### Scenario: The Specs line points at the new capability
-- **WHEN** after the closer's archive commit `rg -c 'Before changing notes-archive, read openspec/specs/notes-archive/spec.md' .claude/CLAUDE.md` runs
+- **WHEN** after the closer's archive commit `rg -c 'Before changing notes-archive, read openspec/specs/notes-archive/spec.md' AGENTS.md` runs
 - **THEN** it prints `1` and the file it names exists
 - **proof:** manual (written by the closer at archive, after verification; checked on the archive commit)
 

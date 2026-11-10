@@ -337,7 +337,7 @@ A playbook in `ansible/playbooks/00_OPERATIONAL/` SHALL apply the node-side role
 
 ### Requirement: Backups are documented and new services must register
 
-Each new role SHALL have a README. `docs/backups.md` SHALL describe what is backed up, where, the retention, the restore steps, how to onboard a new service, and what is NOT covered (disk failure of proxmox1, non-app data). `.claude/CLAUDE.md`'s service-delivery section SHALL state that a service with persistent data must be registered in the backup registry.
+Each new role SHALL have a README. `docs/backups.md` SHALL describe what is backed up, where, the retention, the restore steps, how to onboard a new service, and what is NOT covered (disk failure of proxmox1, non-app data). `AGENTS.md`'s service-delivery section SHALL state that a service with persistent data must be registered in the backup registry.
 
 #### Scenario: Onboarding a new service from the docs
 - **WHEN** a reader follows the onboarding section of `docs/backups.md`
@@ -345,7 +345,7 @@ Each new role SHALL have a README. `docs/backups.md` SHALL describe what is back
 - **proof:** manual (documentation; read at Gate 2)
 
 #### Scenario: CLAUDE.md requires registration
-- **WHEN** the service-delivery section of `.claude/CLAUDE.md` is read
+- **WHEN** the service-delivery section of `AGENTS.md` is read
 - **THEN** it says a service with persistent data must be registered in the backup registry and points to `docs/backups.md`
 - **proof:** manual (documentation; read at Gate 2)
 

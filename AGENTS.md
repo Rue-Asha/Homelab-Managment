@@ -152,8 +152,9 @@ staged files; `--all` covers the whole repo. The commit gate is the git hook
 `.githooks/pre-commit` (enabled by `.envrc`): it runs `proof.sh --staged` on
 every commit, Rue's and the agent's, and aborts on any `INVARIANT_VIOLATION`.
 Don't pass `--no-verify`; fix the violation instead — CI runs the same checks
-and won't let the commit merge anyway. A Claude Code gate
-(`.claude/settings.json`) asks for confirmation before `terraform
+and won't let the commit merge anyway. An agent hook gate
+(`.agents/hooks/core/iac-apply-gate.sh`; Claude wires it through
+`.claude/settings.json`) asks for confirmation before `terraform
 apply`/`destroy`, any `ansible-playbook` run without `--check`, and the `gh`
 commands that deploy: `gh pr merge`, `gh workflow run`, and `gh api`
 merge/dispatch calls.
