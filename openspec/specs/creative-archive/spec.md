@@ -184,15 +184,15 @@ The role default `creative_archive_body_size_limit` SHALL be `17M` and SHALL be 
 
 ### Requirement: The Creative Archive is documented
 
-`README.md` SHALL list the `creative_archive` role in its roles table and show its playbook command; `ansible/roles/creative_archive/README.md` SHALL describe the role like the `rues_cooking_hub` README, including `creative_archive_body_size_limit` and the env line of the on-host layout; `docs/backups.md` SHALL name Creative-Archive among the backed-up apps; `docs/release-bump.md` SHALL list Creative-Archive under wired-up apps with `creative_archive_version` and its host_vars path; `.claude/CLAUDE.md` SHALL carry the line `- Before changing creative-archive, read openspec/specs/creative-archive/spec.md.` under `## Specs`.
+`README.md` SHALL list the `creative_archive` role in its roles table and show its playbook command; `ansible/roles/creative_archive/README.md` SHALL describe the role like the `rues_cooking_hub` README, including `creative_archive_body_size_limit` and the env line of the on-host layout; `docs/backups.md` SHALL name Creative-Archive among the backed-up apps; `docs/release-bump.md` SHALL list Creative-Archive under wired-up apps with `creative_archive_version` and its host_vars path; `AGENTS.md` SHALL carry the line `- Before changing creative-archive, read openspec/specs/creative-archive/spec.md.` under `## Specs`.
 
 #### Scenario: Every doc names the new service
-- **WHEN** `rg -l 'creative_archive|creative-archive|Creative-Archive' README.md docs/backups.md docs/release-bump.md ansible/roles/creative_archive/README.md .claude/CLAUDE.md` runs
+- **WHEN** `rg -l 'creative_archive|creative-archive|Creative-Archive' README.md docs/backups.md docs/release-bump.md ansible/roles/creative_archive/README.md AGENTS.md` runs
 - **THEN** all five files are listed, and `rg -i 'cooking' ansible/roles/creative_archive/README.md` finds nothing
 - **proof:** manual (one-shot command recorded in `verification.md`; prose read at Gate 2)
 
 #### Scenario: The Specs line points at the new capability
-- **WHEN** `rg -c 'Before changing creative-archive, read openspec/specs/creative-archive/spec.md' .claude/CLAUDE.md` runs
+- **WHEN** `rg -c 'Before changing creative-archive, read openspec/specs/creative-archive/spec.md' AGENTS.md` runs
 - **THEN** it prints `1`; the file it names exists once the change is archived
 - **proof:** manual (one-shot command recorded in `verification.md`)
 

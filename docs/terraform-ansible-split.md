@@ -178,7 +178,7 @@ above: they are guest-side configuration, so they belong to Ansible either way.
 ## Conventions
 
 Terraform follows standard HashiCorp style, not the Ansible rules in
-`.claude/CLAUDE.md` — `terraform fmt`, snake_case, and one
+`AGENTS.md` — `terraform fmt`, snake_case, and one
 `main.tf` / `variables.tf` / `outputs.tf` / `versions.tf` per module.
 
 Two project-specific rules worth stating:

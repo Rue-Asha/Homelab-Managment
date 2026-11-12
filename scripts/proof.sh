@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the "Before committing" checks from .claude/CLAUDE.md against what
+# Runs the "Before committing" checks from AGENTS.md against what
 # changed. Shared by the git commit gate (.githooks/pre-commit), CI, the
 # /proof command, and humans. Never contacts the Proxmox node or a guest.
 #
@@ -37,6 +37,7 @@ collection_reqs=()
 deploy_targets=0
 plan_protected=0
 workflow_triggers=0
+iac_gate=0
 unique_hosts=0
 sqlite_snapshot=0
 sqlite_backup=0
@@ -52,6 +53,7 @@ for f in "${files[@]}"; do
     scripts/tests/deploy-targets.sh) deploy_targets=1 ;;
     scripts/checks/plan-protected.sh|scripts/tests/plan-protected.sh) plan_protected=1 ;;
     scripts/checks/unique-hosts.py|scripts/tests/unique-hosts.sh) unique_hosts=1 ;;
+    .claude/hooks/*|.claude/settings.json|.agents/hooks/*|tests/hooks/*) iac_gate=1 ;;
     scripts/checks/workflow-triggers.py|scripts/tests/workflow-triggers.sh) workflow_triggers=1 ;;
     ansible/roles/sqlite_snapshot/*|ansible/playbooks/02_SERVICES/*|ansible/inventory/host_vars/*|scripts/tests/sqlite-snapshot.sh) sqlite_snapshot=1 ;;
     ansible/roles/sqlite_backup/*|ansible/playbooks/00_OPERATIONAL/sqlite_backup.yml|ansible/playbooks/00_OPERATIONAL/sqlite_restore.yml|scripts/tests/sqlite-backup.sh) sqlite_backup=1 ;;
@@ -176,6 +178,8 @@ fi
 if [ "$nginx_reload" -eq 1 ]; then
   sensor "nginx-reload fixtures" NGINX_RELOAD_FIXTURES_FAILED scripts/tests/nginx-reload.sh
 fi
+
+sensor "iac-apply-gate goldens" IAC_APPLY_GATE_GOLDENS_FAILED tests/hooks/iac-apply-gate.sh
 
 # The check runner runs PR code, so no deploy credential may be wired into it.
 sensor "check runner role has no deploy credentials" CHECK_RUNNER_HAS_CREDENTIALS sh -c '! git grep -nE "deploy_ed25519|vault_pass|terraform\.env|github_runner_" -- ansible/roles/check_runner ansible/inventory/group_vars/check_runner'

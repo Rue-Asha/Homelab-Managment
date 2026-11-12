@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Logging stub: tests must never reach the real ansible-playbook.
+jq -cn '$ARGS.positional' --args -- "${0##*/}" "$@" >>"${GOLDEN_STUB_LOG:-/dev/null}"
