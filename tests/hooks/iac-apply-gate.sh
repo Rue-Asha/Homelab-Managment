@@ -38,9 +38,14 @@ for dir in "$golden"/cases/iac-apply-gate/*/; do
     CLAUDE_PROJECT_DIR="$proj" GOLDEN_STUB_LOG="$sandbox/stubs.log" \
     timeout 60 bash -c "$command") <"$sandbox/stdin" >"$sandbox/stdout" 2>"$sandbox/stderr"
   printf '%s\n' "$?" >"$sandbox/code"
+  # jq 1.8 quotes the key as ("command"), 1.7 as "command"; the runner and the workstation differ.
+  sed -E 's/(with string) \(("[^"]*")\)/\1 \2/' "$dir/expect/stderr" >"$sandbox/expect.stderr"
+  sed -i -E 's/(with string) \(("[^"]*")\)/\1 \2/' "$sandbox/stderr"
   bad=""
   for x in stdout stderr code; do
-    cmp -s "$dir/expect/$x" "$sandbox/$x" || bad="$bad $x"
+    want=$dir/expect/$x
+    [ "$x" != stderr ] || want=$sandbox/expect.stderr
+    cmp -s "$want" "$sandbox/$x" || bad="$bad $x"
   done
   [ ! -s "$sandbox/stubs.log" ] || bad="$bad stub-calls"
   if [ -z "$bad" ]; then
@@ -48,7 +53,9 @@ for dir in "$golden"/cases/iac-apply-gate/*/; do
   else
     echo "FAIL: Scenario: iac-apply-gate $name (differs:$bad)"
     for x in stdout stderr code; do
-      cmp -s "$dir/expect/$x" "$sandbox/$x" || diff -u --label "expect/$x" --label "actual/$x" "$dir/expect/$x" "$sandbox/$x" | head -n 20
+      want=$dir/expect/$x
+      [ "$x" != stderr ] || want=$sandbox/expect.stderr
+      cmp -s "$want" "$sandbox/$x" || diff -u --label "expect/$x" --label "actual/$x" "$want" "$sandbox/$x" | head -n 20
     done
     cat "$sandbox/stubs.log"
     failed=1
