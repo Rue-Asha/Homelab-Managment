@@ -10,6 +10,8 @@ common_timezone: Europe/Berlin
 nginx_reverse_proxy_enabled: true
 nginx_backend_host: 127.0.0.1
 nginx_backend_port: "{{ notes_archive_port }}"
+nginx_server_aliases:
+  - notes.home.arpa
 nginx_service_description: "the Notes Archive web service"
 # Image uploads go up to 16 MB; nginx's default 10m would answer 413 before the app (BODY_SIZE_LIMIT 17M) decides.
 nginx_client_max_body_size: 18m

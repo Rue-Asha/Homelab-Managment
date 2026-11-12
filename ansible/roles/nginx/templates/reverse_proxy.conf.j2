@@ -2,7 +2,7 @@
 
 server {
     listen {{ nginx_listen_port }};
-    server_name {{ nginx_server_name }};
+    server_name {{ ([nginx_server_name] + nginx_server_aliases) | join(' ') }};
 
     client_max_body_size {{ nginx_client_max_body_size }};
 
