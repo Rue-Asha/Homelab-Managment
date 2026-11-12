@@ -11,6 +11,8 @@ common_timezone: Europe/Berlin
 nginx_reverse_proxy_enabled: true
 nginx_backend_host: 127.0.0.1
 nginx_backend_port: "{{ life_manager_port }}"
+nginx_server_aliases:
+  - life.home.arpa
 nginx_service_description: "the Life Manager web service"
 
 # --- sqlite backups (roles/sqlite_snapshot, roles/sqlite_backup, 00_OPERATIONAL/sqlite_restore.yml) ---

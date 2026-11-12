@@ -35,6 +35,7 @@ Role Variables
 | `nginx_service_name` | `nginx` | systemd service name. |
 | `nginx_reverse_proxy_enabled` | `false` | Opt-in: deploy + enable the reverse-proxy vhost. Off = stock default site only. |
 | `nginx_server_name` | default IPv4 fact | `server_name` for the vhost. |
+| `nginx_server_aliases` | `[]` | Extra `server_name` entries (e.g. a LAN domain) next to `nginx_server_name`, which stays the name smoke checks send as `Host`. |
 | `nginx_listen_port` | `80` | Port nginx listens on. |
 | `nginx_backend_host` | `127.0.0.1` | Backend host to proxy to. |
 | `nginx_backend_port` | `8080` | Backend port (override per service). |
