@@ -1,6 +1,6 @@
 ---
 # --- rues_cooking_hub service (02_SERVICES) ---
-rues_cooking_hub_version: v0.2.0
+rues_cooking_hub_version: v0.3.0
 rues_cooking_hub_smoke_headers:
   Host: "{{ nginx_server_name }}"
 
